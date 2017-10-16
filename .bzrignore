@@ -1,0 +1,14 @@
+src/aptik
+src/aptik-gtk
+designs/
+release/source
+release/amd64
+release/i386
+release/armel
+release/armhf
+release/*.deb
+release/*.run
+*.geany
+.git
+*.c
+*.o

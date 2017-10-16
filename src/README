@@ -1,0 +1,7 @@
+
+/Console/  -- Command-line version of this App; Does not contain GUI code (no references to Gtk, Gdk, etc)
+/Gtk/      -- Gtk version of this App; Contains GUI code (references to Gtk, Gdk, etc); Calls the commandline version to get work done;
+
+/Utility/          -- Helper classes
+/Utility/Console/  -- Helper classes; Does not contain GUI code (no references to Gtk, Gdk, etc)
+/Utility/Gtk/      -- Helper classes; Contains GUI code (references to Gtk, Gdk, etc)

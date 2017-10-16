@@ -1,0 +1,16 @@
+Source: aptik
+Section: utils
+Priority: extra
+Maintainer: Tony George <tony.george.kol@gmail.com>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, valac, libgee-0.8-dev, libjson-glib-dev
+Standards-Version: 3.9.3
+Homepage: http://teejeetech.blogspot.in/
+#Vcs-Git: 
+#Vcs-Browser:
+
+Package: aptik
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, pdftk, ghostscript, pngcrush, youtube-dl
+#Recommends: 
+Description: Complimentary plugins for Polo file manager
+ Complimentary plugins for Polo file manager

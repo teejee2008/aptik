@@ -58,4 +58,4 @@ Polo includes a few extra plugins for people who have contributed to the project
 
 ```1Js5vfgmwKew4byF9unWacwAjBQVvZ3Fev```
 
-![](https://4.bp.blogspot.com/-9hMyCacf0nc/WQ1p3dcdtwI/AAAAAAAAGgA/WC-4gbGFl7skTjNRZbl99EBsXeYfZDqpgCLcB/s1600/polo.png)
+![](https://4.bp.blogspot.com/-9hMyCacf0nc/WQ1p3dcdtwI/AAAAAAAAGgA/WC-4gbGFl7skTjNRZbl99EBsXeYfZDqpgCLcB/s1600/polo.png)# aptik-ng

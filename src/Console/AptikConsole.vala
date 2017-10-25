@@ -30,9 +30,9 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public const string AppName = "Aptik Migration Utility";
+public const string AppName = "Aptik NG";
 public const string AppShortName = "aptik";
-public const string AppVersion = "17.4";
+public const string AppVersion = "17.10";
 public const string AppAuthor = "Tony George";
 public const string AppAuthorEmail = "teejeetech@gmail.com";
 

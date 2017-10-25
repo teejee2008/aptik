@@ -1,4 +1,4 @@
-Source: aptik
+Source: aptik-ng
 Section: utils
 Priority: extra
 Maintainer: Tony George <tony.george.kol@gmail.com>
@@ -8,9 +8,10 @@ Homepage: http://teejeetech.blogspot.in/
 #Vcs-Git: 
 #Vcs-Browser:
 
-Package: aptik
+Package: aptik-ng
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, apt, aptitude, gdebi, apt-transport-https
-#Recommends: 
-Description: Complimentary plugins for Polo file manager
- Complimentary plugins for Polo file manager
+#Recommends:
+Replaces: aptik
+Description: Aptik system migration utility
+ Aptik system migration utility

@@ -46,10 +46,14 @@ public class AptikConsole : GLib.Object {
 	public string basepath = "";
 	public LinuxDistro distro = null;
 	public bool no_prompt = true;
+	public bool dry_run = false;
+	public bool list_only = false;
 
 	public string password = "";
 	public uint64 config_size_limit = 0;
-	public bool dry_run = false;
+	
+
+	//public UserManager user_mgr;
 
 	public static int main (string[] args) {
 		
@@ -84,9 +88,11 @@ public class AptikConsole : GLib.Object {
 	public AptikConsole(){
 
 		distro = new LinuxDistro();
-		distro.print_system_info();
 
 		basepath = Environment.get_current_dir();
+
+		//user_mgr = new UserManager();
+		//user_mgr.query_users(true);
 	}
 
 	public void print_backup_path(){
@@ -118,16 +124,15 @@ public class AptikConsole : GLib.Object {
 		msg += "%s:\n".printf(Message.TASK_PPA);
 		msg += "\n";
 		//msg += "  --list-repo            " + _("List PPAs") + "\n";
-		msg += "  --backup-repos          " + _("Backup list of PPAs") + "\n";
-		msg += "  --restore-repos         " + _("Restore PPAs from file 'ppa.list'") + "\n";
-		msg += "  --import-missing-keys   " + _("Import missing apt keys") + "\n";
+		msg += "  --backup-repos          " + _("Save list of software repositories") + "\n";
+		msg += "  --restore-repos         " + _("Add missing software repositories") + "\n";
+		msg += "  --import-missing-keys   " + _("Import any missing public keys for software repositories") + "\n";
 		msg += "\n";
 		
-
 		msg += "%s:\n".printf(Message.TASK_CACHE);
 		msg += "\n";
-		msg += "  --backup-cache        " + _("Backup downloaded packages from system cache") + "\n";
-		msg += "  --restore-cache       " + _("Restore packages to system cache") + "\n";
+		msg += "  --backup-cache        " + _("Copy downloaded packages from system cache") + "\n";
+		msg += "  --restore-cache       " + _("Copy packages to system cache") + "\n";
 		msg += "  --clear-cache         " + _("Remove downloaded packages from system cache") + "\n";
 		msg += "\n";
 
@@ -139,7 +144,7 @@ public class AptikConsole : GLib.Object {
 		//msg += "  --list-{manual|extra} " + _("List extra packages installed by user") + "\n";
 		//msg += "  --list-default        " + _("List default packages for linux distribution") + "\n";
 		msg += "  --backup-packages     " + _("Save list of installed packages") + "\n";
-		msg += "  --restore-packages    " + _("Restore packages from saved list") + "\n";
+		msg += "  --restore-packages    " + _("Install missing packages") + "\n";
 		msg += "\n";
 
 		/*
@@ -197,7 +202,7 @@ public class AptikConsole : GLib.Object {
 		msg += "\n";
 		msg += "  --backup-all          " + _("Backup all items") + "\n";
 		msg += "  --restore-all         " + _("Restore all items") + "\n";
-		msg += "  --clean               " + _("Remove all backups from backup location") + "\n";
+		//msg += "  --clean               " + _("Remove all backups from backup location") + "\n";
 		msg += "\n";
 
 		return msg;
@@ -265,190 +270,213 @@ public class AptikConsole : GLib.Object {
 
 			// ppa --------------------------------------------
 			
-			case "--list-repo":
-			case "--list-repos":
+			//case "--list-repo":
+			//case "--list-repos":
 				//App.ppa_backup_init(show_desc);
 				//foreach(Ppa ppa in App.ppa_list_master.values) {
 				//	ppa.is_selected = true;
 				//}
 				//print_ppa_list(show_desc);
 				//TODO: call the faster method for getting ppas?
-				break;
+				//break;
 
-			case "--backup-repo":
 			case "--backup-repos":
+				distro.print_system_info();
 				return backup_repos();
 				
-			case "--restore-repo":
 			case "--restore-repos":
+				distro.print_system_info();
 				return restore_repos();
 				
 			case "--import-missing-keys":
-				return RepoManager.import_apt_keys(true);
+				distro.print_system_info();
+				return import_missing_keys();
 
 			// package ---------------------------------------
 
-			case "--list-available":
+			//case "--list-available":
 				//App.read_package_info();
 				//foreach(Package pkg in App.pkg_list_master.values) {
 				//	pkg.is_selected = (pkg.is_available && !pkg.is_foreign());
 				//}
 				//print_package_list(show_desc);
-				break;
+				//break;
 
-			case "--list-installed":
+			//case "--list-installed":
 				//App.read_package_info();
 				//foreach(Package pkg in App.pkg_list_master.values) {
 				//	pkg.is_selected = pkg.is_installed;
 				//}
 				//print_package_list(show_desc);
-				break;
+				//break;
 
-			case "--list-default":
+			//case "--list-default":
 				//App.read_package_info();
 				//foreach(Package pkg in App.pkg_list_master.values) {
 				//	pkg.is_selected = pkg.is_default;
 				//}
 				//print_package_list(show_desc);
-				break;
+				//break;
 
-			case "--list-auto":
-			case "--list-automatic":
+			//case "--list-auto":
+			//case "--list-automatic":
 				//App.read_package_info();
 				//foreach(Package pkg in App.pkg_list_master.values) {
 				//	pkg.is_selected = pkg.is_automatic;
 				//}
 				//print_package_list(show_desc);
-				break;
+				//break;
 
-			case "--list-manual":
-			case "--list-extra":
+			//case "--list-manual":
+			//case "--list-extra":
 				//App.read_package_info();
 				//foreach(Package pkg in App.pkg_list_master.values) {
 				//	pkg.is_selected = pkg.is_manual;
 				//}
 				//print_package_list(show_desc);
-				break;
+				//break;
 
-			case "--backup-package":
+			//case "--backup-package":
 			case "--backup-packages":
+				distro.print_system_info();
 				return backup_packages();
 				
-			case "--restore-package":
+			//case "--restore-package":
 			case "--restore-packages":
+				distro.print_system_info();
 				return restore_packages();
 								
 			// package cache -------------------------------------
 
 			case "--backup-cache":
 			case "--backup-pkg-cache":
+				distro.print_system_info();
 				return backup_cache();
 				
 			case "--restore-cache":
 			case "--restore-pkg-cache":
+				distro.print_system_info();
 				return restore_cache();
 
 			case "--clear-cache":
 			case "--clear-pkg-cache":
+				distro.print_system_info();
 				return clear_cache();
 								
 			// config ---------------------------------------
 
-			case "--list-config":
-			case "--list-configs":
+			//case "--list-config":
+			//case "--list-configs":
 				//print_config_list(App.list_app_config_directories_from_home(false));
-				break;
+				//break;
 
-			case "--backup-appsettings":
-			case "--backup-configs":
-			case "--backup-config":
+			//case "--backup-appsettings":
+			//case "--backup-configs":
+			//case "--backup-config":
 				//return backup_config();
-				return true;
+				//return true;
 
-			case "--restore-appsettings":
-			case "--restore-configs":
+			//case "--restore-appsettings":
+			//case "--restore-configs":
 				//return restore_config();
-				return true;
+				//return true;
 
 			// home -------------------------------------
 
-			case "--backup-user-data":
-			case "--backup-home":
+			//case "--backup-user-data":
+			//case "--backup-home":
 				//return backup_home();
-				return true;
+				//return true;
 
-			case "--restore-user-data":
-			case "--restore-home":
+			//case "--restore-user-data":
+			//case "--restore-home":
 				//return restore_home();
-				return true;
+				//return true;
 				
 			// theme ---------------------------------------------
 
-			case "--list-theme":
-			case "--list-themes":
+			//case "--list-theme":
+			//case "--list-themes":
 				//print_theme_list(Theme.list_themes_installed(App.current_user.name, true));
-				break;
+				//break;
 
-			case "--backup-theme":
+			case "--list-themes":
+				//distro.print_system_info();
+				return list_themes();
+
 			case "--backup-themes":
-				//return backup_themes();
-				return true;
+				distro.print_system_info();
+				return backup_themes();
 				
-			case "--restore-theme":
 			case "--restore-themes":
-				//return restore_themes();
-				return true;
+				distro.print_system_info();
+				return restore_themes();
+
+			case "--list-icons":
+				//distro.print_system_info();
+				return list_icons();
+
+			case "--backup-icons":
+				distro.print_system_info();
+				return backup_icons();
+				
+			case "--restore-icons":
+				distro.print_system_info();
+				return restore_icons();
 
 			// mount -------------------------------------------
 			
-			case "--backup-mount":
-			case "--backup-mounts":
+			//case "--backup-mount":
+			//case "--backup-mounts":
 				//return backup_mounts();
-				return true;
+				//return true;
 
-			case "--restore-mount":
-			case "--restore-mounts":
+			//case "--restore-mount":
+			//case "--restore-mounts":
 				//return restore_mounts();
-				return true;
+				//return true;
 
 			// users -------------------------------------------
 
-			case "--list-user":
-			case "--list-users":
+			//case "--list-user":
+			//case "--list-users":
 				//return list_users_and_groups();
-				return true;
+				//return true;
 
-			case "--backup-user":
-			case "--backup-users":
+			//case "--backup-user":
+			//case "--backup-users":
 				//return backup_users_and_groups();
-				return true;
+				//return true;
 
-			case "--restore-user":
-			case "--restore-users":
+			//case "--restore-user":
+			//case "--restore-users":
 				//return restore_users_and_groups();
-				return true;
+				//return true;
 
 			// crontab -------------------------------------------
 
-			case "--backup-crontab":
-			case "--backup-crontabs":
+			//case "--backup-crontab":
+			//case "--backup-crontabs":
 				//return backup_crontab();
-				return true;
+				//return true;
 
-			case "--restore-crontab":
-			case "--restore-crontabs":
+			//case "--restore-crontab":
+			//case "--restore-crontabs":
 				//return restore_crontab();
-				return true;
+				//return true;
 				
 			// all ---------------------------------------------
 
 			case "--backup-all":
+				distro.print_system_info();
 				return backup_all();
 
 			case "--restore-all":
+				distro.print_system_info();
 				return restore_all();
 
 			case "--clean":
+				distro.print_system_info();
 				return remove_backups();
 				
 			// other -------------------------------------------
@@ -544,6 +572,22 @@ public class AptikConsole : GLib.Object {
 			return dir_exists(path_combine(basepath, "repos"));
 		case BackupType.CACHE:
 			return dir_exists(path_combine(basepath, "cache"));
+		case BackupType.ICONS:
+			return dir_exists(path_combine(basepath, "icons"));
+		case BackupType.THEMES:
+			return dir_exists(path_combine(basepath, "themes"));
+		case BackupType.FONTS:
+			return dir_exists(path_combine(basepath, "fonts"));
+		case BackupType.USERS:
+			return dir_exists(path_combine(basepath, "users"));
+		case BackupType.GROUPS:
+			return dir_exists(path_combine(basepath, "groups"));
+		case BackupType.MOUNTS:
+			return dir_exists(path_combine(basepath, "mounts"));
+		case BackupType.HOME:
+			return dir_exists(path_combine(basepath, "home"));
+		case BackupType.CRON:
+			return dir_exists(path_combine(basepath, "cron"));
 		}
 
 		return false;
@@ -569,6 +613,8 @@ public class AptikConsole : GLib.Object {
 	public bool backup_packages(){
 		
 		dir_create(basepath);
+
+		copy_binary();
 		
 		var mgr = new PackageManager(distro, dry_run);
 		return mgr.save_package_list(basepath);
@@ -583,9 +629,13 @@ public class AptikConsole : GLib.Object {
 		return mgr.restore_packages(basepath, no_prompt);
 	}
 
+	// cache  ---------------------
+	
 	public bool backup_cache(){
 
 		dir_create(basepath);
+
+		copy_binary();
 		
 		var mgr = new PackageManagerCache(distro, dry_run);
 		return mgr.backup_cache(basepath);
@@ -605,9 +655,13 @@ public class AptikConsole : GLib.Object {
 		return mgr.clear_cache(no_prompt);
 	}
 
+	// repos --------------------------
+	
 	public bool backup_repos(){
 		
 		dir_create(basepath);
+
+		copy_binary();
 		
 		var mgr = new RepoManager(distro, dry_run);
 		return mgr.save_repos(basepath);
@@ -622,7 +676,93 @@ public class AptikConsole : GLib.Object {
 		return mgr.restore_repos(basepath);
 	}
 
+	public bool import_missing_keys(){
+		var mgr = new RepoManager(distro, dry_run);
+		return mgr.import_missing_keys(true);
+	}
+
+	// themes -----------------------------
+
+	public bool list_themes(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		var mgr = new ThemeManager(distro, false, true, "themes");
+		mgr.check_installed_themes();
+		return true;
+	}
 	
+	public bool backup_themes(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		var mgr = new ThemeManager(distro, dry_run, false, "themes");
+		mgr.check_installed_themes();
+		return mgr.save_themes(basepath);
+	}
+
+	public bool restore_themes(){
+		
+		check_basepath();
+		if (!check_backup_dir_exists(BackupType.THEMES)) { return false; }
+		
+		var mgr = new ThemeManager(distro, dry_run, false, "themes");
+		mgr.check_archived_themes(basepath);
+		return mgr.restore_themes(basepath);
+	}
+
+	// icons -----------------------------
+
+	public bool list_icons(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		var mgr = new ThemeManager(distro, false, true, "icons");
+		mgr.check_installed_themes();
+		return true;
+	}
+	
+	public bool backup_icons(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		var mgr = new ThemeManager(distro, dry_run, false, "icons");
+		mgr.check_installed_themes();
+		return mgr.save_themes(basepath);
+	}
+
+	public bool restore_icons(){
+		
+		check_basepath();
+		if (!check_backup_dir_exists(BackupType.ICONS)) { return false; }
+		
+		var mgr = new ThemeManager(distro, dry_run, false, "icons");
+		mgr.check_archived_themes(basepath);
+		return mgr.restore_themes(basepath);
+	}
+	
+	// common ---------------
+	
+	public void copy_binary(){
+
+		string src = get_cmd_path(AppShortName);
+		string dst = path_combine(basepath, AppShortName);
+
+		string cmd = "cp -f '%s' '%s'".printf(
+			escape_single_quote(src),
+			escape_single_quote(dst));
+			
+		log_debug(cmd);
+		Posix.system(cmd);
+	}
 
 	// packages --------------------------
 
@@ -1197,15 +1337,15 @@ public class AptikConsole : GLib.Object {
 	*/
 }
 
-
 public enum BackupType {
 	PACKAGES,
 	REPOS,
 	CACHE,
-	FONTS,
 	ICONS,
 	THEMES,
+	FONTS,
 	USERS,
+	GROUPS,
 	MOUNTS,
 	HOME,
 	CRON

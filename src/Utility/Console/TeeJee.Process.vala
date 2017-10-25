@@ -255,7 +255,7 @@ namespace TeeJee.ProcessHelper{
 			int exitCode;
 			string stdout, stderr;
 			Process.spawn_command_line_sync("which " + cmd_tool, out stdout, out stderr, out exitCode);
-	        return stdout;
+	        return stdout.replace("\n","").replace("\r","");
 		}
 		catch (Error e){
 	        log_error (e.message);

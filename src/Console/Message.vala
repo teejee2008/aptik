@@ -57,7 +57,7 @@ public class Message : GLib.Object {
 	public const string PASSWORD_EMPTY = _("Password cannot be empty!");
 	public const string PASSWORD_NOT_MATCHING = _("Passwords do not match!");
 
-	public const string TASK_PPA = _("Software Sources (PPA)");
+	public const string TASK_PPA = _("Software Repositories");
 	public const string TASK_CACHE = _("Downloaded Packages");
 	public const string TASK_PACKAGE = _("Installed Software");
 	public const string TASK_MOUNT = _("Filesystem Mounts");

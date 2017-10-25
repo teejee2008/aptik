@@ -54,20 +54,16 @@ public class PackageManagerCache : GLib.Object {
 			dir_create(backup_cache);
 		}
 
-		switch(distro.package_manager){
-		case "dnf":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"dnf"));
-			return false;
-			
-		case "yum":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"yum"));
+		switch(distro.dist_type){
+		case "fedora":
+			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED," dnf/yum"));
 			return false;
 
-		case "pacman":
+		case "arch":
 			system_cache = "/var/cache/pacman/pkg";
 			break;
 
-		case "apt":
+		case "debian":
 			system_cache = "/var/cache/apt/archives";
 			break;
 
@@ -117,20 +113,16 @@ public class PackageManagerCache : GLib.Object {
 			return false;
 		}
 
-		switch(distro.package_manager){
-		case "dnf":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"dnf"));
+		switch(distro.dist_type){
+		case "fedora":
+			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"dnf/yum"));
 			return false;
 			
-		case "yum":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"yum"));
-			return false;
-
-		case "pacman":
+		case "arch":
 			system_cache = "/var/cache/pacman/pkg";
 			break;
 
-		case "apt":
+		case "debian":
 			system_cache = "/var/cache/apt/archives";
 			break;
 
@@ -173,18 +165,14 @@ public class PackageManagerCache : GLib.Object {
 
 		string cmd = "";
 		
-		switch(distro.package_manager){
+		switch(distro.dist_type){
 			
-		case "dnf":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"dnf"));
-			return false;
-			
-		case "yum":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"yum"));
+		case "fedora":
+			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"dnf/yum"));
 			return false;
 
-		case "pacman":
-			cmd = "pacman";
+		case "arch":
+			cmd = distro.package_manager;
 			
 			if (no_prompt){
 				cmd += " --noconfirm";
@@ -193,8 +181,9 @@ public class PackageManagerCache : GLib.Object {
 			cmd = " -Sc";
 			break;
 
-		case "apt":
-			cmd = "apt-get clean";
+		case "debian":
+			cmd = distro.package_manager;
+			cmd += " clean";
 			break;
 
 		default:

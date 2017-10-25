@@ -10,7 +10,7 @@ Homepage: http://teejeetech.blogspot.in/
 
 Package: aptik
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, pdftk, ghostscript, pngcrush, youtube-dl
+Depends: ${shlibs:Depends}, ${misc:Depends}, apt, aptitude, gdebi, apt-transport-https
 #Recommends: 
 Description: Complimentary plugins for Polo file manager
  Complimentary plugins for Polo file manager

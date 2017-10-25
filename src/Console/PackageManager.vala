@@ -246,11 +246,13 @@ public class PackageManager : GLib.Object {
 
 	private void check_packages_debian(){
 		
-		if (cmd_exists("aptitude")){
+		switch(distro.package_manager){
+		case "aptitude":
 			check_packages_aptitude();
-		}
-		else if (cmd_exists("apt")){
+			break;
+		default:
 			check_packages_apt();
+			break;
 		}
 
 		check_packages_apt_default();
@@ -504,6 +506,24 @@ public class PackageManager : GLib.Object {
 		ok = save_package_list_installed(backup_path);
 		if (!ok){ status = false; }
 
+
+		switch(distro.dist_type){
+		case "fedora":
+			// NOT IMPLEMENTED
+			break;
+		case "arch":
+			// NOT IMPLEMENTED
+			break;
+		case "debian":
+			string deb_dir = path_combine(basepath, "debs");
+			string deb_readme = path_combine(deb_dir, "README");
+			string msg = _("DEB files placed in this directory will be installed on restore");
+			dir_create(deb_dir);
+			chmod(deb_dir, "a+rw");
+			file_write(deb_readme, msg);
+			break;
+		}
+
 		log_msg(string.nfill(70,'-'));
 		
 		if (status){
@@ -522,7 +542,7 @@ public class PackageManager : GLib.Object {
 
 		string list_file = path_combine(backup_path, "installed.list");
 
-		string text = "";
+		string text = "\n# DO NOT EDIT - This list is not used for restore\n\n";
 
 		packages_sorted.foreach((pkg)=> {
 			if (pkg.is_installed){
@@ -533,7 +553,10 @@ public class PackageManager : GLib.Object {
 
 		bool ok = file_write(list_file, text);
 
-		if (ok){ log_msg("%s: %s".printf(_("Saved"), list_file)); }
+		if (ok){
+			chmod(list_file, "a+r"); // not writable
+			log_msg("%s: %s".printf(_("Saved"), list_file));
+		}
 
 		return ok;
 	}
@@ -542,9 +565,14 @@ public class PackageManager : GLib.Object {
 
 		string list_file = path_combine(backup_path, "selected.list");
 
-		string text = "";
+		string text = "\n# Comment-out or remove lines for unwanted items\n\n";
 
 		packages_sorted.foreach((pkg)=> {
+
+			if (pkg.name.has_prefix("linux-headers")){ return true; }
+			if (pkg.name.has_prefix("linux-signed")){ return true; }
+			if (pkg.name.has_prefix("linux-tools")){ return true; }
+			
 			if (pkg.is_selected){
 				text += "%s #%s\n".printf(pkg.name, pkg.description);
 			}
@@ -553,7 +581,10 @@ public class PackageManager : GLib.Object {
 
 		bool ok = file_write(list_file, text);
 
-		if (ok){ log_msg("%s: %s".printf(_("Saved"), list_file)); }
+		if (ok){
+			chmod(list_file, "a+rw");
+			log_msg("%s: %s".printf(_("Saved"), list_file));
+		}
 
 		return ok;
 	}
@@ -651,24 +682,23 @@ public class PackageManager : GLib.Object {
 			
 			if (line.strip().length == 0) { continue; }
 
-			if (!line.strip().has_prefix("#")) {
-				
-				string name = line.strip();
-				string desc = "";
-				
-				if (line.strip().contains("#")){
-					name = line.split("#",2)[0].strip();
-					desc = line.split("#",2)[1].strip();
+			if (line.strip().has_prefix("#")) { continue; }
+			
+			string name = line.strip();
+			string desc = "";
+			
+			if (line.strip().contains("#")){
+				name = line.split("#",2)[0].strip();
+				desc = line.split("#",2)[1].strip();
+			}
+			
+			if (packages.has_key(name)){
+				if (!packages[name].is_installed){
+					list_install += " %s".printf(name);
 				}
-				
-				if (packages.has_key(name)){
-					if (!packages[name].is_installed){
-						list_install += " %s".printf(name);
-					}
-				}
-				else{
-					list_missing += " %s".printf(name);
-				}
+			}
+			else{
+				list_missing += " %s".printf(name);
 			}
 		}
 
@@ -707,27 +737,25 @@ public class PackageManager : GLib.Object {
 			return true;
 		}
 
-		switch(distro.package_manager){
-		case "dnf":
-			return install_packages_dnf(list_install, no_prompt);
-		case "yum":
-			return install_packages_yum(list_install, no_prompt);
-		case "pacman":
-			return install_packages_pacman(list_install, no_prompt);
-		case "apt":
-			return install_packages_apt(basepath, list_install, no_prompt);
+		switch(distro.dist_type){
+		case "fedora":
+			return install_packages_fedora(list_install, no_prompt);
+		case "arch":
+			return install_packages_arch(list_install, no_prompt);
+		case "debian":
+			return install_packages_debian(basepath, list_install, no_prompt);
 		}
 
 		return false;
 	}
 
-	private bool install_packages_dnf(string list_install, bool no_prompt){
+	private bool install_packages_fedora(string list_install, bool no_prompt){
 
-		log_debug("install_packages_dnf()");
+		log_debug("install_packages_fedora()");
 		
 		if (list_install.length == 0){ return true; }
 		
-		string cmd = "dnf";
+		string cmd = distro.package_manager;
 
 		if (no_prompt){
 			cmd += " -y";
@@ -743,35 +771,13 @@ public class PackageManager : GLib.Object {
 		return (status == 0);
 	}
 
-	private bool install_packages_yum(string list_install, bool no_prompt){
+	private bool install_packages_arch(string list_install, bool no_prompt){
 
-		log_debug("install_packages_yum()");
-		
-		if (list_install.length == 0){ return true; }
-
-		string cmd = "yum";
-
-		if (no_prompt){
-			cmd += " -y";
-		}
-
-		cmd += " install %s".printf(list_install);
-		
-		int status = Posix.system(cmd);
-
-		log_msg(string.nfill(70,'-'));
-		log_msg(Message.RESTORE_OK);
-		
-		return (status == 0);
-	}
-
-	private bool install_packages_pacman(string list_install, bool no_prompt){
-
-		log_debug("install_packages_pacman()");
+		log_debug("install_packages_arch()");
 
 		if (list_install.length == 0){ return true; }
 
-		string cmd = "pacman";
+		string cmd = distro.package_manager;
 
 		if (no_prompt){
 			cmd += " --noconfirm";
@@ -787,28 +793,14 @@ public class PackageManager : GLib.Object {
 		return (status == 0);
 	}
 
-	private bool install_packages_apt(string basepath, string list_install, bool no_prompt){
+	private bool install_packages_debian(string basepath, string list_install, bool no_prompt){
 
-		log_debug("install_packages_apt()");
+		log_debug("install_packages_debian()");
 		
 		if (list_install.length == 0){ return true; }
 
-		string cmd = "";
+		string cmd = distro.package_manager;
 		
-		if (cmd_exists("apt-fast")){
-			cmd = "apt-fast";
-		}
-		else if (cmd_exists("apt")){
-			cmd = "apt";
-		}
-		else if (cmd_exists("apt-get")){
-			cmd = "apt-get";
-		}
-		else{
-			log_error(Message.MISSING_PACKAGE_MANAGER);
-			return false;
-		}
-
 		if (no_prompt){
 			cmd += " -y";
 		}

@@ -56,18 +56,15 @@ public class RepoManager : GLib.Object {
 
 		repos = new Gee.HashMap<string,Repo>();
 		
-		switch(distro.package_manager){
-		case "dnf":
-			check_repos_dnf();
+		switch(distro.dist_type){
+		case "fedora":
+			check_repos_fedora();
 			break;
-		case "yum":
-			check_repos_yum();
+		case "arch":
+			check_repos_arch();
 			break;
-		case "pacman":
-			check_repos_pacman();
-			break;
-		case "apt":
-			check_repos_apt();
+		case "debian":
+			check_repos_debian();
 			break;
 		}
 
@@ -76,21 +73,14 @@ public class RepoManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 	}
 
-	public void check_repos_dnf(){
+	public void check_repos_fedora(){
 		
 		// NOT IMPLEMENTED
 
 		log_msg(_("Not Implemented"));
 	}
 
-	public void check_repos_yum(){
-		
-		// NOT IMPLEMENTED
-
-		log_msg(_("Not Implemented"));
-	}
-
-	public void check_repos_pacman(){
+	public void check_repos_arch(){
 		
 		string txt = file_read("/etc/pacman.conf");
 
@@ -136,7 +126,7 @@ public class RepoManager : GLib.Object {
 		});
 	}
 
-	public void check_repos_apt(){
+	public void check_repos_debian(){
 		
 		var list = dir_list_names("/etc/apt", true);
 		var list2 = dir_list_names("/etc/apt/sources.list.d", true);
@@ -164,8 +154,6 @@ public class RepoManager : GLib.Object {
 					repo.is_installed = true;
 					repos[name] = repo;
 
-					log_msg("repo: %s".printf(name));
-					
 					repo_added = true;
 				}
 			}
@@ -212,17 +200,16 @@ public class RepoManager : GLib.Object {
 		log_msg(_("Saving installed repos..."));
 
 		string backup_path = path_combine(basepath, "repos");
+		dir_delete(backup_path); // remove existing .list files
 		dir_create(backup_path);
 
-		switch(distro.package_manager){
-		case "dnf":
-			return save_repos_dnf(backup_path);
-		case "yum":
-			return save_repos_yum(backup_path);
-		case "pacman":
-			return save_repos_pacman(backup_path);
-		case "apt":
-			return save_repos_apt(backup_path);
+		switch(distro.dist_type){
+		case "fedora":
+			return save_repos_fedora(backup_path);
+		case "arch":
+			return save_repos_arch(backup_path);
+		case "debian":
+			return save_repos_debian(backup_path);
 		}
 
 		log_msg(_("Nothing to save"));
@@ -231,7 +218,7 @@ public class RepoManager : GLib.Object {
 		return false;
 	}
 
-	public bool save_repos_dnf(string backup_path){
+	public bool save_repos_fedora(string backup_path){
 
 		// NOT IMPLEMENTED
 
@@ -239,18 +226,10 @@ public class RepoManager : GLib.Object {
 		return false;
 	}
 
-	public bool save_repos_yum(string backup_path){
-
-		// NOT IMPLEMENTED
-
-		log_msg(_("Not Implemented"));
-		return false;
-	}
-
-	public bool save_repos_pacman(string backup_path){
+	public bool save_repos_arch(string backup_path){
 
 		bool status = true;
-		
+
 		repos_sorted.foreach((repo) => {
 	
 			if (repo.is_installed && (repo.name.length > 0)){
@@ -263,7 +242,7 @@ public class RepoManager : GLib.Object {
 			return true;
 		});
 
-		bool ok = export_pacman_keys(backup_path);
+		bool ok = export_keys_arch(backup_path);
 		if (!ok){ status = false; }
 
 		if (status){
@@ -278,7 +257,7 @@ public class RepoManager : GLib.Object {
 		return status;
 	}
 
-	public bool save_repos_apt(string backup_path){
+	public bool save_repos_debian(string backup_path){
 	
 		bool ok, status = true;
 
@@ -286,6 +265,9 @@ public class RepoManager : GLib.Object {
 		if (!ok){ status = false; }
 		
 		ok = save_repos_apt_custom(backup_path);
+		if (!ok){ status = false; }
+
+		ok = export_keys_debian(backup_path);
 		if (!ok){ status = false; }
 		
 		if (status){
@@ -302,9 +284,9 @@ public class RepoManager : GLib.Object {
 	
 	public bool save_repos_apt_launchpad(string backup_path) {
 
-		string list_file = path_combine(backup_path, "installed.list");
+		string list_file = path_combine(backup_path, "launchpad-ppas.list");
 
-		string text = "";
+		string text = "\n# Comment-out or remove lines for unwanted items\n\n";
 
 		repos_sorted.foreach((repo) => {
 	
@@ -315,7 +297,14 @@ public class RepoManager : GLib.Object {
 			return true;
 		});
 
-		return file_write(list_file, text);
+		bool ok = file_write(list_file, text);
+
+		if (ok){
+			chmod(list_file, "a+rw");
+			log_msg("%s: %s".printf(_("Saved"), list_file));
+		}
+
+		return ok;
 	}
 
 	public bool save_repos_apt_custom(string backup_path) {
@@ -336,42 +325,15 @@ public class RepoManager : GLib.Object {
 				txt = txt.replace(distro.codename, "CODENAME");
 				ok = file_write(backup_file, txt);
 				if (!ok){ status = false; return true; }
+
+				chmod(backup_file, "a+rw");
+				log_msg("%s: %s".printf(_("Saved"), backup_file));
 			}
 			
 			return true;
 		});
 
 		return status;
-	}
-
-	public bool export_pacman_keys(string backup_path){
-
-		if (!cmd_exists("pacman-key")){
-			log_error("%s: %s".printf(_("Missing command"), "pacman-key"));
-			log_error(_("Install required packages and try again"));
-			return false; // exit method
-		}
-
-		bool ok = true;
-
-		string backup_file = path_combine(backup_path, "pacman.keys");
-
-		file_delete(backup_file); // delete existing
-
-		string cmd = "pacman-key -e > '%s'".printf(escape_single_quote(backup_file));
-		log_debug(cmd);
-		Posix.system(cmd);
-		
-		if (file_exists(backup_file)){
-			log_msg("%s: %s".printf(_("Keys exported"), backup_file));
-			log_msg(string.nfill(70,'-'));
-		}
-		else{
-			log_error(_("Failed to export keys"));
-			log_error(string.nfill(70,'-'));
-		}
-
-		return ok;
 	}
 
 	// restore ---------------------------
@@ -386,21 +348,19 @@ public class RepoManager : GLib.Object {
 			return false;
 		}
 
-		switch(distro.package_manager){
-		case "dnf":
-			return restore_repos_dnf(backup_path);
-		case "yum":
-			return restore_repos_yum(backup_path);
-		case "pacman":
-			return restore_repos_pacman(backup_path);
-		case "apt":
-			return restore_repos_apt(backup_path);
+		switch(distro.dist_type){
+		case "fedora":
+			return restore_repos_fedora(backup_path);
+		case "arch":
+			return restore_repos_arch(backup_path);
+		case "debian":
+			return restore_repos_debian(backup_path);
 		}
 
 		return false;
 	}
 
-	public bool restore_repos_dnf(string backup_path){
+	public bool restore_repos_fedora(string backup_path){
 
 		// NOT IMPLEMENTED
 
@@ -408,15 +368,7 @@ public class RepoManager : GLib.Object {
 		return false;
 	}
 
-	public bool restore_repos_yum(string backup_path){
-
-		// NOT IMPLEMENTED
-
-		log_msg(_("Not Implemented"));
-		return false;
-	}
-
-	public bool restore_repos_pacman(string backup_path){
+	public bool restore_repos_arch(string backup_path){
 
 		bool status = true;
 
@@ -456,7 +408,7 @@ public class RepoManager : GLib.Object {
 			return true;
 		});
 
-		bool ok = import_pacman_keys(backup_path);
+		bool ok = import_keys_arch(backup_path);
 		if (!ok){ status = false; }
 		
 		if (status){
@@ -471,10 +423,16 @@ public class RepoManager : GLib.Object {
 		return status;
 	}
 
-	public bool restore_repos_apt(string backup_path){
+	public bool restore_repos_debian(string backup_path){
 
 		bool status = true;
 
+		int retval = Posix.system("dpkg -s apt-transport-https | grep Status | grep installed > /dev/null");
+		if (retval != 0){
+			Posix.system("apt-get install -y apt-transport-https");
+			log_msg(string.nfill(70,'-'));
+		}
+		
 		bool ok = restore_repos_apt_launchpad(backup_path);
 		if (!ok){ status = false; }
 		
@@ -488,8 +446,10 @@ public class RepoManager : GLib.Object {
 			return true;
 		}
 
+		import_keys_debian(backup_path);
+
 		// run 'apt update' and import missing keys if not --dry-run
-		import_apt_keys(false);
+		import_missing_keys_debian(false);
 		if (!ok){ status = false; }
 
 		if (status){
@@ -506,7 +466,7 @@ public class RepoManager : GLib.Object {
 	
 	public bool restore_repos_apt_launchpad(string backup_path) {
 
-		string backup_file = path_combine(backup_path, "installed.list");
+		string backup_file = path_combine(backup_path, "launchpad-ppas.list");
 
 		if (!file_exists(backup_file)) {
 			string msg = "%s: %s".printf(Message.FILE_MISSING, backup_file);
@@ -516,8 +476,14 @@ public class RepoManager : GLib.Object {
 
 		var added_list = new Gee.ArrayList<string>();
 		
-		foreach(string name in file_read(backup_file).split("\n")){
+		foreach(string line in file_read(backup_file).split("\n")){
 
+			if (line.strip().length == 0) { continue; }
+			
+			if (line.strip().has_prefix("#")) { continue; }
+
+			string name = line;
+			
 			if (name.length == 0){ continue; }
 			if (repos.has_key(name)){ continue; }
 
@@ -537,6 +503,7 @@ public class RepoManager : GLib.Object {
 
 			added_list.add(name);
 
+			log_msg("%s: %s".printf(_("Repo"), name)); 
 			string cmd = "add-apt-repository -y ppa:%s\n".printf(name);
 			Posix.system(cmd);
 			log_msg(string.nfill(70,'-'));
@@ -553,15 +520,15 @@ public class RepoManager : GLib.Object {
 		
 		list.foreach((backup_file) => {
 
-			if (file_basename(backup_file) == "sources.list"){
-				return true;
-			}
+			string name = file_basename(backup_file);
+			
+			if (name == "sources.list"){ return true; }
 
-			if (file_basename(backup_file) == "installed.list"){
-				return true;
-			}
+			if (name == "launchpad-ppas.list"){ return true; }
 
-			string name = file_basename(backup_file).replace(".list","");
+			if (!name.has_suffix(".list")){ return true; }
+
+			name = name.replace(".list","");
 
 			if (name.contains("CODENAME") && (distro.codename.length == 0)){
 				log_error("%s: %s".printf(_("Skipping File"), backup_file));
@@ -585,9 +552,9 @@ public class RepoManager : GLib.Object {
 			bool ok = file_copy(backup_file, list_file);
 			if (!ok){ status = false; return true; }
 			
-			string txt = file_read(backup_file);
+			string txt = file_read(list_file);
 			txt = txt.replace("CODENAME", distro.codename);
-			ok = file_write(backup_file, txt);
+			ok = file_write(list_file, txt);
 			if (!ok){ status = false; return true; }
 
 			log_msg("%s: %s".printf(_("Installed"), list_file));
@@ -598,7 +565,181 @@ public class RepoManager : GLib.Object {
 		return status;
 	}
 
-	public static bool import_apt_keys(bool show_message){
+	// keys ------------------------------------
+
+	public bool import_keys(string basepath){
+
+		string backup_path = path_combine(basepath, "repos");
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			log_error(msg);
+			return false;
+		}
+
+		switch(distro.dist_type){
+		case "fedora":
+			return import_keys_fedora(backup_path);
+		case "arch":
+			return import_keys_arch(backup_path);
+		case "debian":
+			return import_keys_debian(backup_path);
+		}
+
+		return false;
+	}
+
+	public bool import_keys_fedora(string backup_path){
+
+		// NOT IMPLEMENTED
+
+		log_msg(_("Not Implemented"));
+		return false;
+	}
+
+	public bool export_keys_arch(string backup_path){
+
+		if (!cmd_exists("pacman-key")){
+			log_error("%s: %s".printf(_("Missing command"), "pacman-key"));
+			log_error(_("Install required packages and try again"));
+			return false; // exit method
+		}
+
+		bool ok = true;
+
+		string backup_file = path_combine(backup_path, "pacman.keys");
+
+		file_delete(backup_file); // delete existing
+
+		string cmd = "pacman-key -e > '%s'".printf(escape_single_quote(backup_file));
+		log_debug(cmd);
+		Posix.system(cmd);
+		
+		if (file_exists(backup_file)){
+			log_msg("%s: %s".printf(_("Keys exported"), backup_file));
+			log_msg(string.nfill(70,'-'));
+		}
+		else{
+			log_error(_("Failed to export keys"));
+			log_error(string.nfill(70,'-'));
+		}
+
+		return ok;
+	}
+	
+	public bool import_keys_arch(string backup_path){
+
+		if (!cmd_exists("pacman-key")){
+			log_error("%s: %s".printf(_("Missing command"), "pacman-key"));
+			log_error(_("Install required packages and try again"));
+			return false; // exit method
+		}
+
+		bool ok = true;
+
+		string backup_file = path_combine(backup_path, "pacman.keys");
+
+		if (!file_exists(backup_file)){
+			return true;
+		}
+
+		string cmd = "pacman-key --add '%s'".printf(escape_single_quote(backup_file));
+		log_debug(cmd);
+		int retval = Posix.system(cmd);
+		
+		if (retval == 0){
+			log_msg("%s: %s".printf(_("Keys imported"), backup_file));
+			log_msg(string.nfill(70,'-'));
+		}
+		else{
+			log_error(_("Error while importing keys"));
+			log_error(string.nfill(70,'-'));
+		}
+
+		return ok;
+	}
+
+	public bool export_keys_debian(string backup_path){
+
+		if (!cmd_exists("apt-key")){
+			log_error("%s: %s".printf(_("Missing command"), "apt-key"));
+			log_error(_("Install required packages and try again"));
+			return false; // exit method
+		}
+
+		bool ok = true;
+
+		string backup_file = path_combine(backup_path, "apt.keys");
+
+		file_delete(backup_file);
+
+		string cmd = "apt-key exportall > '%s'".printf(escape_single_quote(backup_file));
+		log_debug(cmd);
+		int retval = Posix.system(cmd);
+		
+		if (retval == 0){
+			log_msg("%s: %s".printf(_("Keys exported"), backup_file));
+			log_msg(string.nfill(70,'-'));
+		}
+		else{
+			//log_error(_("Error while exporting keys"));
+			log_error(string.nfill(70,'-'));
+		}
+
+		return ok;
+	}
+	
+	public bool import_keys_debian(string backup_path){
+
+		if (!cmd_exists("apt-key")){
+			log_error("%s: %s".printf(_("Missing command"), "apt-key"));
+			log_error(_("Install required packages and try again"));
+			return false; // exit method
+		}
+
+		bool ok = true;
+
+		string backup_file = path_combine(backup_path, "apt.keys");
+
+		if (!file_exists(backup_file)){
+			return true;
+		}
+
+		string cmd = "apt-key add '%s'".printf(escape_single_quote(backup_file));
+		log_debug(cmd);
+		int retval = Posix.system(cmd);
+		
+		if (retval == 0){
+			log_msg("%s: %s".printf(_("Keys imported"), backup_file));
+			log_msg(string.nfill(70,'-'));
+		}
+		else{
+			//log_error(_("Error while importing keys"));
+			log_error(string.nfill(70,'-'));
+		}
+
+		return ok;
+	}
+	
+	// missing keys  ----------------------------
+	
+	public bool import_missing_keys(bool show_message){
+
+		switch(distro.dist_type){
+		case "fedora":
+			log_error("%s".printf(_("NOT SUPPORTED")));
+			return false;
+		case "arch":
+			log_error("%s".printf(_("NOT SUPPORTED")));
+			return false;
+		case "debian":
+			return import_missing_keys_debian(show_message);
+		}
+
+		return false;
+	}
+
+	public bool import_missing_keys_debian(bool show_message){
 
 		if (!cmd_exists("apt-key")){
 			log_error("%s: %s".printf(_("Missing command"), "apt-key"));
@@ -609,7 +750,7 @@ public class RepoManager : GLib.Object {
 		bool ok = true;
 
 		string temp_file;
-		update_repos_apt(out temp_file);
+		update_repos_debian(out temp_file);
 
 		if (!file_exists(temp_file)){ return true; }
 
@@ -661,7 +802,7 @@ public class RepoManager : GLib.Object {
 				log_msg(string.nfill(70,'-'));
 			}
 			
-			if (!update_repos_apt(out temp_file)){
+			if (!update_repos_debian(out temp_file)){
 				ok = false;
 			}
 		}
@@ -675,38 +816,6 @@ public class RepoManager : GLib.Object {
 		return ok;
 	}
 
-	public bool import_pacman_keys(string backup_path){
-
-		if (!cmd_exists("pacman-key")){
-			log_error("%s: %s".printf(_("Missing command"), "pacman-key"));
-			log_error(_("Install required packages and try again"));
-			return false; // exit method
-		}
-
-		bool ok = true;
-
-		string backup_file = path_combine(backup_path, "pacman.keys");
-
-		if (!file_exists(backup_file)){
-			return true;
-		}
-
-		string cmd = "pacman-key --add '%s'".printf(escape_single_quote(backup_file));
-		log_debug(cmd);
-		int retval = Posix.system(cmd);
-		
-		if (retval == 0){
-			log_msg("%s: %s".printf(_("Keys imported"), backup_file));
-			log_msg(string.nfill(70,'-'));
-		}
-		else{
-			log_error(_("Error while importing keys"));
-			log_error(string.nfill(70,'-'));
-		}
-
-		return ok;
-	}
-	
 	// update ----------------------
 
 	public bool update_repos(string basepath, out string temp_file){
@@ -719,15 +828,13 @@ public class RepoManager : GLib.Object {
 			return true;
 		}
 
-		switch(distro.package_manager){
-		case "dnf":
-			return update_repos_dnf(out temp_file);
-		case "yum":
-			return update_repos_yum(out temp_file);
-		case "pacman":
-			return update_repos_pacman(out temp_file);
-		case "apt":
-			return update_repos_apt(out temp_file);
+		switch(distro.dist_type){
+		case "fedora":
+			return update_repos_fedora(out temp_file);
+		case "arch":
+			return update_repos_arch(out temp_file);
+		case "debian":
+			return update_repos_debian(out temp_file);
 		}
 
 		temp_file = "";
@@ -735,7 +842,7 @@ public class RepoManager : GLib.Object {
 		return false;
 	}
 
-	public static bool update_repos_dnf(out string temp_file){
+	public bool update_repos_fedora(out string temp_file){
 
 		// NOT IMPLEMENTED
 
@@ -744,7 +851,7 @@ public class RepoManager : GLib.Object {
 		return false;
 	}
 
-	public static bool update_repos_yum(out string temp_file){
+	public bool update_repos_arch(out string temp_file){
 
 		// NOT IMPLEMENTED
 
@@ -753,40 +860,15 @@ public class RepoManager : GLib.Object {
 		return false;
 	}
 
-	public static bool update_repos_pacman(out string temp_file){
-
-		// NOT IMPLEMENTED
-
-		temp_file = "";
-		log_msg(_("Not Implemented"));
-		return false;
-	}
-
-	public static bool update_repos_apt(out string temp_file){
+	public bool update_repos_debian(out string temp_file){
 	
-		log_msg(_("Running apt update..."));
+		log_msg(_("Updating package information..."));
 		
 		temp_file = get_temp_file_path();
 		log_debug(temp_file);
 
-		string pm = "";
-		
-		if (cmd_exists("apt-fast")){
-			pm = "apt-fast";
-		}
-		else if (cmd_exists("apt-get")){
-			pm = "apt-get";
-		}
-		// NOTE: avoid using apt in scripts
-		else if (cmd_exists("apt")){
-			pm = "apt";
-		}
-		else{
-			log_error(Message.MISSING_PACKAGE_MANAGER);
-			return false;
-		}
-
-		string cmd = "%s update | tee '%s'".printf(pm, escape_single_quote(temp_file));
+		string cmd = distro.package_manager;
+		cmd += " update | tee '%s'".printf(escape_single_quote(temp_file));
 		log_debug(cmd);
 		
 		int status = Posix.system(cmd);

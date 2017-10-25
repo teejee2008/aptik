@@ -172,9 +172,22 @@ public class LinuxDistro : GLib.Object{
 
 	private void check_dist_type(){
 		
-		if (cmd_exists("apt-get") || cmd_exists("apt") || cmd_exists("apt-fast")){
+		if (cmd_exists("dpkg")){
+			
 			dist_type = "debian";
-			package_manager = "apt";
+
+			if (cmd_exists("aptitude")){
+				package_manager = "aptitude";
+			}
+			else if (cmd_exists("apt-get")){
+				package_manager = "apt-get";
+			}
+			else if (cmd_exists("apt-fast")){
+				package_manager = "apt-fast";
+			}
+			else if (cmd_exists("apt")){
+				package_manager = "apt";
+			}
 		}
 		else if (cmd_exists("dnf")){
 			dist_type = "fedora";
@@ -216,22 +229,17 @@ public class LinuxDistro : GLib.Object{
 
 		string cmd = "";
 		
-		switch(package_manager){
-		case "apt":
+		switch(dist_type){
+		case "debian":
 			cmd = "dpkg --print-architecture"; // i386, amd64, ...
 			break;
 			
-		case "dnf":
-		case "yum":
+		case "fedora":
 			cmd = "uname -m";
 			break;
 			
-		case "pacman":
+		case "arch":
 			cmd = "uname -m";  // x86_64, i386, i686, ...
-			break;
-			
-		default:
-			cmd = "";
 			break;
 		}
 

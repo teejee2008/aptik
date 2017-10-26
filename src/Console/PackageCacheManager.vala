@@ -1,5 +1,5 @@
 /*
- * PackageManagerCache.vala
+ * PackageCacheManager.vala
  *
  * Copyright 2012-2017 Tony George <teejeetech@gmail.com>
  *
@@ -30,12 +30,12 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public class PackageManagerCache : GLib.Object {
+public class PackageCacheManager : GLib.Object {
 	
 	public LinuxDistro distro;
 	public bool dry_run = false;
 	
-	public PackageManagerCache(LinuxDistro _distro, bool _dry_run){
+	public PackageCacheManager(LinuxDistro _distro, bool _dry_run){
 
 		distro = _distro;
 

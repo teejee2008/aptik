@@ -35,6 +35,7 @@ public class PackageManager : GLib.Object {
 	public Gee.HashMap<string,Package> packages;
 
 	public bool auto_installed_known = false;
+	public bool description_available = false;
 	
 	public static string DEF_PKG_LIST = "/var/log/installer/initial-status.gz";
 	public static string DEF_PKG_LIST_UNPACKED = "/var/log/installer/initial-status";
@@ -42,12 +43,15 @@ public class PackageManager : GLib.Object {
 
 	public LinuxDistro distro;
 	public bool dry_run = false;
+	public bool list_only = false;
 
-	public PackageManager(LinuxDistro _distro, bool _dry_run){
+	public PackageManager(LinuxDistro _distro, bool _dry_run, bool _list_only){
 
 		distro = _distro;
 
 		dry_run = _dry_run;
+
+		list_only = _list_only;
 		
 		check_packages();
 	}
@@ -56,7 +60,9 @@ public class PackageManager : GLib.Object {
 	
 	private void check_packages(){
 
-		log_msg("Checking installed packages...");
+		if (!list_only){
+			log_msg("Checking installed packages...");
+		}
 
 		log_debug("check_packages()");
 
@@ -87,11 +93,12 @@ public class PackageManager : GLib.Object {
 			return true;
 		});
 
-		log_msg("Available: %'6d".printf(available_count));
-		log_msg("Installed: %'6d".printf(installed_count));
-		log_msg("Selected : %'6d".printf(selected_count));
-
-		log_msg(string.nfill(70,'-'));
+		if (!list_only){
+			log_msg("Available: %'6d".printf(available_count));
+			log_msg("Installed: %'6d".printf(installed_count));
+			log_msg("Selected : %'6d".printf(selected_count));
+			log_msg(string.nfill(70,'-'));
+		}
 	}
 
 	private void check_packages_fedora(){
@@ -280,6 +287,7 @@ public class PackageManager : GLib.Object {
 			string name = parts[0]; // remove :amd64 :i386 etc
 			
 			string arch = "";
+			bool is_foreign = false;
 					
 			if (name.contains(":")) {
 				arch = name.split(":")[1].strip();
@@ -291,6 +299,7 @@ public class PackageManager : GLib.Object {
 
 			if (arch != distro.package_arch){
 				name = "%s:%s".printf(name, arch);
+				is_foreign = true;
 			}
 
 			//log_debug("%s,%s".printf(name, arch));
@@ -302,6 +311,7 @@ public class PackageManager : GLib.Object {
 
 			packages[name].is_installed = true;
 			packages[name].is_available = true;
+			packages[name].is_foreign = is_foreign;
 		}
 
 		exec_sync("apt-cache pkgnames", out std_out, out std_err);
@@ -314,6 +324,7 @@ public class PackageManager : GLib.Object {
 			name = name.split(":")[0]; // remove :amd64 :i386 etc
 
 			string arch = "";
+			bool is_foreign = false;
 					
 			if (name.contains(":")) {
 				arch = name.split(":")[1].strip();
@@ -323,12 +334,18 @@ public class PackageManager : GLib.Object {
 				arch = distro.package_arch;
 			}
 
+			if (arch != distro.package_arch){
+				name = "%s:%s".printf(name, arch);
+				is_foreign = true;
+			}
+
 			if (!packages.has_key(name)){
 				packages[name] = new Package(name);
 				packages[name].arch = arch;
 			}
 
 			packages[name].is_available = true;
+			packages[name].is_foreign = is_foreign;
 		}
 	}
 
@@ -360,6 +377,8 @@ public class PackageManager : GLib.Object {
 				string name = arr[0].strip();
 				
 				string arch = "";
+
+				bool is_foreign = false;
 				
 				if (name.contains(":")) {
 					arch = name.split(":")[1].strip();
@@ -371,6 +390,7 @@ public class PackageManager : GLib.Object {
 
 				if (arch != distro.package_arch){
 					name = "%s:%s".printf(name, arch);
+					is_foreign = true;
 				}
 
 				string version = arr[1].strip();
@@ -388,10 +408,12 @@ public class PackageManager : GLib.Object {
 				pkg.is_available = true;
 				pkg.is_installed = (state == "installed");
 				pkg.is_automatic = (auto == "A");
+				pkg.is_foreign = is_foreign;
 				pkg.version_installed = version;
 			}
 
 			auto_installed_known = true; // is_automatic flag is available
+			description_available = true; 
 		}
 		catch (Error e) {
 			log_error (e.message);
@@ -442,6 +464,7 @@ public class PackageManager : GLib.Object {
 					
 						string name = p_value;
 						string arch = "";
+						bool is_foreign = false;
 				
 						if (name.contains(":")) {
 							arch = name.split(":",2)[1].strip();
@@ -453,6 +476,7 @@ public class PackageManager : GLib.Object {
 
 						if (arch != distro.package_arch){
 							name = "%s:%s".printf(name, arch);
+							is_foreign = true;
 						}
 
 						if (!packages.has_key(name)){
@@ -465,11 +489,12 @@ public class PackageManager : GLib.Object {
 						pkg.is_available = true;
 						pkg.is_installed = true;
 						pkg.is_default = true;
+						pkg.is_foreign = is_foreign;
 						break;
 				}
 			}
 
-			if (count > 0){
+			if ((count > 0) && !list_only){
 				log_msg("Dist-Base: %'6d".printf(count));
 			}
 		}
@@ -492,7 +517,7 @@ public class PackageManager : GLib.Object {
 			log_msg(_("Nothing to do (--dry-run mode)"));
 			return true;
 		}
-
+		
 		log_msg(_("Saving list of packages..."));
 		
 		bool ok, status = true;

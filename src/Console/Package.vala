@@ -57,6 +57,7 @@ public class Package : GLib.Object {
 	public bool is_automatic = false;
 	public bool is_manual = false;
 	public bool is_deb = false;
+	public bool is_foreign = false;
 
 	public Package(string _name){
 		name = _name;

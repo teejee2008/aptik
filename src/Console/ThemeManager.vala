@@ -74,6 +74,8 @@ public class ThemeManager : GLib.Object {
 		mgr.query_users(false);
 		
 		foreach(var user in mgr.users.values){
+
+			if (user.is_system) { continue; }
 			
 			path = "%s/.%s".printf(user.home_path, type);
 			add_themes_from_path(path);

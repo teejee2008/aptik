@@ -14,6 +14,8 @@ public class Message : GLib.Object {
 
 	public const string MISSING_PACKAGE_MANAGER = _("Package Manager Not Found");
 
+	public const string MISSING_COMMAND = _("Missing command");
+
 	public const string CACHE_NOT_SUPPORTED = _("Cache backup & restore not supported for package manager");
 	
 	public const string RESTORE_OK = _("Restore completed");

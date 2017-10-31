@@ -853,7 +853,7 @@ public class PackageManager : GLib.Object {
 		var list = dir_list_names(backup_path, true);
 		if (list.size == 0){ return true; }
 
-		log_msg(_("Installing deb packages..."));
+		log_msg(_("Installing DEB packages..."));
 		
 		if (cmd_exists("apt")){
 			return install_packages_deb_apt(list);
@@ -871,8 +871,7 @@ public class PackageManager : GLib.Object {
 		log_debug("install_packages_deb_apt()");
 
 		if (!cmd_exists("apt")){
-			log_error("%s: %s".printf(_("Missing command"), "apt"));
-			log_error(_("Install required packages and try again"));
+			log_error("%s: %s".printf(Message.MISSING_COMMAND, "apt"));
 			return false; // exit method
 		}
 
@@ -895,8 +894,7 @@ public class PackageManager : GLib.Object {
 		log_debug("install_packages_deb_gdebi()");
 
 		if (!cmd_exists("gdebi")){
-			log_error("%s: %s".printf(_("Missing command"), "gdebi"));
-			log_error(_("Install required packages and try again"));
+			log_error("%s: %s".printf(Message.MISSING_COMMAND, "gdebi"));
 			return false; // exit method
 		}
 

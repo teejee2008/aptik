@@ -1018,8 +1018,17 @@ public class AptikConsole : GLib.Object {
 		if (!check_backup_dir_exists(BackupType.USERS)) { return false; }
 		if (!check_backup_dir_exists(BackupType.GROUPS)) { return false; }
 
-		var mgr = new UserManager(dry_run);
-		return mgr.restore_users_and_groups(basepath);
+		bool status = true, ok;
+		
+		var usr_mgr = new UserManager(dry_run);
+		ok = usr_mgr.restore_users(basepath);
+		if (!ok){ status = false; }
+		
+		var grp_mgr = new GroupManager(dry_run);
+		ok = grp_mgr.restore_groups(basepath);
+		if (!ok){ status = false; }
+		
+		return status;
 	}
 	
 	// common ---------------

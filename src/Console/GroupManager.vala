@@ -24,6 +24,7 @@
 using TeeJee.Logging;
 using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
+using TeeJee.Misc;
 
 public class GroupManager : GLib.Object {
 
@@ -252,6 +253,9 @@ public class GroupManager : GLib.Object {
 			else{ status = false; }
 		}
 
+		bool ok = backup_memberships(backup_path);
+		if (!ok){ status = false; }
+		
 		if (status){
 			log_msg(Message.BACKUP_OK);
 		}
@@ -264,8 +268,26 @@ public class GroupManager : GLib.Object {
 		return status;
 	}
 
-	public bool restore_groups(string basepath){
+	private bool backup_memberships(string backup_path){
 
+		string backup_file = path_combine(backup_path, "memberships.list");
+		
+		string txt = "";
+		
+		foreach(var group in groups_sorted){
+			txt += "%s:%s".printf(group.name, group.user_names);
+		}
+
+		bool ok = file_write(backup_file, txt);
+		if (ok){
+			log_msg("%s: %s".printf(_("Saved"), backup_file));
+		}
+
+		return ok;
+	}
+	
+	public bool restore_groups(string basepath){
+		
 		string backup_path = path_combine(basepath, "groups");
 		
 		if (!dir_exists(backup_path)) {
@@ -273,13 +295,22 @@ public class GroupManager : GLib.Object {
 			log_error(msg);
 			return false;
 		}
+
+		bool status = true, ok;
 		
-		//restore_add_missing_groups(backup_path);
+		ok = add_missing_groups_from_backup(basepath);
+		if (!ok){ status = false; }
 		
-		return true;
+		ok = update_groups_from_backup(basepath);
+		if (!ok){ status = false; }
+
+		ok = add_missing_members_from_backup(basepath);
+		if (!ok){ status = false; }
+		
+		return status;
 	}
 
-	public bool add_missing_groups_from_backup(string basepath){
+	private bool add_missing_groups_from_backup(string basepath){
 
 		log_debug("add_missing_groups_from_backup()");
 
@@ -316,7 +347,7 @@ public class GroupManager : GLib.Object {
 		return status;
 	}
 
-	public bool update_groups_from_backup(string basepath){
+	private bool update_groups_from_backup(string basepath){
 
 		log_debug("update_groups_from_backup()");
 
@@ -366,6 +397,50 @@ public class GroupManager : GLib.Object {
 		return status;
 	}
 
+	private bool add_missing_members_from_backup(string basepath){
+
+		log_debug("add_missing_members_from_backup()");
+
+		string backup_path = path_combine(basepath, "groups");
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			log_error(msg);
+			return false;
+		}
+
+		string backup_file = path_combine(backup_path, "memberships.list");
+
+		if (!file_exists(backup_file)) {
+			string msg = "%s: %s".printf(Message.FILE_MISSING, backup_file);
+			log_error(msg);
+			return false;
+		}
+
+		bool status = true;
+		
+		string txt = file_read(backup_file);
+		
+		foreach(var line in txt.split("\n")){
+
+			var match = regex_match("""(.*):(.*)""", line);
+			if (match != null){
+				string name = match.fetch(1);
+				string user_names = match.fetch(2);
+				if (groups.has_key(name)){
+					var group = groups[name];
+					if (group.user_names != user_names){
+						group.user_names = user_names; // TODO: Check if user exists
+						bool ok = group.update_group_file();
+						if (!ok){ status = false; }
+					}
+				}
+			}
+		}
+
+		return status;
+	}
+	
 	// static ----------------------
 
 	public static Gee.ArrayList<Group> get_sorted_array(Gee.HashMap<string,Group> dict){

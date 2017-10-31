@@ -296,41 +296,18 @@ public class UserManager : GLib.Object {
 			return false;
 		}
 		
-		//restore_add_missing_users(backup_path);
-
-		//restore_add_missing_groups(backup_path);
-		
-		return true;
-	}
-
-	public bool restore_users_and_groups(string basepath){
-
-		log_debug("restore_users_and_groups()");
-		
 		bool status = true, ok;
-
-		query_users(true);
 		
-		var user_mgr = new UserManager(dry_run);
-
-		var grp_mgr = new GroupManager(dry_run);
-
-		ok = user_mgr.add_missing_users_from_backup(basepath);
+		ok = add_missing_users_from_backup(basepath);
 		if (!ok){ status = false; }
 		
-		ok = grp_mgr.add_missing_groups_from_backup(basepath);
-		if (!ok){ status = false; }
-		
-		ok = user_mgr.update_users_from_backup(basepath);
-		if (!ok){ status = false; }
-		
-		ok = grp_mgr.update_groups_from_backup(basepath);
+		ok = update_users_from_backup(basepath);
 		if (!ok){ status = false; }
 
 		return status;
 	}
-
-	public bool add_missing_users_from_backup(string basepath){
+	
+	private bool add_missing_users_from_backup(string basepath){
 
 		log_debug("add_missing_users_from_backup()");
 
@@ -367,7 +344,7 @@ public class UserManager : GLib.Object {
 		return status;
 	}
 
-	public bool update_users_from_backup(string basepath){
+	private bool update_users_from_backup(string basepath){
 
 		log_debug("update_users_from_backup()");
 
@@ -398,6 +375,7 @@ public class UserManager : GLib.Object {
 				user.user_info = old_user.user_info;
 				user.home_path = old_user.home_path;
 				user.shell_path = old_user.shell_path;
+				// keep name, uid, gid
 
 				bool ok = user.update_passwd_file();
 				if (!ok){ status = false; }
@@ -413,6 +391,7 @@ public class UserManager : GLib.Object {
 				user.pwd_inactivity_period = old_user.pwd_inactivity_period;
 				user.pwd_expiraton_date = old_user.pwd_expiraton_date;
 				user.reserved_field = old_user.reserved_field;
+				// keep name
 				
 				bool ok = user.update_shadow_file();
 				if (!ok){ status = false; }

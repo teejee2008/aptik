@@ -179,11 +179,11 @@ public class LinuxDistro : GLib.Object{
 			if (cmd_exists("aptitude")){
 				package_manager = "aptitude";
 			}
-			else if (cmd_exists("apt-get")){
-				package_manager = "apt-get";
-			}
 			else if (cmd_exists("apt-fast")){
 				package_manager = "apt-fast";
+			}
+			else if (cmd_exists("apt-get")){
+				package_manager = "apt-get";
 			}
 			else if (cmd_exists("apt")){
 				package_manager = "apt";

@@ -74,8 +74,8 @@ public class FontManager : GLib.Object {
 		}
 
 		foreach(var font in fonts_sorted){
-			//log_msg("%-30s: %s".printf(font.family, font.style));
-			log_msg("%s".printf(font.family));
+			log_msg("%s -- %s".printf(font.family, font.style));
+			//log_msg("%s".printf(font.family));
 		}
 	}
 

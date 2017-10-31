@@ -62,7 +62,7 @@ public class Message : GLib.Object {
 	public const string TASK_PACKAGE = _("Installed Software");
 	public const string TASK_MOUNT = _("Filesystem Mounts");
 	public const string TASK_THEME = _("Themes and Icons");
-	public const string TASK_USER = _("Users and Groups");
+	public const string TASK_USER = _("User Accounts and Groups");
 	public const string TASK_CONFIG = _("Application Settings");
 	public const string TASK_HOME = _("Home Directory Data");
 	public const string TASK_CRON = _("Scheduled Tasks");

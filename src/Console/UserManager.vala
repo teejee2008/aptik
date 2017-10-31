@@ -1,4 +1,3 @@
-
 /*
  * UserManager.vala
  *
@@ -30,7 +29,11 @@ public class UserManager : GLib.Object {
 	
 	public Gee.HashMap<string,User> users;
 
-	public UserManager(){
+	public bool dry_run = false;
+	
+	public UserManager(bool _dry_run = false){
+
+		dry_run = _dry_run;
 
 		users = new Gee.HashMap<string,User>();
 		
@@ -54,7 +57,7 @@ public class UserManager : GLib.Object {
 	}
 
 	public void read_users_from_file(string passwd_file, string shadow_file, string password){
-		
+
 		// read 'passwd' file ---------------------------------
 		
 		string txt = "";
@@ -72,13 +75,10 @@ public class UserManager : GLib.Object {
 		}
 
 		foreach(string line in txt.split("\n")){
-			if ((line == null) || (line.length == 0)){
-				continue;
-			}
-			var user = parse_line_passwd(line);
-			if (user != null){
-				users[user.name] = user;
-			}
+			
+			if ((line == null) || (line.length == 0)){ continue; }
+			
+			parse_line_passwd(line);
 		}
 
 		if (shadow_file.length == 0){ return; }
@@ -94,9 +94,7 @@ public class UserManager : GLib.Object {
 			txt = file_read(shadow_file);
 		}
 
-		if (txt.length == 0){
-			return;
-		}
+		if (txt.length == 0){ return; }
 
 		foreach(string line in txt.split("\n")){
 			
@@ -104,11 +102,40 @@ public class UserManager : GLib.Object {
 			
 			parse_line_shadow(line);
 		}
+
+		log_debug("read_users_from_file(): %d".printf(users.size));
 	}
 
-	private static User? parse_line_passwd(string line){
+	public void read_users_from_folder(string backup_path){
+
+		log_debug("backup_path=%s".printf(backup_path));
+
+		var list = dir_list_names(backup_path, true);
 		
-		if ((line == null) || (line.length == 0)){ return null;}
+		foreach(string backup_file in list){
+
+			string file_name = file_basename(backup_file);
+
+			if (!file_name.has_suffix(".passwd")){ continue; }
+
+			parse_line_passwd(file_read(backup_file)); 
+		}
+
+		foreach(string backup_file in list){
+
+			string file_name = file_basename(backup_file);
+
+			if (!file_name.has_suffix(".shadow")){ continue; }
+
+			parse_line_shadow(file_read(backup_file));
+		}
+
+		log_debug("read_users_from_folder(): %d".printf(users.size));
+	}
+
+	private void parse_line_passwd(string line){
+		
+		if ((line == null) || (line.length == 0)){ return; }
 		
 		User user = null;
 
@@ -141,13 +168,12 @@ public class UserManager : GLib.Object {
 			if (arr.length >= 5){
 				user.other_info = arr[4];
 			}
+
+			users[user.name] = user;
 		}
 		else{
 			log_error("'passwd' file contains a record with non-standard fields" + ": %d".printf(fields.length));
-			return null;
 		}
-		
-		return user;
 	}
 
 	private User? parse_line_shadow(string line){
@@ -201,6 +227,200 @@ public class UserManager : GLib.Object {
 		return status;
 	}
 
+	// backup and restore ----------------------
+	
+	public void list_users(bool all){
+		
+		foreach(var user in users_sorted){
+			
+			if (!all && user.is_system) { continue; }
+
+			string txt = (user.full_name.length > 0) ? "-- " + user.full_name : "" ;
+			
+			log_msg("%5d %-20s %s".printf(user.uid, user.name, txt));
+		}
+	}
+
+	public bool backup_users(string basepath){
+
+		string backup_path = path_combine(basepath, "users");
+
+		if (!dry_run){
+			dir_create(backup_path);
+		}
+
+		if (!dry_run){
+			log_msg(_("Saving users..."));
+		}
+
+		bool status = true;
+
+		foreach(var user in users_sorted){
+			
+			if (user.is_system) { continue; }
+	
+			string backup_file = path_combine(backup_path, "%s.passwd".printf(user.name));
+			bool ok = file_write(backup_file, user.get_passwd_line());
+			
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
+			else{ status = false; }
+
+			backup_file = path_combine(backup_path, "%s.shadow".printf(user.name));
+			ok = file_write(backup_file, user.get_shadow_line());
+			
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
+			else{ status = false; }
+		}
+
+		if (status){
+			log_msg(Message.BACKUP_OK);
+		}
+		else{
+			log_error(Message.BACKUP_ERROR);
+		}
+
+		log_msg(string.nfill(70,'-'));
+
+		return status;
+	}
+
+	public bool restore_users(string basepath){
+
+		// REMOVE THIS
+		
+		string backup_path = path_combine(basepath, "users");
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			log_error(msg);
+			return false;
+		}
+		
+		//restore_add_missing_users(backup_path);
+
+		//restore_add_missing_groups(backup_path);
+		
+		return true;
+	}
+
+	public bool restore_users_and_groups(string basepath){
+
+		log_debug("restore_users_and_groups()");
+		
+		bool status = true, ok;
+
+		query_users(true);
+		
+		var user_mgr = new UserManager(dry_run);
+
+		var grp_mgr = new GroupManager(dry_run);
+
+		ok = user_mgr.add_missing_users_from_backup(basepath);
+		if (!ok){ status = false; }
+		
+		ok = grp_mgr.add_missing_groups_from_backup(basepath);
+		if (!ok){ status = false; }
+		
+		ok = user_mgr.update_users_from_backup(basepath);
+		if (!ok){ status = false; }
+		
+		ok = grp_mgr.update_groups_from_backup(basepath);
+		if (!ok){ status = false; }
+
+		return status;
+	}
+
+	public bool add_missing_users_from_backup(string basepath){
+
+		log_debug("add_missing_users_from_backup()");
+
+		string backup_path = path_combine(basepath, "users");
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			log_error(msg);
+			return false;
+		}
+
+		bool status = true, ok;
+		
+		query_users(true);
+		
+		var mgr = new UserManager(dry_run);
+		mgr.read_users_from_folder(backup_path);
+
+		foreach(var user in mgr.users_sorted){
+			
+			if (users.has_key(user.name)){ continue; }
+
+			ok = (user.add() == 0);
+		
+			if (!ok){
+				log_error(Message.USER_ADD_ERROR + ": %s".printf(user.name));
+				status = false;
+			}
+			else{
+				log_msg(Message.USER_ADD_OK + ": %s".printf(user.name));
+			}
+		}
+
+		return status;
+	}
+
+	public bool update_users_from_backup(string basepath){
+
+		log_debug("update_users_from_backup()");
+
+		string backup_path = path_combine(basepath, "users");
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			log_error(msg);
+			return false;
+		}
+
+		bool status = true;
+		
+		query_users(true);
+
+		var mgr = new UserManager(dry_run);
+		mgr.read_users_from_folder(backup_path);
+		
+		foreach(var old_user in mgr.users_sorted){
+
+			if (!users.has_key(old_user.name)){ continue; }
+			
+			var user = users[old_user.name];
+
+			if (user.compare_fields(old_user) > 0){
+				// passwd mismatch
+				user.password = old_user.password;
+				user.user_info = old_user.user_info;
+				user.home_path = old_user.home_path;
+				user.shell_path = old_user.shell_path;
+
+				bool ok = user.update_passwd_file();
+				if (!ok){ status = false; }
+			}
+
+			if (user.compare_fields(old_user) < 0){
+				// shadow mismatch
+				user.pwd_hash = old_user.pwd_hash;
+				user.pwd_last_changed = old_user.pwd_last_changed;
+				user.pwd_age_min = old_user.pwd_age_min;
+				user.pwd_age_max = old_user.pwd_age_max;
+				user.pwd_warning_period = old_user.pwd_warning_period;
+				user.pwd_inactivity_period = old_user.pwd_inactivity_period;
+				user.pwd_expiraton_date = old_user.pwd_expiraton_date;
+				user.reserved_field = old_user.reserved_field;
+				
+				bool ok = user.update_shadow_file();
+				if (!ok){ status = false; }
+			}
+		}
+
+		return status;
+	}
 
 	// static ----------------------
 
@@ -217,150 +437,6 @@ public class UserManager : GLib.Object {
 		});
 
 		return list;
-	}
-}
-
-public class User : GLib.Object {
-
-	public string name = "";
-	public string password = "";
-	public int uid = -1;
-	public int gid = -1;
-	public string user_info = "";
-	public string home_path = "";
-	public string shell_path = "";
-
-	public string full_name = "";
-	public string room_num = "";
-	public string phone_work = "";
-	public string phone_home = "";
-	public string other_info = "";
-
-	//public string
-	public string shadow_line = "";
-	public string pwd_hash = "";
-	public string pwd_last_changed = "";
-	public string pwd_age_min = "";
-	public string pwd_age_max = "";
-	public string pwd_warning_period = "";
-	public string pwd_inactivity_period = "";
-	public string pwd_expiraton_date = "";
-	public string reserved_field = "";
-	
-	public bool is_selected = false;
-
-	public User(string name){
-		this.name = name;
-	}
-
-	public int add(){
-		return UserManager.add_user(name, is_system);
-	}
-	
-	public bool is_system{
-		get {
-			return ((uid != 0) && (uid < 1000)) || (uid == 65534) || (name == "PinguyBuilder"); // 65534 - nobody
-		}
-	}
-
-	public string group_names{
-		owned get {
-			return "";
-		}
-	}
-
-	public string get_passwd_line(){
-		string txt = "";
-		txt += "%s".printf(name);
-		txt += ":%s".printf(password);
-		txt += ":%d".printf(uid);
-		txt += ":%d".printf(gid);
-		txt += ":%s".printf(user_info);
-		txt += ":%s".printf(home_path);
-		txt += ":%s".printf(shell_path);
-		return txt;
-	}
-
-	public string get_shadow_line(){
-		string txt = "";
-		txt += "%s".printf(name);
-		txt += ":%s".printf(pwd_hash);
-		txt += ":%s".printf(pwd_last_changed);
-		txt += ":%s".printf(pwd_age_min);
-		txt += ":%s".printf(pwd_age_max);
-		txt += ":%s".printf(pwd_warning_period);
-		txt += ":%s".printf(pwd_inactivity_period);
-		txt += ":%s".printf(pwd_expiraton_date);
-		txt += ":%s".printf(reserved_field);
-		return txt;
-	}
-
-	// update ------------------------------------
-
-	public bool update_passwd_file(){
-		
-		string file_path = "/etc/passwd";
-		string txt = file_read(file_path);
-		
-		var txt_new = "";
-		
-		foreach(string line in txt.split("\n")){
-			
-			if (line.strip().length == 0) { continue; }
-			
-			string[] parts = line.split(":");
-
-			if (parts.length != 7){
-				log_error("'passwd' file contains a record with non-standard fields" + ": %d".printf(parts.length));
-				return false;
-			}
-			
-			if (parts[0].strip() == name){
-				txt_new += get_passwd_line() + "\n";
-			}
-			else{
-				txt_new += line + "\n";
-			}
-		}
-
-		file_write(file_path, txt_new);
-		
-		log_msg("Updated user settings in /etc/passwd" + ": %s".printf(name));
-		
-		return true;
-	}
-
-	public bool update_shadow_file(){
-		
-		string file_path = "/etc/shadow";
-		string txt = file_read(file_path);
-		
-		var txt_new = "";
-		
-		foreach(string line in txt.split("\n")){
-			
-			if (line.strip().length == 0) { continue; }
-			
-			string[] parts = line.split(":");
-
-			if (parts.length != 9){
-				log_error("'shadow' file contains a record with non-standard fields" + ": %d".printf(parts.length));
-				return false;
-			}
-			
-			if (parts[0].strip() == name){
-				txt_new += get_shadow_line() + "\n";
-			}
-			else{
-				txt_new += line + "\n";
-			}
-		}
-
-		file_write(file_path, txt_new);
-		
-		log_msg("Updated user settings in /etc/shadow" + ": %s".printf(name));
-		
-		return true;
 	}
 }
 

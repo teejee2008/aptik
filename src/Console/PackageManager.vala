@@ -845,28 +845,67 @@ public class PackageManager : GLib.Object {
 
 	private bool install_packages_deb(string basepath){
 
-		log_debug("install_packages_apt()");
+		log_debug("install_packages_deb()");
 
 		string backup_path = path_combine(basepath, "debs");
 		if (!dir_exists(backup_path)){ return true; }
 
 		var list = dir_list_names(backup_path, true);
 		if (list.size == 0){ return true; }
+
+		log_msg(_("Installing deb packages..."));
 		
+		if (cmd_exists("apt")){
+			return install_packages_deb_apt(list);
+		}
+		else if (cmd_exists("gdebi")){
+			return install_packages_deb_gdebi(list);
+		}
+		else {
+			return false;
+		}
+	}
+
+	private bool install_packages_deb_apt(Gee.ArrayList<string> list){
+
+		log_debug("install_packages_deb_apt()");
+
+		if (!cmd_exists("apt")){
+			log_error("%s: %s".printf(_("Missing command"), "apt"));
+			log_error(_("Install required packages and try again"));
+			return false; // exit method
+		}
+
+		string txt = "";
+		foreach(string file_path in list){
+			txt += " '%s'".printf(escape_single_quote(file_path));
+		}
+
+		string cmd = "apt install %s".printf(txt.strip());
+		log_debug(cmd);
+		
+		int status = Posix.system(cmd);
+		log_msg(string.nfill(70,'-'));
+
+		return (status == 0);
+	}
+
+	private bool install_packages_deb_gdebi(Gee.ArrayList<string> list){
+
+		log_debug("install_packages_deb_gdebi()");
+
 		if (!cmd_exists("gdebi")){
 			log_error("%s: %s".printf(_("Missing command"), "gdebi"));
 			log_error(_("Install required packages and try again"));
 			return false; // exit method
 		}
 
-		string install_list = "";
+		string txt = "";
 		foreach(string file_path in list){
-			install_list += " '%s'".printf(escape_single_quote(file_path));
+			txt += " '%s'".printf(escape_single_quote(file_path));
 		}
 
-		log_msg(_("Installing deb packages..."));
-		
-		string cmd = "gdebi -n %s".printf(install_list.strip());
+		string cmd = "gdebi -n %s".printf(txt.strip());
 		log_debug(cmd);
 		
 		int status = Posix.system(cmd);

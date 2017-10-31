@@ -2,6 +2,52 @@
 
 This page details the actions that are executed on backup and restore.
 
+### Downloaded Packages
+
+#### Backup Actions
+Following actions are executed for backup:
+1. Downloaded packages are copied from system cache to backup location `<basepath>/cache` using `rsync` command
+   * Debian-based distros - Copied from `/var/cache/apt/archives`
+   * Fedora-based distros - Not supported
+   * Arch-based distros - Copied from `/var/cache/pacman/pkg`
+
+
+#### Restore Actions
+
+Following actions are executed for restore:
+
+1. Packages are copied from backup location to system cache
+
+### Installed Packages
+
+#### Backup Actions
+
+Following actions are executed for backup:
+
+1. List of installed packages are saved to `<basepath>/packages/installed.list`. This file is saved only for reference and is not used during restore.
+
+2. List of installed packages are filtered to **remove** the following:
+
+   1. Kernel packages - `linux-headers*`, `linux-signed*`, `linux-tools*`
+   2. Packages that were auto-installed as dependencies for other packages. 
+      * Debian-based distros - Determined using `aptitude` and will be filtered out
+      * Other distros - Cannot be determined and will not be filtered out
+   3. Packages that are part of the Linux distribution base.
+      * Debian-based - Determined by reading `/var/log/installer/initial-status.gz` and will be filtered out. Cannot be determined if this file is missing on the system.
+      * Other distros - Cannot be determined and will not be filtered out
+
+   List of filtered packages are saved to `<basepath>/packages/selected.list`. This file can be edited to comment-out or remove lines for unwanted packages.
+
+#### Restore Actions
+Following actions are executed for restore:
+   1. List of packages are read from `<basepath>/packages/selected.list`. Packages that are not installed, but available in repositories, will be installed using the package manager.
+      * Debian-based distros - Installed using `aptitude`, `apt-fast`, `apt-get` or `apt` in order of preference
+      * Fedora-based distros - Installed using `dnf` or `yum` in order of preference
+      * Arch-based distros - Installed using `pacman`
+
+   2. Any deb files in backup folder `<basepath>/debs` will be installed using `gdebi` on debian-based distros
+
+
 ### Users & Groups
 
 #### Backup Actions

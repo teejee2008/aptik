@@ -311,7 +311,7 @@ public class RepoManager : GLib.Object {
 
 		bool status = true;
 		
-		repos_sorted.foreach((repo) => {
+		foreach(var repo in repos_sorted){
 			
 			if (repo.is_installed && (repo.name.length == 0) && (repo.list_file_path.length > 0)){
 
@@ -319,19 +319,21 @@ public class RepoManager : GLib.Object {
 				string backup_file = path_combine(backup_path, backup_name);
 				
 				bool ok = file_copy(repo.list_file_path, backup_file);
-				if (!ok){ status = false; return true; }
+				if (!ok){ status = false; continue; }
 				
 				string txt = file_read(backup_file);
 				txt = txt.replace(distro.codename, "CODENAME");
 				ok = file_write(backup_file, txt);
-				if (!ok){ status = false; return true; }
+				if (!ok){ status = false; continue; }
 
 				chmod(backup_file, "a+rw");
 				log_msg("%s: %s".printf(_("Saved"), backup_file));
 			}
-			
-			return true;
-		});
+		}
+
+		string backup_file = path_combine(backup_path, "CODENAME");
+		bool ok = file_write(backup_file, distro.codename);
+		if (!ok){ status = false; }
 
 		return status;
 	}
@@ -522,7 +524,7 @@ public class RepoManager : GLib.Object {
 
 			added_list.add(name);
 
-			log_msg("%s: %s".printf(_("Repo"), name)); 
+			log_msg("%s: %s\n".printf(_("Repo"), name)); 
 			string cmd = "add-apt-repository -y ppa:%s\n".printf(name);
 			Posix.system(cmd);
 			log_msg(string.nfill(70,'-'));
@@ -535,51 +537,68 @@ public class RepoManager : GLib.Object {
 
 		bool status = true;
 
+		string codename = "";
+		string codename_file = path_combine(backup_path, "CODENAME");
+		if (file_exists(codename_file)){
+			codename = file_read(codename_file);
+		}
+
 		var list = dir_list_names(backup_path, true);
 		
-		list.foreach((backup_file) => {
+		foreach(string backup_file in list){
 
 			string name = file_basename(backup_file);
 			
-			if (name == "sources.list"){ return true; }
+			if (name == "sources.list"){ continue; }
 
-			if (name == "launchpad-ppas.list"){ return true; }
+			if (name == "launchpad-ppas.list"){ continue; }
 
-			if (!name.has_suffix(".list")){ return true; }
+			if (!name.has_suffix(".list")){ continue; }
 
 			name = name.replace(".list","");
 
-			if (name.contains("CODENAME") && (distro.codename.length == 0)){
-				log_error("%s: %s".printf(_("Skipping File"), backup_file));
-				log_error(_("This repo cannot be added to this system"));
-				log_error(Message.UNKNOWN_CODENAME);
-				return true;
+			string txt = file_read(backup_file);
+
+			if (name.contains("CODENAME") || txt.contains("CODENAME")){
+				if ((distro.codename.length == 0) || (codename != distro.codename)){
+					log_msg("%s: %s\n".printf(_("Repo"), name.replace("CODENAME", codename))); 
+					log_error("%s: %s".printf(_("Skipping File"), backup_file.replace("CODENAME", codename)));
+					log_error(_("This repo is meant for another OS release and cannot be added to this system"));
+					log_error("Release-Repo: %s, Release-Current: %s".printf(codename, distro.codename));
+					log_msg(string.nfill(70,'-'));
+					continue;
+				}
 			}
 
 			name = name.replace("CODENAME", distro.codename);
 			
-			if (repos.has_key(name)){ return true; }
+			if (repos.has_key(name)){ continue; }
+
+			log_msg("%s: %s\n".printf(_("Repo"), name.replace("CODENAME", distro.codename))); 
 
 			string list_name = file_basename(backup_file).replace("CODENAME", distro.codename);
 			string list_file = path_combine("/etc/apt/sources.list.d", list_name);
 
 			if (dry_run){
-				log_msg("Install source list: %s".printf(list_file));
-				return true;
+				log_msg("%s: %s".printf(_("Install source list"), list_file));
+				log_msg(string.nfill(70,'-'));
+				continue;
 			}
-			
+
 			bool ok = file_copy(backup_file, list_file);
-			if (!ok){ status = false; return true; }
-			
-			string txt = file_read(list_file);
-			txt = txt.replace("CODENAME", distro.codename);
-			ok = file_write(list_file, txt);
-			if (!ok){ status = false; return true; }
+			if (!ok){ status = false; }
+			else{
+				txt = file_read(list_file);
+				txt = txt.replace("CODENAME", distro.codename);
+				ok = file_write(list_file, txt);
+				if (!ok){ status = false; }
+				else{
+					log_msg("%s: %s".printf(_("Installed"), list_file));
+				}
+			}
 
-			log_msg("%s: %s".printf(_("Installed"), list_file));
-
-			return true;
-		});
+			log_msg(string.nfill(70,'-'));
+		}
 
 		return status;
 	}

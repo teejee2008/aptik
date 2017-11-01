@@ -26,7 +26,7 @@ Following actions are executed for restore:
 
 1. Debian-based distros
    1. Missing Launchpad PPAs are added using command `add-apt-repository`
-   2. Third party PPAs are installed by copying list file from backup folder to `/etc/apt/sources.list.d`
+   2. Third party PPAs are installed by copying list file from backup folder to `/etc/apt/sources.list.d`. If the repo source lines contain release codename (trusty, xenial, etc), and codename does not match current system, then it will be skipped.
    3. Apt keys are imported from file `<basepath>/repos/pacman.keys`
    4. Package information is updated by running `apt update`
 2. Fedora-based distros

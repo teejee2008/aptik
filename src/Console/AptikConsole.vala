@@ -633,13 +633,37 @@ public class AptikConsole : GLib.Object {
 		bool status = true;
 		bool ok;
 		
-		ok = dir_delete(path_combine(basepath, "packages"), true);
-		if (!ok) { status = false; return status; }
-
 		ok = dir_delete(path_combine(basepath, "repos"), true);
 		if (!ok) { status = false; return status; }
 		
 		ok = dir_delete(path_combine(basepath, "cache"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "packages"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "users"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "groups"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "mounts"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "themes"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "icons"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "fonts"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "home"), true);
+		if (!ok) { status = false; return status; }
+
+		ok = dir_delete(path_combine(basepath, "cron"), true);
 		if (!ok) { status = false; return status; }
 
 		return status;

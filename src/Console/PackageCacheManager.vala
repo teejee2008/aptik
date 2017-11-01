@@ -46,13 +46,14 @@ public class PackageCacheManager : GLib.Object {
 
 	public bool backup_cache(string basepath){
 
-		string backup_cache = path_combine(basepath, "cache");
-
-		string system_cache = "";
+		string backup_cache = path_combine(basepath, "cache/%s".printf(distro.dist_type));
 
 		if (!dry_run){
 			dir_create(backup_cache);
 		}
+
+		string system_cache = "";
+		string filter = "";
 
 		switch(distro.dist_type){
 		case "fedora":
@@ -61,10 +62,12 @@ public class PackageCacheManager : GLib.Object {
 
 		case "arch":
 			system_cache = "/var/cache/pacman/pkg";
+			filter = " --include=\"*.tar.xz\" --include=\"*.txz\" --exclude=\"*\"";
 			break;
 
 		case "debian":
 			system_cache = "/var/cache/apt/archives";
+			filter = " --include=\"*.deb\" --exclude=\"*\"";
 			break;
 
 		default:
@@ -81,6 +84,7 @@ public class PackageCacheManager : GLib.Object {
 		}
 		
 		cmd += " --exclude=lock --exclude=partial/ --exclude=apt-fast/";
+		cmd += filter;
 		cmd += " '%s/'".printf(escape_single_quote(system_cache));
 		cmd += " '%s/'".printf(escape_single_quote(backup_cache));
 
@@ -104,14 +108,15 @@ public class PackageCacheManager : GLib.Object {
 	
 	public bool restore_cache(string basepath){
 
-		string backup_cache = path_combine(basepath, "cache");
+		string backup_cache = path_combine(basepath, "cache/%s".printf(distro.dist_type));
 
-		string system_cache = "";
-		
 		if (!dir_exists(backup_cache)){
 			log_error("%s: %s".printf(_("Directory not found"), backup_cache));
 			return false;
 		}
+
+		string system_cache = "";
+		string filter = "";
 
 		switch(distro.dist_type){
 		case "fedora":
@@ -120,10 +125,12 @@ public class PackageCacheManager : GLib.Object {
 			
 		case "arch":
 			system_cache = "/var/cache/pacman/pkg";
+			filter = " --include=\"*.tar.xz\" --include=\"*.txz\" --exclude=\"*\"";
 			break;
 
 		case "debian":
 			system_cache = "/var/cache/apt/archives";
+			filter = " --include=\"*.deb\" --exclude=\"*\"";
 			break;
 
 		default:
@@ -140,6 +147,7 @@ public class PackageCacheManager : GLib.Object {
 		}
 		
 		cmd += " --exclude=lock --exclude=partial/ --exclude=apt-fast/";
+		cmd += filter;
 		cmd += " '%s/'".printf(escape_single_quote(backup_cache));
 		cmd += " '%s/'".printf(escape_single_quote(system_cache));
 

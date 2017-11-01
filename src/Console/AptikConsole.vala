@@ -52,9 +52,6 @@ public class AptikConsole : GLib.Object {
 	public string password = "";
 	public uint64 config_size_limit = 0;
 	
-
-	//public UserManager user_mgr;
-
 	public static int main (string[] args) {
 		
 		set_locale();
@@ -163,6 +160,12 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("restore-groups", _("Restore groups"));
 		msg += "\n";
 
+		msg += "%s:\n\n".printf(Message.TASK_MOUNT);
+
+		msg += fmt.printf("backup-mounts", _("Backup /etc/fstab and /etc/crypttab entries"));
+		msg += fmt.printf("restore-mounts", _("Restore /etc/fstab and /etc/crypttab entries"));
+		msg += "\n";
+		
 		msg += _("All Items") + ":\n\n";
 		
 		msg += fmt.printf("backup-all", _("Backup all items"));
@@ -187,13 +190,8 @@ public class AptikConsole : GLib.Object {
 		msg += "\n";
 		*/
 		
-		/*
-		msg += "%s:\n".printf(Message.TASK_MOUNT);
-		msg += "\n";
-		msg += fmt.printf("backup-mounts       " + _("Backup /etc/fstab and /etc/crypttab entries") + "\n";
-		msg += fmt.printf("restore-mounts      " + _("Restore /etc/fstab and /etc/crypttab entries") + "\n";
-		msg += "\n";
-		*/
+
+		
 		
 		/*
 		msg += "%s:\n".printf(Message.TASK_HOME);
@@ -459,6 +457,17 @@ public class AptikConsole : GLib.Object {
 
 			case "--restore-groups":
 				return restore_groups();
+
+			// mounts -------------------------------------------
+
+			case "--list-mounts":
+				return list_mounts();
+
+			case "--backup-mounts":
+				return backup_mounts();
+
+			case "--restore-mounts":
+				return restore_mounts();
 
 			// crontab -------------------------------------------
 
@@ -1045,9 +1054,9 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 
-		var grp_mgr = new GroupManager(dry_run);
-		grp_mgr.query_groups(true);
-		bool ok = grp_mgr.backup_groups(basepath);
+		var mgr = new GroupManager(dry_run);
+		mgr.query_groups(true);
+		bool ok = mgr.backup_groups(basepath);
 		if (!ok){ status = false; }
 		
 		return status; 
@@ -1060,8 +1069,52 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 		
-		var grp_mgr = new GroupManager(dry_run);
-		bool ok = grp_mgr.restore_groups(basepath);
+		var mgr = new GroupManager(dry_run);
+		bool ok = mgr.restore_groups(basepath);
+		if (!ok){ status = false; }
+		
+		return status;
+	}
+
+	// mounts -----------------------------
+	
+	public bool list_mounts(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		var mgr = new MountEntryManager(false);
+		mgr.query_mount_entries();
+		mgr.list_mount_entries();
+		return true;
+	}
+	
+	public bool backup_mounts(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		bool status = true;
+
+		var mgr = new MountEntryManager(dry_run);
+		mgr.query_mount_entries();
+		bool ok = mgr.backup_mount_entries(basepath);
+		if (!ok){ status = false; }
+		
+		return status; 
+	}
+
+	public bool restore_mounts(){
+		
+		check_basepath();
+		if (!check_backup_dir_exists(BackupType.MOUNTS)) { return false; }
+
+		bool status = true;
+		
+		var mgr = new MountEntryManager(dry_run);
+		bool ok = mgr.restore_mount_entries(basepath);
 		if (!ok){ status = false; }
 		
 		return status;

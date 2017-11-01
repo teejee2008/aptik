@@ -1285,6 +1285,12 @@ public class Device : GLib.Object{
 			if (dev.device == dev_name){
 				return dev;
 			}
+			else if (dev.kname == dev_name){
+				return dev;
+			}
+			else if (dev.mapped_name == dev_name.replace("/dev/mapper/","")){
+				return dev;
+			}
 		}
 
 		return null;

@@ -151,10 +151,16 @@ public class AptikConsole : GLib.Object {
 		
 		msg += fmt.printf("list-users", _("List users"));
 		msg += fmt.printf("list-users-all", _("List all users (including system user accounts)"));
-		msg += fmt.printf("list-groups", _("List groups"));
-		msg += fmt.printf("list-groups-all", _("List all groups (including system groups)"));
 		msg += fmt.printf("backup-users", _("Backup users and groups"));
 		msg += fmt.printf("restore-users", _("Restore users and groups"));
+		msg += "\n";
+		
+		msg += "%s:\n\n".printf(Message.TASK_GROUP);
+		
+		msg += fmt.printf("list-groups", _("List groups"));
+		msg += fmt.printf("list-groups-all", _("List all groups (including system groups)"));
+		msg += fmt.printf("backup-groups", _("Backup groups"));
+		msg += fmt.printf("restore-groups", _("Restore groups"));
 		msg += "\n";
 
 		msg += _("All Items") + ":\n\n";
@@ -434,17 +440,25 @@ public class AptikConsole : GLib.Object {
 			case "--list-users-all":
 				return list_users(true);
 
+			case "--backup-users":
+				return backup_users();
+
+			case "--restore-users":
+				return restore_users();
+
+			// groups -------------------------------------------
+
 			case "--list-groups":
 				return list_groups();
 
 			case "--list-groups-all":
 				return list_groups(true);
 
-			case "--backup-users":
-				return backup_users_and_groups();
+			case "--backup-groups":
+				return backup_groups();
 
-			case "--restore-users":
-				return restore_users_and_groups();
+			case "--restore-groups":
+				return restore_groups();
 
 			// crontab -------------------------------------------
 
@@ -979,6 +993,38 @@ public class AptikConsole : GLib.Object {
 		return true;
 	}
 
+	public bool backup_users(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		bool status = true;
+
+		var us_mgr = new UserManager(dry_run);
+		us_mgr.query_users(true);
+		bool ok = us_mgr.backup_users(basepath);
+		if (!ok){ status = false; }
+
+		return status; 
+	}
+
+	public bool restore_users(){
+		
+		check_basepath();
+		if (!check_backup_dir_exists(BackupType.USERS)) { return false; }
+
+		bool status = true, ok;
+		
+		var usr_mgr = new UserManager(dry_run);
+		ok = usr_mgr.restore_users(basepath);
+		if (!ok){ status = false; }
+		
+		return status;
+	}
+
+	// groups -----------------------------
+	
 	public bool list_groups(bool all = false){
 
 		dir_create(basepath);
@@ -991,7 +1037,7 @@ public class AptikConsole : GLib.Object {
 		return true;
 	}
 	
-	public bool backup_users_and_groups(){
+	public bool backup_groups(){
 
 		dir_create(basepath);
 
@@ -999,33 +1045,23 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 
-		var us_mgr = new UserManager(dry_run);
-		us_mgr.query_users(true);
-		bool ok = us_mgr.backup_users(basepath);
-		if (!ok){ status = false; }
-		
 		var grp_mgr = new GroupManager(dry_run);
 		grp_mgr.query_groups(true);
-		ok = grp_mgr.backup_groups(basepath);
+		bool ok = grp_mgr.backup_groups(basepath);
 		if (!ok){ status = false; }
 		
 		return status; 
 	}
 
-	public bool restore_users_and_groups(){
+	public bool restore_groups(){
 		
 		check_basepath();
-		if (!check_backup_dir_exists(BackupType.USERS)) { return false; }
 		if (!check_backup_dir_exists(BackupType.GROUPS)) { return false; }
 
-		bool status = true, ok;
-		
-		var usr_mgr = new UserManager(dry_run);
-		ok = usr_mgr.restore_users(basepath);
-		if (!ok){ status = false; }
+		bool status = true;
 		
 		var grp_mgr = new GroupManager(dry_run);
-		ok = grp_mgr.restore_groups(basepath);
+		bool ok = grp_mgr.restore_groups(basepath);
 		if (!ok){ status = false; }
 		
 		return status;

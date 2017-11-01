@@ -362,16 +362,27 @@ public class RepoManager : GLib.Object {
 
 	public bool restore_repos_fedora(string backup_path){
 
+		bool status = true;
+
+		// add repos -------------------------------------
+		
 		// NOT IMPLEMENTED
 
-		log_msg(_("Not Implemented"));
-		return false;
+		// update repos -------------------------------------
+		
+		string temp_file;
+		bool ok = update_repos_fedora(out temp_file);
+		if (!ok){ status = false; }
+		
+		return status;
 	}
 
 	public bool restore_repos_arch(string backup_path){
 
 		bool status = true;
 
+		// add repos -------------------------------------
+		
 		var list = dir_list_names(backup_path, true);
 		
 		list.foreach((backup_file) => {
@@ -410,6 +421,12 @@ public class RepoManager : GLib.Object {
 
 		bool ok = import_keys_arch(backup_path);
 		if (!ok){ status = false; }
+
+		// update repos -------------------------------------
+		
+		string temp_file;
+		ok = update_repos_arch(out temp_file);
+		if (!ok){ status = false; }
 		
 		if (status){
 			log_msg(Message.RESTORE_OK);
@@ -432,6 +449,8 @@ public class RepoManager : GLib.Object {
 			Posix.system("apt-get install -y apt-transport-https");
 			log_msg(string.nfill(70,'-'));
 		}
+
+		// add repos -------------------------------------
 		
 		bool ok = restore_repos_apt_launchpad(backup_path);
 		if (!ok){ status = false; }
@@ -440,7 +459,6 @@ public class RepoManager : GLib.Object {
 		if (!ok){ status = false; }
 				
 		if (dry_run){
-			
 			log_msg(_("Nothing to do (--dry-run mode)"));
 			log_msg(string.nfill(70,'-'));
 			return true;
@@ -448,7 +466,8 @@ public class RepoManager : GLib.Object {
 
 		import_keys_debian(backup_path);
 
-		// run 'apt update' and import missing keys if not --dry-run
+		// update repos and import missing keys -----------------
+		
 		import_missing_keys_debian(false);
 		if (!ok){ status = false; }
 
@@ -844,20 +863,38 @@ public class RepoManager : GLib.Object {
 
 	public bool update_repos_fedora(out string temp_file){
 
-		// NOT IMPLEMENTED
+		log_msg(_("Updating package information..."));
+		
+		temp_file = get_temp_file_path();
+		log_debug(temp_file);
 
-		temp_file = "";
-		log_msg(_("Not Implemented"));
-		return false;
+		string cmd = distro.package_manager;
+		cmd += " check-update | tee '%s'".printf(escape_single_quote(temp_file));
+		log_debug(cmd);
+		
+		int status = Posix.system(cmd);
+
+		log_msg(string.nfill(70,'-'));
+		
+		return (status == 0);
 	}
 
 	public bool update_repos_arch(out string temp_file){
 
-		// NOT IMPLEMENTED
+		log_msg(_("Updating package information..."));
+		
+		temp_file = get_temp_file_path();
+		log_debug(temp_file);
 
-		temp_file = "";
-		log_msg(_("Not Implemented"));
-		return false;
+		string cmd = distro.package_manager;
+		cmd += " -Sy | tee '%s'".printf(escape_single_quote(temp_file));
+		log_debug(cmd);
+		
+		int status = Posix.system(cmd);
+
+		log_msg(string.nfill(70,'-'));
+		
+		return (status == 0);
 	}
 
 	public bool update_repos_debian(out string temp_file){

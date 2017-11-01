@@ -2,6 +2,41 @@
 
 This page details the actions that are executed on backup and restore.
 
+### Software Repositories
+
+**Backup Actions**
+
+Following actions are executed for backup:
+
+1. Debian-based distros
+
+   1. Launchpad PPA names are read from files in `/etc/apt/sources.list.d`. Names are saved to file `<basepath>/repos/launchpad-ppas.list`.  This file can be edited to comment-out or remove lines for unwanted repos.
+   2. Third party PPAs are determined by reading list files in `/etc/apt/sources.list.d`. Source lines are saved to file `<basepath>/repos/<repo-name>.list`.  Files can be deleted from the backup folder for unwanted repos.
+   3. Apt keys are exported to file `<basepath>/repos/apt.keys`
+
+2. Fedora-based distros - Not supported
+
+3. Arch-based distros   
+   1. Custom repos are read from file `/etc/pacman.conf`. Source lines are saved to file `<basepath>/repos/<repo-name>.list`.  Files can be deleted from the backup folder for unwanted repos.
+   2. Pacman keys are exported to file `<basepath>/repos/pacman.keys`
+
+**Restore Actions**
+
+Following actions are executed for restore:
+
+1. Debian-based distros
+   1. Missing Launchpad PPAs are added using command `add-apt-repository`
+   2. Third party PPAs are installed by copying list file from backup folder to `/etc/apt/sources.list.d`
+   3. Apt keys are imported from file `<basepath>/repos/pacman.keys`
+   4. Package information is updated by running `apt update`
+2. Fedora-based distros
+   1. Restoring repos is not supported.
+   2. Package information is updated by running `dnf check-update`	
+3. Arch-based distros 
+   2. Custom repos are installed by appending the source lines to `/etc/pacman.conf`
+   3. Pacman keys are imported from file `<basepath>/repos/pacman.keys`
+   4. Package information is updated by running `pacman -Sy`
+
 ### Downloaded Packages
 
 **Backup Actions**

@@ -34,22 +34,23 @@ public class Group : GLib.Object {
 
 	public string shadow_line = "";
 	public string password_hash = "";
-	public string admin_list = "";
-	public string member_list = "";
+	public string admin_names = "";
+	public string member_names = "";
 
 	public bool is_selected = false;
-	public Gee.ArrayList<string> users;
-	
+
 	public Group(string name){
+		
 		this.name = name;
-		this.users = new Gee.ArrayList<string>();
 	}
 
 	public int add(){
+		
 		return GroupManager.add_group(name, is_system);
 	}
 
 	public int add_to_group(string user_name){
+		
 		return GroupManager.add_user_to_group(user_name, name);
 	}
 	
@@ -69,13 +70,29 @@ public class Group : GLib.Object {
 			return 1; // group mismatch
 		}
 		else if ((password_hash != b.password_hash)
-		|| (admin_list != b.admin_list)
-		|| (member_list != b.member_list)
+		|| (admin_names != b.admin_names)
+		|| (member_names != b.member_names)
 		){
 			return -1; // gshadow mismatch
 		}
 		
 		return 0;
+	}
+
+	public static string remove_missing_user_names(Gee.ArrayList<string> current_users, string user_list){
+
+		string txt = "";
+		
+		foreach(string user_name in user_list.split(",")){
+			
+			if (!current_users.contains(user_name)){ continue; }
+
+			if (txt.length > 0){ txt += ","; }
+
+			txt += user_name;
+		}
+
+		return txt.strip();
 	}
 
 	// get line ------------------------------------
@@ -95,8 +112,8 @@ public class Group : GLib.Object {
 		string txt = "";
 		txt += "%s".printf(name);
 		txt += ":%s".printf(password_hash);
-		txt += ":%s".printf(admin_list);
-		txt += ":%s".printf(member_list);
+		txt += ":%s".printf(admin_names);
+		txt += ":%s".printf(member_names);
 		return txt;
 	}
 

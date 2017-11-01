@@ -144,9 +144,6 @@ public class GroupManager : GLib.Object {
 			group.password = fields[1].strip();
 			group.gid = int.parse(fields[2].strip());
 			group.user_names = fields[3].strip();
-			foreach(string user_name in group.user_names.split(",")){
-				group.users.add(user_name);
-			}
 			groups[group.name] = group;
 		}
 		else{
@@ -170,8 +167,8 @@ public class GroupManager : GLib.Object {
 				group = groups[group_name];
 				group.shadow_line = line;
 				group.password_hash = fields[1].strip();
-				group.admin_list = fields[2].strip();
-				group.member_list = fields[3].strip();
+				group.admin_names = fields[2].strip();
+				group.member_names = fields[3].strip();
 				return;
 			}
 			else{
@@ -363,10 +360,14 @@ public class GroupManager : GLib.Object {
 		
 		query_groups(true);
 
-		var mgr = new GroupManager(dry_run);
-		mgr.read_groups_from_folder(backup_path);
+		var grp_mgr = new GroupManager(dry_run);
+		grp_mgr.read_groups_from_folder(backup_path);
+
+		var usr_mgr = new UserManager(dry_run);
+		usr_mgr.query_users(false);
+		var current_user_names = usr_mgr.user_names_sorted;
 		
-		foreach(var old_group in mgr.groups_sorted){
+		foreach(var old_group in grp_mgr.groups_sorted){
 
 			if (!groups.has_key(old_group.name)){ continue; }
 
@@ -375,7 +376,7 @@ public class GroupManager : GLib.Object {
 			if (group.compare_fields(old_group) > 0){
 				// group mismatch
 				group.password = old_group.password;
-				group.user_names = old_group.user_names;
+				group.user_names = Group.remove_missing_user_names(current_user_names, old_group.user_names); 
 				// keep name, gid
 				
 				bool ok = group.update_group_file();
@@ -385,8 +386,8 @@ public class GroupManager : GLib.Object {
 			if (group.compare_fields(old_group) < 0){
 				// gshadow mismatch
 				group.password = old_group.password;
-				group.admin_list = old_group.admin_list;
-				group.member_list = old_group.member_list;
+				group.admin_names = Group.remove_missing_user_names(current_user_names, old_group.admin_names); 
+				group.member_names = Group.remove_missing_user_names(current_user_names, old_group.member_names);
 				// keep name
 
 				bool ok = group.update_gshadow_file();
@@ -418,6 +419,10 @@ public class GroupManager : GLib.Object {
 		}
 
 		bool status = true;
+
+		var usr_mgr = new UserManager(dry_run);
+		usr_mgr.query_users(false);
+		var current_user_names = usr_mgr.user_names_sorted;
 		
 		string txt = file_read(backup_file);
 		
@@ -430,7 +435,7 @@ public class GroupManager : GLib.Object {
 				if (groups.has_key(name)){
 					var group = groups[name];
 					if (group.user_names != user_names){
-						group.user_names = user_names; // TODO: Check if user exists
+						group.user_names = Group.remove_missing_user_names(current_user_names, user_names);
 						bool ok = group.update_group_file();
 						if (!ok){ status = false; }
 					}

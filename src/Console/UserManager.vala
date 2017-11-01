@@ -51,8 +51,34 @@ public class UserManager : GLib.Object {
 	}
 
 	public Gee.ArrayList<User> users_sorted {
+		
 		owned get{
-			return get_sorted_array(users);
+			
+			var list = new Gee.ArrayList<User>();
+		
+			foreach(var user in users.values) {
+				list.add(user);
+			}
+
+			list.sort((a, b) => {
+				return strcmp(a.name, b.name);
+			});
+
+			return list;
+		}
+	}
+
+	public Gee.ArrayList<string> user_names_sorted {
+		
+		owned get{
+			
+			var list = new Gee.ArrayList<string>();
+		
+			foreach(var user in users_sorted) {
+				list.add(user.name);
+			}
+
+			return list;
 		}
 	}
 
@@ -399,23 +425,6 @@ public class UserManager : GLib.Object {
 		}
 
 		return status;
-	}
-
-	// static ----------------------
-
-	public static Gee.ArrayList<User> get_sorted_array(Gee.HashMap<string,User> dict){
-
-		var list = new Gee.ArrayList<User>();
-		
-		foreach(var pkg in dict.values) {
-			list.add(pkg);
-		}
-
-		list.sort((a, b) => {
-			return strcmp(a.name, b.name);
-		});
-
-		return list;
 	}
 }
 

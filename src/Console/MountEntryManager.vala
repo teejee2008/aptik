@@ -390,6 +390,18 @@ public class MountEntryManager : GLib.Object {
 
 		bool ok = save_fstab_file(fstab);
 
+		// create missing mount folders -----------------
+
+		foreach(var entry in list){
+			
+			if (!entry.mount_point.has_prefix("/")){ continue; }
+			
+			if (!dir_exists(entry.mount_point)){
+	
+				dir_create(entry.mount_point);
+			}
+		}
+
 		// print ---------------------
 
 		log_msg("");
@@ -442,6 +454,18 @@ public class MountEntryManager : GLib.Object {
 		crypttab = list;
 
 		bool ok = save_crypttab_file(crypttab);
+
+		// warn missing key files -----------------
+
+		foreach(var entry in list){
+			
+			if (!entry.password.has_prefix("/")){ continue; }
+			
+			if (!file_exists(entry.password)){
+	
+				log_error("[%s] %s: %s".printf(_("Warning"), _("Keyfile referenced by /etc/crypttab not found"), entry.password));
+			}
+		}
 
 		// print ---------------------
 

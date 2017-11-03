@@ -576,7 +576,7 @@ public class Device : GLib.Object{
 					parent.children.add(part);
 					part.parent = parent;
 					part.pkname = parent.kname;
-					log_debug("%s -> %s".printf(parent.kname, part.kname));
+					//log_debug("%s -> %s".printf(parent.kname, part.kname));
 				}
 			}
 		}
@@ -606,7 +606,7 @@ public class Device : GLib.Object{
 
 		dev.pkname_toplevel = top_kname;
 
-		log_debug("%s -> %s -> %s".printf(dev.pkname_toplevel, dev.pkname, dev.kname));
+		//log_debug("%s -> %s -> %s".printf(dev.pkname_toplevel, dev.pkname, dev.kname));
 	}
 
 	private static void find_child_devices_using_dmsetup(Gee.ArrayList<Device> list){
@@ -653,7 +653,7 @@ public class Device : GLib.Object{
 
 					if ((parent != null) && (child != null)){
 						child.pkname = parent.kname;
-						log_debug("%s -> %s".printf(parent.kname, child.kname));
+						//log_debug("%s -> %s".printf(parent.kname, child.kname));
 					}
 
 				}

@@ -332,4 +332,18 @@ namespace TeeJee.Misc {
 		
 		return txt;
 	}
+
+	public class Converter<T>: GLib.Object {
+
+		public Gee.ArrayList<T> convert_to_arraylist(T[] array){
+
+			var list = new Gee.ArrayList<T>();
+
+			foreach(var item in array){
+				list.add(item);
+			}
+			
+			return list;
+		}
+	}
 }

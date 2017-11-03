@@ -381,8 +381,29 @@ namespace TeeJee.FileSystem{
 	// directory helpers ----------------------
 	
 	public bool dir_exists (string dir_path){
-		/* Check if directory exists */
+
 		return ( FileUtils.test(dir_path, GLib.FileTest.EXISTS) && FileUtils.test(dir_path, GLib.FileTest.IS_DIR));
+		
+		/*try{
+			var dir = File.parse_name(dir_path);
+
+			if (dir.query_exists()) {
+
+				var info = dir.query_info("%s".printf(FileAttribute.STANDARD_TYPE), 0); // follows symlinks
+
+				var file_type = info.get_file_type();
+
+				return (file_type == FileType.DIRECTORY);
+			}
+			else{
+				log_debug("!exists: " + dir_path);
+			}
+		}
+		catch (Error e) {
+			log_error (e.message);
+		}
+
+		return false;*/
 	}
 	
 	public bool dir_create (string dir_path, bool show_message = false){

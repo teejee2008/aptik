@@ -49,7 +49,12 @@ public class AptikConsole : GLib.Object {
 	public bool dry_run = false;
 	public bool list_only = false;
 
-	public string password = "";
+	// home
+	public string userlist = "";
+	public string password = "aptik";
+	public bool full_backup = false;
+	public HomeDataBackupMode home_mode = HomeDataBackupMode.TAR;
+
 	public uint64 config_size_limit = 0;
 	
 	public static int main (string[] args) {
@@ -160,6 +165,16 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("restore-groups", _("Restore groups"));
 		msg += "\n";
 
+		msg += "%s:\n\n".printf(Message.TASK_HOME);
+
+		msg += fmt.printf("backup-home", _("Backup data in users' home directories"));
+		msg += fmt.printf("restore-home", _("Restore data in users' home directories"));
+		msg += fmt.printf("password <string>", _("(optional) Password for encryption/decryption (for duplicity) (default: aptik)"));
+		msg += fmt.printf("users <user1,user2,..>", _("(optional) Users to backup and restore (default: all users)"));
+		msg += fmt.printf("full", _("(optional) Do full backup (default: incremental if backup exists, else full)"));
+		msg += fmt.printf("duplicity", _("(optional) Use duplicity for backup instead of TAR (default: TAR)"));
+		msg += "\n";
+		
 		msg += "%s:\n\n".printf(Message.TASK_MOUNT);
 
 		msg += fmt.printf("backup-mounts", _("Backup /etc/fstab and /etc/crypttab entries"));
@@ -178,26 +193,6 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("backup-configs      " + _("Backup config files from /home/<user>") + "\n";
 		msg += fmt.printf("restore-configs     " + _("Restore config files to /home/<user>") + "\n";
 		msg += fmt.printf("size-limit <bytes>  " + _("Skip config dirs larger than specified size") + "\n";
-		msg += "\n";
-		*/
-		
-		/*
-		msg += "%s:\n".printf(Message.TASK_THEME);
-		msg += "\n";
-		msg += fmt.printf("list-themes         " + _("List themes in /usr/share/themes") + "\n";
-		msg += fmt.printf("backup-themes       " + _("Backup themes from /usr/share/themes") + "\n";
-		msg += fmt.printf("restore-themes      " + _("Restore themes to /usr/share/themes") + "\n";
-		msg += "\n";
-		*/
-		
-
-		
-		
-		/*
-		msg += "%s:\n".printf(Message.TASK_HOME);
-		msg += "\n";
-		msg += fmt.printf("backup-home         " + _("Backup user-created data in user's home directory") + "\n";
-		msg += fmt.printf("restore-home        " + _("Restore user-created data in user's home directory") + "\n";
 		msg += "\n";
 		*/
 		
@@ -238,31 +233,42 @@ public class AptikConsole : GLib.Object {
 				k += 1;
 				basepath = args[k] + (args[k].has_suffix("/") ? "" : "/");
 				break;
-			case "--user":
-			case "--username":
-				k += 1;
-				//App.select_user(args[k]);
-				break;
-			case "--size-limit":
-			case "--limit-size":
-				k += 1;
-				config_size_limit = uint64.parse(args[k]);
-				break;
-			case "-y":
-			case "--yes":
+
+			//case "--size-limit":
+			//case "--limit-size":
+				//k++;
+				//config_size_limit = uint64.parse(args[k]);
+				//break;
 			case "--scripted":
 				no_prompt = true;
 				break;
+
+			case "--password":
+				k++;
+				password = args[k];
+				break;
+				
+			case "--users":
+				k++;
+				userlist = args[k];
+				break;
+
+			case "--full":
+				full_backup = true;
+				break;
+
+			case "--duplicity":
+				home_mode = HomeDataBackupMode.DUPLICITY;
+				break;
+				
 			case "--debug":
 				LOG_DEBUG = true;
 				break;
-			case "--password":
-				k += 1;
-				password = args[k];
-				break;
+				
 			case "--dry-run":
 				dry_run = true;
 				break;
+				
 			case "--help":
 			case "--h":
 			case "-h":
@@ -375,18 +381,6 @@ public class AptikConsole : GLib.Object {
 				//return restore_config();
 				//return true;
 
-			// home -------------------------------------
-
-			//case "--backup-user-data":
-			//case "--backup-home":
-				//return backup_home();
-				//return true;
-
-			//case "--restore-user-data":
-			//case "--restore-home":
-				//return restore_home();
-				//return true;
-				
 			// theme ---------------------------------------------
 
 			//case "--list-theme":
@@ -418,18 +412,6 @@ public class AptikConsole : GLib.Object {
 				distro.print_system_info();
 				return restore_icons();
 
-			// mount -------------------------------------------
-			
-			//case "--backup-mount":
-			//case "--backup-mounts":
-				//return backup_mounts();
-				//return true;
-
-			//case "--restore-mount":
-			//case "--restore-mounts":
-				//return restore_mounts();
-				//return true;
-
 			// users -------------------------------------------
 
 			case "--list-users":
@@ -458,6 +440,14 @@ public class AptikConsole : GLib.Object {
 			case "--restore-groups":
 				return restore_groups();
 
+			// home -------------------------------------
+
+			case "--backup-home":
+				return backup_home();
+
+			case "--restore-home":
+				return restore_home();
+
 			// mounts -------------------------------------------
 
 			case "--list-mounts":
@@ -468,6 +458,9 @@ public class AptikConsole : GLib.Object {
 
 			case "--restore-mounts":
 				return restore_mounts();
+
+
+				
 
 			// crontab -------------------------------------------
 
@@ -1143,6 +1136,37 @@ public class AptikConsole : GLib.Object {
 		
 		return status;
 	}
+
+	// home -----------------------------
+
+	public bool backup_home(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		bool status = true;
+
+		var mgr = new UserHomeDataManager(dry_run);
+		bool ok = mgr.backup_home(basepath, userlist, password, full_backup, home_mode);
+		if (!ok){ status = false; }
+		
+		return status; 
+	}
+
+	public bool restore_home(){
+		
+		check_basepath();
+		if (!check_backup_dir_exists(BackupType.HOME)) { return false; }
+
+		bool status = true;
+		
+		var mgr = new UserHomeDataManager(dry_run);
+		bool ok = mgr.restore_home(basepath, userlist, password);
+		if (!ok){ status = false; }
+		
+		return status;
+	}
 	
 	// common ---------------
 	
@@ -1200,92 +1224,6 @@ public class AptikConsole : GLib.Object {
 		return ok;
 	}
 
-	// mounts ---------------------
-	
-	public bool backup_mounts(){
-		bool ok = App.backup_mounts();
-		
-		if (ok){
-			log_msg(Message.BACKUP_OK);
-		}
-		else{
-			log_msg(Message.BACKUP_ERROR);
-		}
-
-		return ok;
-	}
-	
-	public bool restore_mounts(){
-		var fstab_list = App.create_fstab_list_for_restore();
-		var crypttab_list = App.create_crypttab_list_for_restore();
-
-		bool ok = App.restore_mounts(fstab_list, crypttab_list, "");
-
-		if (ok){
-			log_msg(Message.RESTORE_OK);
-		}
-		else{
-			log_msg(Message.RESTORE_ERROR);
-		}
-		
-		return ok;
-	}
-
-	// home ---------------------
-	
-	public bool backup_home(){
-
-		// get password -------------------
-		
-		App.prompt_for_password(true);
-		
-		if (App.password.length == 0){
-			log_error(Message.PASSWORD_MISSING);
-			return false;
-		}
-
-		// backup ------------------
-		
-		int status = Posix.system("%s\n".printf(save_bash_script_temp(App.backup_home_get_script())));
-			
-		bool ok = (status == 0);
-		
-		if (ok){
-			log_msg(Message.BACKUP_OK);
-		}
-		else{
-			log_msg(Message.BACKUP_ERROR);
-		}
-
-		return ok;
-	}
-	
-	public bool restore_home(){
-		
-		// get password -------------------
-		
-		App.prompt_for_password(false);
-		
-		if (App.password.length == 0){
-			log_error(Message.PASSWORD_MISSING);
-			return false;
-		}
-
-		// restore ------------
-		
-		int status = Posix.system("%s\n".printf(save_bash_script_temp(App.restore_home_get_script())));
-			
-		bool ok = (status == 0);
-
-		if (ok){
-			log_msg(Message.RESTORE_OK);
-		}
-		else{
-			log_msg(Message.RESTORE_ERROR);
-		}
-		
-		return ok;
-	}
 
 	// crontabs -------------------
 

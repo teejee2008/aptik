@@ -111,7 +111,7 @@ public class AptikConsole : GLib.Object {
 		
 		string msg = "\n" + AppName + " v" + AppVersion + " by %s (%s)".printf(AppAuthor, AppAuthorEmail) + "\n\n";
 
-		msg += _("Usage") + ": aptik command [options]\n\n";
+		msg += _("Usage") + ": aptik <command> [options]\n\n";
 
 		msg += fmt2.printf(Message.TASK_PPA);
 		

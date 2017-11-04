@@ -1,10 +1,95 @@
-## Backup & Restore Actions
+## User Manual
 
-This page details the actions that are executed on backup and restore.
+```
+Usage: aptik <command> [options]
+
+▰▰▰ Software Repositories ▰▰▰
+
+Commands:
+  --backup-repos                 Save list of software repositories
+  --restore-repos                Add missing software repositories
+  --import-missing-keys          Find and import missing keys for apt repos
+
+Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives), dnf/yum (Fedora & Derivatives)
+
+▰▰▰ Downloaded Packages ▰▰▰
+
+Commands:
+  --backup-cache                 Copy downloaded packages from system cache
+  --restore-cache                Copy packages to system cache
+  --clear-cache                  Remove downloaded packages from system cache
+
+Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives)
+
+▰▰▰ Installed Software ▰▰▰
+
+Commands:
+  --list-installed               List installed packages
+  --list-available               List available packages
+  --list-foreign                 List non-native packages
+  --list-extra                   List extra packages installed by user
+  --list-{default|dist|base}     List default packages for linux distribution
+  --backup-packages              Save list of installed packages
+  --restore-packages             Install missing packages
+
+Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives), dnf/yum (Fedora & Derivatives)
+
+▰▰▰ User Accounts ▰▰▰
+
+Commands:
+  --list-users                   List users
+  --list-users-all               List all users (including system user accounts)
+  --backup-users                 Backup users and groups
+  --restore-users                Restore users and groups
+
+▰▰▰ Groups ▰▰▰
+
+Commands:
+  --list-groups                  List groups
+  --list-groups-all              List all groups (including system groups)
+  --backup-groups                Backup groups
+  --restore-groups               Restore groups
+
+▰▰▰ Home Directory Data ▰▰▰
+
+Commands:
+  --backup-home                  Backup data in users' home directories
+  --restore-home                 Restore data in users' home directories
+  --fix-ownership                Make every user the owner of their home directory contents
+
+Options:
+  --users <usr1,usr2,..>         Users to backup and restore (default: all users)
+  --duplicity                    Use duplicity for backup instead of TAR (default: TAR)
+  --password <string>            Password for encryption/decryption with duplicity (default: 'aptik')
+  --full                         Do full backup with duplicity (default: incremental if backup exists, else full)
+  --exclude-hidden               Exclude hidden files and directories (application config files)(default: include)
+
+▰▰▰ Filesystem Mounts ▰▰▰
+
+Commands:
+  --backup-mounts                Backup /etc/fstab and /etc/crypttab entries
+  --restore-mounts               Restore /etc/fstab and /etc/crypttab entries
+
+▰▰▰ All Items ▰▰▰
+
+Commands:
+  --backup-all                   Backup all items
+  --restore-all                  Restore all items
+
+▰▰▰ Common ▰▰▰
+
+Options:
+  --basepath <dir>               Backup directory (default: current directory)
+  --scripted                     Run in non-interactive mode
+  --dry-run                      Show actions for restore without making changes to system
+  --help                         Show all options
+```
 
 ### Software Repositories
 
-**Backup Actions**
+**Backup**
+
+Usage: `aptik --backup-repos`
 
 Following actions are executed for backup:
 
@@ -20,7 +105,9 @@ Following actions are executed for backup:
    1. Custom repos are read from file `/etc/pacman.conf`. Source lines are saved to file `<basepath>/repos/<repo-name>.list`.  Files can be deleted from the backup folder for unwanted repos.
    2. Pacman keys are exported to file `<basepath>/repos/pacman.keys`
 
-**Restore Actions**
+**Restore**
+
+Usage: `aptik --restore-repos`
 
 Following actions are executed for restore:
 
@@ -39,16 +126,21 @@ Following actions are executed for restore:
 
 ### Downloaded Packages
 
-**Backup Actions**
+**Backup**
+
+Usage: `aptik --backup-cache`
 
 Following actions are executed for backup:
+
 1. Downloaded packages are copied from system cache to backup location `<basepath>/cache` using `rsync` command
    * Debian-based distros - Copied from `/var/cache/apt/archives`
    * Fedora-based distros - Not supported
    * Arch-based distros - Copied from `/var/cache/pacman/pkg`
 
 
-**Restore Actions**
+**Restore**
+
+Usage: `aptik --restore-cache`
 
 Following actions are executed for restore:
 
@@ -56,7 +148,9 @@ Following actions are executed for restore:
 
 ### Installed Packages
 
-**Backup Actions**
+**Backup**
+
+Usage: `aptik --backup-packages`
 
 Following actions are executed for backup:
 
@@ -64,17 +158,19 @@ Following actions are executed for backup:
 
 2. List of installed packages are filtered to **remove** the following:
 
-   1. Kernel packages - `linux-headers*`, `linux-signed*`, `linux-tools*`
-   2. Packages that were auto-installed as dependencies for other packages. 
+   * Kernel packages - `linux-headers*`, `linux-signed*`, `linux-tools*`
+   * Packages that were auto-installed as dependencies for other packages. 
       * Debian-based distros - Determined using `aptitude` and will be filtered out
       * Other distros - Cannot be determined and will not be filtered out
-   3. Packages that are part of the Linux distribution base.
+   * Packages that are part of the Linux distribution base.
       * Debian-based - Determined by reading `/var/log/installer/initial-status.gz` and will be filtered out. Cannot be determined if this file is missing on the system.
       * Other distros - Cannot be determined and will not be filtered out
 
-   List of filtered packages are saved to `<basepath>/packages/selected.list`. This file can be edited to comment-out or remove lines for unwanted packages.
+3. List of filtered packages are saved to `<basepath>/packages/selected.list`. This file can be edited to comment-out or remove lines for unwanted packages.
 
-**Restore Actions**
+**Restore**
+
+Usage: `aptik --restore-packages`
 
 Following actions are executed for restore:
    1. List of packages are read from `<basepath>/packages/selected.list`. Packages that are not installed, but available in repositories, will be installed using the package manager.
@@ -85,17 +181,19 @@ Following actions are executed for restore:
    2. Debian-based distros - Any deb files in backup folder `<basepath>/debs` will be installed using `apt` or `gdebi` in order of preference.
 
 
-### Users & Groups
+### Users
 
-**Backup Actions**
+**Backup**
+
+Usage: `aptik --backup-users`
 
 Following actions are executed for backup:
 
 1. Entries in `/etc/passwd` and `/etc/shadow` are saved to backup folder  `<basepath>/users` for human users (UID = 0 or UID >= 1000 and UID != 65534). User's line in both files are saved as `<username>.passwd` and `<username>.shadow` in the backup folder. You can delete the files for any users that you do not wish to restore.
-2. Entries in `/etc/group` and `/etc/gshadow` are saved to backup folder  `<basepath>/groups` for non-system groups (GID >= 1000 and GID != 65534). Group's line in both files are saved as `<groupname>.group` and `<groupname>.gshadow` in the backup folder. You can delete the files for any groups that you do not wish to restore.
-3. For all groups, the list of users in the group are saved in file `<basepath>/groups/memberships.list`.
 
-**Restore Actions**
+**Restore**
+
+Usage: `aptik --restore-users`
 
 Following actions are executed for restore:
 
@@ -104,27 +202,93 @@ Following actions are executed for restore:
    2. User's full name, home directory path, and other fields are updated in `/etc/passwd`. User's UID will not be updated and remains same as the value generated by `useradd` command.
    3. User's password field and password expiry rules are updated in `/etc/shadow`
 
-2. *Missing groups* are added from backup folder `<basepath>/groups`
 
+
+### Groups
+
+**Backup**
+
+Usage: `aptik --backup-groups`
+
+Following actions are executed for backup:
+
+1. Entries in `/etc/group` and `/etc/gshadow` are saved to backup folder  `<basepath>/groups` for non-system groups (GID >= 1000 and GID != 65534). Group's line in both files are saved as `<groupname>.group` and `<groupname>.gshadow` in the backup folder. You can delete the files for any groups that you do not wish to restore.
+2. For all groups, the list of users in the group are saved in file `<basepath>/groups/memberships.list`.
+
+**Restore**
+
+Usage: `aptik --restore-groups`
+
+Following actions are executed for restore:
+
+1. *Missing groups* are added from backup folder `<basepath>/groups`
    1. Missing users are added using `groupadd` command
    2. Group's password and users field are updated in `/etc/group`. Group's GID will not be updated and remains same as the value generated by `groupadd` command.
    3. Group's password, admin and member fields are updated in `/etc/gshadow`
-
-3. *Missing members* are added to groups
-
+2. *Missing members* are added to groups
    1. Missing members are added to groups by reading the file `<basepath>/groups/memberships.list`. Members are added directly by updating `/etc/group`
 
+### Home Data
+
+**Backup**
+
+Usage: `aptik --backup-home`
+
+Following actions are executed for backup:
+
+1. For each user, the contents of home directory are archived using TAR + GZIP and saved to file  `<basepath>/home/<username>/data.tar.gz`. Full backup is created every time a backup is taken.
+
+2. When creating backups using **duplicity** (option `--duplicity`), data is saved to folder `<basepath>/home/<username>`. 
+
+   - Incremental backups are created if an existing backup is found. Full backups are created if there is no existing backup, or if full backup was specified by user (option `--full`).
+   - Backups are encrypted with specified password (option `--password <string>`). A default password `aptik` is used if none is specified.
+
+3. Backups can be created for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user names without space.
+
+4. Some directories are excluded by default to save space and avoid issues after restore.
+
+   ```
+   ~/.thumbnails
+   ~/.cache
+   ~/.dbus
+   ~/.gvfs
+   ~/.local/share/Trash
+   ~/.local/share/trash
+   ~/.mozilla/firefox/*.default/Cache
+   ~/.mozilla/firefox/*.default/OfflineCache
+   ~/.opera/cache
+   ~/.kde/share/apps/kio_http/cache
+   ~/.kde/share/cache/http
+   ```
+
+5. Hidden files and folders in home directories can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings.
+
+**Restore**
+
+Usage: `aptik --restore-home`
+
+Following actions are executed for restore:
+
+1. For each user, the TAR file backup `<basepath>/home/<username>/data.tar.gz` is extracted to the user's home directory. Files are restored to original locations along with original permissions and timestamps.
+2. For each user, the ownership is updated for file and folders in user's home directory. This ensures that all files in home directory are owned by the user.
+3. When restoring a duplicity backup, the steps are similar. Data is restored from backup files created by duplicity in `<basepath>/home/<username>`.
+   {0}. The password should be specified during restore if it was specified during backup (option `--password <string>`). A default password `aptik` is used if none is specified.
+4. Backups can be restored for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user names without space.
 
 ### Mount Entries
 
-**Backup Actions**
+**Backup**
+
+Usage: `aptik --backup-mounts`
 
 Following actions are executed for backup:
 
 1. Entries in `/etc/fstab` and `/etc/crypttab` are saved to backup folder  `<basepath>/mounts` . Entries are saved individually as `<dev-name>_<mount-point>.fstab` and `<dev-name>_<mount-point>.crypttab` in the backup folder. You can delete the files for any mount entries that you do not wish to restore.
      *  Device names like `/dev/sda1` and `/dev/mapper/sd2_crypt` will be replaced by UUIDs like `UUID=576be21b-3c3a-4287-b971-40b8e8b39823` while saving backup files. This makes the entries portable so that they can be used on other systems where the device names may be different.
 
-**Restore Actions**
+**Restore**
+
+Usage: `aptik --restore-mounts`
 
 Following actions are executed for restore:
 

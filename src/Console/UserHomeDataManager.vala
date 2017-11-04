@@ -259,9 +259,7 @@ public class UserHomeDataManager : GLib.Object {
 			return false;
 		}
 
-		if (!dry_run){
-			log_msg(_("Restoring home directory data..."));
-		}
+		log_msg(_("Restoring home directory data..."));
 
 		bool status = true;
 
@@ -302,6 +300,8 @@ public class UserHomeDataManager : GLib.Object {
 				break;
 			}
 		}
+
+		log_msg("%s: %s".printf(_("Backup mode detected"), mode.to_string().replace("HOME_DATA_BACKUP_MODE_", "")));
 		
 		// restore ----------------------------------------
 
@@ -333,6 +333,9 @@ public class UserHomeDataManager : GLib.Object {
 	public bool restore_home_tar(string backup_path, Gee.ArrayList<User> users){
 
 		bool status = true;
+
+		var grpmgr = new GroupManager();
+		grpmgr.query_groups(false);
 		
 		foreach(var user in users){
 
@@ -387,14 +390,21 @@ public class UserHomeDataManager : GLib.Object {
 
 			cmd += "\n";
 
-			log_debug(cmd);
-
 			// execute ---------------------------------
 
-			string sh_file = save_bash_script_temp(cmd);
-			int retval = Posix.system(sh_file);
+			if (!dry_run){
+				log_debug(cmd);
+				string sh_file = save_bash_script_temp(cmd);
+				int retval = Posix.system(sh_file);
+				if (retval != 0){ status = false; }
+			}
+			else{
+				log_msg("cmd: %s".printf(cmd));
+			}
 
-			if (retval != 0){ status = false; }
+			// update ownership --------------------------
+
+			update_owner_for_directory_contents(user, grpmgr.groups_sorted);
 
 			log_msg(string.nfill(70,'-'));
 		}
@@ -407,6 +417,9 @@ public class UserHomeDataManager : GLib.Object {
 		string password = _password;
 		
 		bool status = true;
+
+		var grpmgr = new GroupManager();
+		grpmgr.query_groups(false);
 		
 		foreach(var user in users){
 
@@ -462,14 +475,21 @@ public class UserHomeDataManager : GLib.Object {
 			
 			cmd += "unset PASSPHRASE\n";
 
-			log_debug(cmd);
-
 			// execute ---------------------------------
 
-			string sh_file = save_bash_script_temp(cmd);
-			int retval = Posix.system(sh_file);
+			if (!dry_run){
+				log_debug(cmd);
+				string sh_file = save_bash_script_temp(cmd);
+				int retval = Posix.system(sh_file);
+				if (retval != 0){ status = false; }
+			}
+			else{
+				log_msg("cmd: %s".printf(cmd));
+			}
 
-			if (retval != 0){ status = false; }
+			// update ownership --------------------------
+			
+			update_owner_for_directory_contents(user, grpmgr.groups_sorted);
 
 			log_msg(string.nfill(70,'-'));
 		}
@@ -517,6 +537,88 @@ public class UserHomeDataManager : GLib.Object {
 
 		//txt += "%s\n".printf("**/.*");
 		return txt;
+	}
+
+	public bool fix_home_ownership(string userlist){
+
+		if (!dry_run){
+			log_msg(_("Updating ownership for home directory..."));
+		}
+
+		bool status = true;
+
+		// build user list -----------------------
+		
+		var usmgr = new UserManager();
+		usmgr.query_users(false);
+
+		var users = new Gee.ArrayList<User>();
+		
+		if (userlist.length == 0){
+			users = usmgr.users_sorted;
+		}
+		else{
+			foreach(string username in userlist.split(",")){
+				foreach(var user in usmgr.users_sorted){
+					if (user.name == username){
+						users.add(user);
+						break;
+					}
+				}
+			}
+		}
+		
+		// update ----------------------------------------
+
+		bool ok = true;
+
+		var grpmgr = new GroupManager();
+		grpmgr.query_groups(false);
+		
+		foreach(var user in users){
+
+			if (user.is_system){ continue; }
+
+			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
+			
+			if (!dir_exists(user.home_path)){
+				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
+				log_msg(string.nfill(70,'-'));
+				continue;
+			}
+
+			update_owner_for_directory_contents(user, grpmgr.groups_sorted);
+
+			log_msg(string.nfill(70,'-'));
+		}
+		
+		if (!ok){ status = false; }
+		
+		if (status){
+			log_msg(Message.RESTORE_OK);
+		}
+		else{
+			log_error(Message.RESTORE_ERROR);
+		}
+
+		log_msg(string.nfill(70,'-'));
+
+		return status;
+	}
+
+	public bool update_owner_for_directory_contents(User user, Gee.ArrayList<Group> groups){
+
+		string usergroup = user.get_primary_group_name(groups);
+
+		bool ok = true;
+		
+		if (!dry_run){
+			chown(user.home_path, user.name, usergroup);
+		}
+		
+		log_msg("%s: %s (%s,%s)".printf(_("Updated owner for directory contents"), user.home_path, user.name, usergroup));
+
+		return ok;
 	}
 }
 

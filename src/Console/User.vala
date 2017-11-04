@@ -69,10 +69,16 @@ public class User : GLib.Object {
 		}
 	}
 
-	public string group_names{
-		owned get {
-			return "";
+	public string get_primary_group_name(Gee.ArrayList<Group> groups){
+		
+		foreach(var grp in groups){
+			if (grp.gid == gid){
+				return grp.name;
+			}
 		}
+
+		log_error("%s: %s".printf("Failed to find primary group for user", name));
+		return name; // assume group name = user name
 	}
 
 	// get line ------------------------------------

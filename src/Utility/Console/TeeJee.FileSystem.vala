@@ -617,6 +617,7 @@ namespace TeeJee.FileSystem{
 
 	public bool chown(string dir_path, string user_name, string group){
 		string cmd = "chown %s:%s -R '%s'".printf(user_name, group, escape_single_quote(dir_path));
+		log_debug("cmd: %s".printf(cmd));
 		int status = exec_sync(cmd, null, null);
 		return (status == 0);
 	}

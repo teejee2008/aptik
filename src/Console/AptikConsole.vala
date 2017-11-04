@@ -104,88 +104,107 @@ public class AptikConsole : GLib.Object {
 
 	public string help_message() {
 
-		string fmt = "  --%-30s %s\n";
+		string fmt = "  %-30s %s\n";
+
+		string fmt2 = "▰▰▰ %s ▰▰▰\n\n"; //▰▰▰ ◈
 		
 		string msg = "\n" + AppName + " v" + AppVersion + " by %s (%s)".printf(AppAuthor, AppAuthorEmail) + "\n\n";
 
-		msg += _("Syntax") + ": aptik [options]\n\n";
+		msg += _("Usage") + ": aptik command [options]\n\n";
 
-		msg += _("Options") + ":\n\n";
-
-		msg += _("Common") + ":\n\n";
+		msg += fmt2.printf(Message.TASK_PPA);
 		
-		msg += fmt.printf("basepath <dir>", _("Backup directory (defaults to current directory)"));
-		msg += fmt.printf("scripted", _("Run in non-interactive mode"));
-		msg += fmt.printf("dry-run", _("Show actions for restore without making changes to system"));
+		//msg += fmt.printf("list-repo            ",  _("List PPAs"));
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--backup-repos", _("Save list of software repositories"));
+		msg += fmt.printf("--restore-repos", _("Add missing software repositories"));
+		msg += fmt.printf("--import-missing-keys", _("Find and import missing keys for apt repos"));
+		msg += "\n";
+
+		msg += "%s: %s, %s, %s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
+		
+		msg += fmt2.printf(Message.TASK_CACHE);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--backup-cache", _("Copy downloaded packages from system cache"));
+		msg += fmt.printf("--restore-cache", _("Copy packages to system cache"));
+		msg += fmt.printf("--clear-cache", _("Remove downloaded packages from system cache"));
+		msg += "\n";
+
+		msg += "%s: %s, %s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)");
+
+		msg += fmt2.printf(Message.TASK_PACKAGE);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-installed", _("List installed packages"));
+		msg += fmt.printf("--list-available", _("List available packages"));
+		msg += fmt.printf("--list-foreign ", _("List non-native packages"));
+		msg += fmt.printf("--list-extra", _("List extra packages installed by user"));
+		msg += fmt.printf("--list-{default|dist|base}", _("List default packages for linux distribution"));
+		msg += fmt.printf("--backup-packages", _("Save list of installed packages"));
+		msg += fmt.printf("--restore-packages", _("Install missing packages"));
+		msg += "\n";
+
+		msg += "%s: %s, %s, %s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
+
+		msg += fmt2.printf(Message.TASK_USER);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-users", _("List users"));
+		msg += fmt.printf("--list-users-all", _("List all users (including system user accounts)"));
+		msg += fmt.printf("--backup-users", _("Backup users and groups"));
+		msg += fmt.printf("--restore-users", _("Restore users and groups"));
+		msg += "\n";
+		
+		msg += fmt2.printf(Message.TASK_GROUP);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-groups", _("List groups"));
+		msg += fmt.printf("--list-groups-all", _("List all groups (including system groups)"));
+		msg += fmt.printf("--backup-groups", _("Backup groups"));
+		msg += fmt.printf("--restore-groups", _("Restore groups"));
+		msg += "\n";
+
+		msg += fmt2.printf(Message.TASK_HOME);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--backup-home", _("Backup data in users' home directories"));
+		msg += fmt.printf("--restore-home", _("Restore data in users' home directories"));
+		msg += fmt.printf("--fix-ownership", _("Make every user the owner of their home directory contents"));
+
+		msg += "\n%s:\n".printf(_("Options"));
+		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore (default: all users)"));
+		msg += fmt.printf("--duplicity", _("Use duplicity for backup instead of TAR (default: TAR)"));
+		msg += fmt.printf("--password <string>", _("Password for encryption/decryption with duplicity (default: 'aptik')"));
+		msg += fmt.printf("--full", _("Do full backup with duplicity (default: incremental if backup exists, else full)"));
+		msg += "\n";
+		
+		msg += fmt2.printf(Message.TASK_MOUNT);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--backup-mounts", _("Backup /etc/fstab and /etc/crypttab entries"));
+		msg += fmt.printf("--restore-mounts", _("Restore /etc/fstab and /etc/crypttab entries"));
+		msg += "\n";
+		
+		msg += fmt2.printf(_("All Items"));
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--backup-all", _("Backup all items"));
+		msg += fmt.printf("--restore-all", _("Restore all items"));
+		msg += "\n";
+		
+		msg += fmt2.printf(("Common"));
+		
+		msg += "%s:\n".printf(_("Options"));
+		msg += fmt.printf("--basepath <dir>", _("Backup directory (default: current directory)"));
+		msg += fmt.printf("--scripted", _("Run in non-interactive mode"));
+		msg += fmt.printf("--dry-run", _("Show actions for restore without making changes to system"));
 		//msg += fmt.printf("user <username>" + _("Select username for listing config files"));
 		//msg += fmt.printf("password <password>" + _("Specify password for encrypting and decrypting backups"));
 		//msg += fmt.printf("[show-]desc" + _("Show package description if available"));
-		msg += fmt.printf("help", _("Show all options"));
-		msg += "\n";
-
-		msg += "%s:\n\n".printf(Message.TASK_PPA);
-		
-		//msg += fmt.printf("list-repo            ",  _("List PPAs"));
-		msg += fmt.printf("backup-repos", _("Save list of software repositories"));
-		msg += fmt.printf("restore-repos", _("Add missing software repositories"));
-		msg += fmt.printf("import-missing-keys", _("Import missing public keys for apt"));
+		msg += fmt.printf("--help", _("Show all options"));
 		msg += "\n";
 		
-		msg += "%s:\n\n".printf(Message.TASK_CACHE);
-		
-		msg += fmt.printf("backup-cache", _("Copy downloaded packages from system cache"));
-		msg += fmt.printf("restore-cache", _("Copy packages to system cache"));
-		msg += fmt.printf("clear-cache", _("Remove downloaded packages from system cache"));
-		msg += "\n";
-
-		msg += "%s:\n\n".printf(Message.TASK_PACKAGE);
-		
-		msg += fmt.printf("list-installed", _("List installed packages"));
-		msg += fmt.printf("list-available", _("List available packages"));
-		msg += fmt.printf("list-foreign ", _("List non-native packages"));
-		msg += fmt.printf("list-extra", _("List extra packages installed by user"));
-		msg += fmt.printf("list-{default|dist|base}", _("List default packages for linux distribution"));
-		msg += fmt.printf("backup-packages", _("Save list of installed packages"));
-		msg += fmt.printf("restore-packages", _("Install missing packages"));
-		msg += "\n";
-
-		msg += "%s:\n\n".printf(Message.TASK_USER);
-		
-		msg += fmt.printf("list-users", _("List users"));
-		msg += fmt.printf("list-users-all", _("List all users (including system user accounts)"));
-		msg += fmt.printf("backup-users", _("Backup users and groups"));
-		msg += fmt.printf("restore-users", _("Restore users and groups"));
-		msg += "\n";
-		
-		msg += "%s:\n\n".printf(Message.TASK_GROUP);
-		
-		msg += fmt.printf("list-groups", _("List groups"));
-		msg += fmt.printf("list-groups-all", _("List all groups (including system groups)"));
-		msg += fmt.printf("backup-groups", _("Backup groups"));
-		msg += fmt.printf("restore-groups", _("Restore groups"));
-		msg += "\n";
-
-		msg += "%s:\n\n".printf(Message.TASK_HOME);
-
-		msg += fmt.printf("backup-home", _("Backup data in users' home directories"));
-		msg += fmt.printf("restore-home", _("Restore data in users' home directories"));
-		msg += fmt.printf("password <string>", _("(optional) Password for encryption/decryption (for duplicity) (default: aptik)"));
-		msg += fmt.printf("users <user1,user2,..>", _("(optional) Users to backup and restore (default: all users)"));
-		msg += fmt.printf("full", _("(optional) Do full backup (default: incremental if backup exists, else full)"));
-		msg += fmt.printf("duplicity", _("(optional) Use duplicity for backup instead of TAR (default: TAR)"));
-		msg += "\n";
-		
-		msg += "%s:\n\n".printf(Message.TASK_MOUNT);
-
-		msg += fmt.printf("backup-mounts", _("Backup /etc/fstab and /etc/crypttab entries"));
-		msg += fmt.printf("restore-mounts", _("Restore /etc/fstab and /etc/crypttab entries"));
-		msg += "\n";
-		
-		msg += _("All Items") + ":\n\n";
-		
-		msg += fmt.printf("backup-all", _("Backup all items"));
-		msg += fmt.printf("restore-all", _("Restore all items"));
-
 		/*
 		msg += "%s:\n".printf(Message.TASK_CONFIG);
 		msg += "\n";
@@ -206,7 +225,7 @@ public class AptikConsole : GLib.Object {
 		
 
 		//msg += fmt.printf("clean               " + _("Remove all backups from backup location") + "\n";
-		msg += "\n";
+		//msg += "\n";
 
 		return msg;
 	}
@@ -447,6 +466,9 @@ public class AptikConsole : GLib.Object {
 
 			case "--restore-home":
 				return restore_home();
+
+			case "--fix-ownership":
+				return fix_home_ownership();
 
 			// mounts -------------------------------------------
 
@@ -1163,6 +1185,20 @@ public class AptikConsole : GLib.Object {
 		
 		var mgr = new UserHomeDataManager(dry_run);
 		bool ok = mgr.restore_home(basepath, userlist, password);
+		if (!ok){ status = false; }
+		
+		return status;
+	}
+
+	public bool fix_home_ownership(){
+		
+		//check_basepath();
+		//if (!check_backup_dir_exists(BackupType.HOME)) { return false; }
+
+		bool status = true;
+		
+		var mgr = new UserHomeDataManager(dry_run);
+		bool ok = mgr.fix_home_ownership(userlist);
 		if (!ok){ status = false; }
 		
 		return status;

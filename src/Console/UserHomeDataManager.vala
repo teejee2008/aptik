@@ -80,7 +80,7 @@ public class UserHomeDataManager : GLib.Object {
 			ok = backup_home_duplicity(backup_path, users, password, full_backup, exclude_hidden);
 			break;
 		default:
-			ok = backup_home_tar(backup_path, users);
+			ok = backup_home_tar(backup_path, users, exclude_hidden);
 			break;
 		}
 
@@ -98,7 +98,7 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users){
+	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users, bool exclude_hidden){
 
 		bool status = true;
 		
@@ -121,11 +121,11 @@ public class UserHomeDataManager : GLib.Object {
 
 			// save exclude list -----------------------
 			
-			//var exclude_list = path_combine(backup_path_user, "exclude.list");
-			//if (file_exists(exclude_list)){
-			//	file_delete(exclude_list);
-			//}
-			//file_write(exclude_list, exclude_list_create(user));
+			var exclude_list = path_combine(backup_path_user, "exclude.list");
+			if (file_exists(exclude_list)){
+				file_delete(exclude_list);
+			}
+			file_write(exclude_list, exclude_list_create(user, exclude_hidden, true));
 
 			// create script ---------------------------
 
@@ -137,8 +137,10 @@ public class UserHomeDataManager : GLib.Object {
 			cmd += "cd '%s'\n".printf(escape_single_quote(file_parent(user.home_path)));
 			
 			cmd += "tar -zvcf";
-			
+
 			cmd += " '%s'".printf(escape_single_quote(tar_file));
+
+			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
 			
 			cmd += " '%s'".printf(escape_single_quote(file_basename(user.home_path)));
 
@@ -194,7 +196,7 @@ public class UserHomeDataManager : GLib.Object {
 			if (file_exists(exclude_list)){
 				file_delete(exclude_list);
 			}
-			file_write(exclude_list, exclude_list_create(user, exclude_hidden));
+			file_write(exclude_list, exclude_list_create(user, exclude_hidden, false));
  
 			// check for existing backup -----------------------
 			
@@ -254,47 +256,37 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public string exclude_list_create(User user, bool exclude_hidden){
+	public string exclude_list_create(User user, bool exclude_hidden, bool tar_format){
 		
 		string txt = "";
-		string path = "";
 
-		path = path_combine(user.home_path, ".thumbnails");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".cache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".dbus");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".gvfs");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".local/share/Trash");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".local/share/trash");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".mozilla/firefox/*.default/Cache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".mozilla/firefox/*.default/OfflineCache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".opera/cache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".kde/share/apps/kio_http/cache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".kde/share/cache/http");
-		txt += "%s\n".printf(path);
+		var list = new Gee.ArrayList<string>();
+		
+		list.add(path_combine(user.home_path, ".thumbnails"));
+		list.add(path_combine(user.home_path, ".cache"));
+		list.add(path_combine(user.home_path, ".dbus"));
+		list.add(path_combine(user.home_path, ".gvfs"));
+		list.add(path_combine(user.home_path, ".local/share/Trash"));
+		list.add(path_combine(user.home_path, ".local/share/trash"));
+		list.add(path_combine(user.home_path, ".mozilla/firefox/*.default/Cache"));
+		list.add(path_combine(user.home_path, ".mozilla/firefox/*.default/OfflineCache"));
+		list.add(path_combine(user.home_path, ".opera/cache"));
+		list.add(path_combine(user.home_path, ".kde/share/apps/kio_http/cache"));
+		list.add(path_combine(user.home_path, ".kde/share/cache/http"));
 
 		if (exclude_hidden){
-			path = path_combine(user.home_path, ".*");
-			txt += "%s\n".printf(path);
+			list.add(path_combine(user.home_path, ".*"));
+		}
+
+		int index = file_parent(user.home_path).length;
+		
+		foreach(var item in list){
+			if (tar_format){
+				txt += "%s\n".printf(item[index:item.length]);
+			}
+			else{
+				txt += "%s\n".printf(item);
+			}
 		}
 
 		if (dry_run || LOG_DEBUG){

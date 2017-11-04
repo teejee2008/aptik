@@ -36,7 +36,7 @@ public class UserHomeDataManager : GLib.Object {
 
 	// backup and restore ----------------------
 	
-	public bool backup_home(string basepath, string userlist, string password, bool full_backup, HomeDataBackupMode mode){
+	public bool backup_home(string basepath, string userlist, HomeDataBackupMode mode, string password, bool full_backup, bool exclude_hidden){
 
 		string backup_path = path_combine(basepath, "home");
 
@@ -77,7 +77,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		switch(mode){
 		case HomeDataBackupMode.DUPLICITY:
-			ok = backup_home_duplicity(backup_path, users, password, full_backup);
+			ok = backup_home_duplicity(backup_path, users, password, full_backup, exclude_hidden);
 			break;
 		default:
 			ok = backup_home_tar(backup_path, users);
@@ -144,14 +144,17 @@ public class UserHomeDataManager : GLib.Object {
 
 			cmd += "\n";
 
-			log_debug(cmd);
-
 			// execute ---------------------------------
 
-			string sh_file = save_bash_script_temp(cmd);
-			int retval = Posix.system(sh_file);
-
-			if (retval != 0){ status = false; }
+			if (!dry_run){
+				log_debug(cmd);
+				string sh_file = save_bash_script_temp(cmd);
+				int retval = Posix.system(sh_file);
+				if (retval != 0){ status = false; }
+			}
+			else{
+				log_msg("cmd: %s".printf(cmd));
+			}
 
 			log_msg(string.nfill(70,'-'));
 		}
@@ -159,7 +162,7 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public bool backup_home_duplicity(string backup_path, Gee.ArrayList<User> users, string _password, bool full_backup){
+	public bool backup_home_duplicity(string backup_path, Gee.ArrayList<User> users, string _password, bool full_backup, bool exclude_hidden){
 
 		string password = _password;
 		
@@ -191,8 +194,8 @@ public class UserHomeDataManager : GLib.Object {
 			if (file_exists(exclude_list)){
 				file_delete(exclude_list);
 			}
-			file_write(exclude_list, exclude_list_create(user));
-
+			file_write(exclude_list, exclude_list_create(user, exclude_hidden));
+ 
 			// check for existing backup -----------------------
 			
 			var list = dir_list_names(backup_path_user, false);
@@ -233,14 +236,17 @@ public class UserHomeDataManager : GLib.Object {
 			
 			cmd += "unset PASSPHRASE\n";
 
-			log_debug(cmd);
-
 			// execute ---------------------------------
 
-			string sh_file = save_bash_script_temp(cmd);
-			int retval = Posix.system(sh_file);
-
-			if (retval != 0){ status = false; }
+			if (!dry_run){
+				log_debug(cmd);
+				string sh_file = save_bash_script_temp(cmd);
+				int retval = Posix.system(sh_file);
+				if (retval != 0){ status = false; }
+			}
+			else{
+				log_msg("cmd: %s".printf(cmd));
+			}
 
 			log_msg(string.nfill(70,'-'));
 		}
@@ -248,6 +254,55 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
+	public string exclude_list_create(User user, bool exclude_hidden){
+		
+		string txt = "";
+		string path = "";
+
+		path = path_combine(user.home_path, ".thumbnails");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".cache");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".dbus");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".gvfs");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".local/share/Trash");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".local/share/trash");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".mozilla/firefox/*.default/Cache");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".mozilla/firefox/*.default/OfflineCache");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".opera/cache");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".kde/share/apps/kio_http/cache");
+		txt += "%s\n".printf(path);
+
+		path = path_combine(user.home_path, ".kde/share/cache/http");
+		txt += "%s\n".printf(path);
+
+		if (exclude_hidden){
+			path = path_combine(user.home_path, ".*");
+			txt += "%s\n".printf(path);
+		}
+
+		if (dry_run || LOG_DEBUG){
+			log_msg("Exclude:\n%s\n".printf(txt));
+		}
+
+		return txt;
+	}
 
 	public bool restore_home(string basepath, string userlist, string password){
 
@@ -445,11 +500,11 @@ public class UserHomeDataManager : GLib.Object {
 
 			// save exclude list -----------------------
 			
-			var exclude_list = path_combine(backup_path_user, "exclude.list");
-			if (file_exists(exclude_list)){
-				file_delete(exclude_list);
-			}
-			file_write(exclude_list, exclude_list_create(user));
+			//var exclude_list = path_combine(backup_path_user, "exclude.list");
+			//if (file_exists(exclude_list)){
+			//	file_delete(exclude_list);
+			//}
+			//file_write(exclude_list, exclude_list_create(user));
 
 			// create script ---------------------------
 			
@@ -495,48 +550,6 @@ public class UserHomeDataManager : GLib.Object {
 		}
 
 		return status;
-	}
-
-	public string exclude_list_create(User user){
-		
-		string txt = "";
-		string path = "";
-
-		path = path_combine(user.home_path, ".thumbnails");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".cache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".dbus");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".gvfs");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".local/share/Trash");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".local/share/trash");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".mozilla/firefox/*.default/Cache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".mozilla/firefox/*.default/OfflineCache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".opera/cache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".kde/share/apps/kio_http/cache");
-		txt += "%s\n".printf(path);
-
-		path = path_combine(user.home_path, ".kde/share/cache/http");
-		txt += "%s\n".printf(path);
-
-		//txt += "%s\n".printf("**/.*");
-		return txt;
 	}
 
 	public bool fix_home_ownership(string userlist){

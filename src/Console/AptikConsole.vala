@@ -53,6 +53,7 @@ public class AptikConsole : GLib.Object {
 	public string userlist = "";
 	public string password = "aptik";
 	public bool full_backup = false;
+	public bool exclude_hidden = false;
 	public HomeDataBackupMode home_mode = HomeDataBackupMode.TAR;
 
 	public uint64 config_size_limit = 0;
@@ -177,6 +178,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--duplicity", _("Use duplicity for backup instead of TAR (default: TAR)"));
 		msg += fmt.printf("--password <string>", _("Password for encryption/decryption with duplicity (default: 'aptik')"));
 		msg += fmt.printf("--full", _("Do full backup with duplicity (default: incremental if backup exists, else full)"));
+		msg += fmt.printf("--exclude-hidden", _("Exclude hidden files and directories (application config files)(default: include)"));
 		msg += "\n";
 		
 		msg += fmt2.printf(Message.TASK_MOUNT);
@@ -276,6 +278,10 @@ public class AptikConsole : GLib.Object {
 				full_backup = true;
 				break;
 
+			case "--exclude-hidden":
+				exclude_hidden = true;
+				break;
+				
 			case "--duplicity":
 				home_mode = HomeDataBackupMode.DUPLICITY;
 				break;
@@ -1170,7 +1176,7 @@ public class AptikConsole : GLib.Object {
 		bool status = true;
 
 		var mgr = new UserHomeDataManager(dry_run);
-		bool ok = mgr.backup_home(basepath, userlist, password, full_backup, home_mode);
+		bool ok = mgr.backup_home(basepath, userlist, home_mode, password, full_backup, exclude_hidden);
 		if (!ok){ status = false; }
 		
 		return status; 

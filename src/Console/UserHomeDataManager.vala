@@ -266,6 +266,7 @@ public class UserHomeDataManager : GLib.Object {
 		list.add(path_combine(user.home_path, ".cache"));
 		list.add(path_combine(user.home_path, ".dbus"));
 		list.add(path_combine(user.home_path, ".gvfs"));
+		list.add(path_combine(user.home_path, ".config/dconf/user"));
 		list.add(path_combine(user.home_path, ".local/share/Trash"));
 		list.add(path_combine(user.home_path, ".local/share/trash"));
 		list.add(path_combine(user.home_path, ".mozilla/firefox/*.default/Cache"));

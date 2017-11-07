@@ -284,7 +284,7 @@ public class RepoManager : GLib.Object {
 	
 	public bool save_repos_apt_launchpad(string backup_path) {
 
-		string list_file = path_combine(backup_path, "launchpad-ppas.list");
+		string backup_file = path_combine(backup_path, "launchpad-ppas.list");
 
 		string text = "\n# Comment-out or remove lines for unwanted items\n\n";
 
@@ -297,11 +297,11 @@ public class RepoManager : GLib.Object {
 			return true;
 		});
 
-		bool ok = file_write(list_file, text);
+		bool ok = file_write(backup_file, text);
 
 		if (ok){
-			chmod(list_file, "a+rw");
-			log_msg("%s: %s".printf(_("Saved"), list_file));
+			chmod(backup_file, "a+rw");
+			log_msg("%s: %s".printf(_("Saved"), backup_file));
 		}
 
 		return ok;

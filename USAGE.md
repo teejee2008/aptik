@@ -87,7 +87,7 @@ Options:
 
 ### Software Repositories
 
-**Backup**
+#### Backup
 
 Usage: `aptik --backup-repos`
 
@@ -105,7 +105,7 @@ Following actions are executed for backup:
    1. Custom repos are read from file `/etc/pacman.conf`. Source lines are saved to file `<basepath>/repos/<repo-name>.list`.  Files can be deleted from the backup folder for unwanted repos.
    2. Pacman keys are exported to file `<basepath>/repos/pacman.keys`
 
-**Restore**
+#### Restore
 
 Usage: `aptik --restore-repos`
 
@@ -126,7 +126,7 @@ Following actions are executed for restore:
 
 ### Downloaded Packages
 
-**Backup**
+#### Backup
 
 Usage: `aptik --backup-cache`
 
@@ -138,7 +138,7 @@ Following actions are executed for backup:
    * Arch-based distros - Copied from `/var/cache/pacman/pkg`
 
 
-**Restore**
+#### Restore
 
 Usage: `aptik --restore-cache`
 
@@ -148,7 +148,7 @@ Following actions are executed for restore:
 
 ### Installed Packages
 
-**Backup**
+#### Backup
 
 Usage: `aptik --backup-packages`
 
@@ -168,7 +168,7 @@ Following actions are executed for backup:
 
 3. List of filtered packages are saved to `<basepath>/packages/selected.list`. This file can be edited to comment-out or remove lines for unwanted packages.
 
-**Restore**
+#### Restore
 
 Usage: `aptik --restore-packages`
 
@@ -183,7 +183,7 @@ Following actions are executed for restore:
 
 ### Users
 
-**Backup**
+#### Backup
 
 Usage: `aptik --backup-users`
 
@@ -191,7 +191,7 @@ Following actions are executed for backup:
 
 1. Entries in `/etc/passwd` and `/etc/shadow` are saved to backup folder  `<basepath>/users` for human users (UID = 0 or UID >= 1000 and UID != 65534). User's line in both files are saved as `<username>.passwd` and `<username>.shadow` in the backup folder. You can delete the files for any users that you do not wish to restore.
 
-**Restore**
+#### Restore
 
 Usage: `aptik --restore-users`
 
@@ -206,7 +206,7 @@ Following actions are executed for restore:
 
 ### Groups
 
-**Backup**
+#### Backup
 
 Usage: `aptik --backup-groups`
 
@@ -215,7 +215,7 @@ Following actions are executed for backup:
 1. Entries in `/etc/group` and `/etc/gshadow` are saved to backup folder  `<basepath>/groups` for non-system groups (GID >= 1000 and GID != 65534). Group's line in both files are saved as `<groupname>.group` and `<groupname>.gshadow` in the backup folder. You can delete the files for any groups that you do not wish to restore.
 2. For all groups, the list of users in the group are saved in file `<basepath>/groups/memberships.list`.
 
-**Restore**
+#### Restore
 
 Usage: `aptik --restore-groups`
 
@@ -230,7 +230,7 @@ Following actions are executed for restore:
 
 ### Home Data
 
-**Backup**
+#### Backup
 
 Usage: `aptik --backup-home`
 
@@ -252,6 +252,7 @@ Following actions are executed for backup:
    ~/.cache
    ~/.dbus
    ~/.gvfs
+   ~/.config/dconf/user
    ~/.local/share/Trash
    ~/.local/share/trash
    ~/.mozilla/firefox/*.default/Cache
@@ -263,7 +264,7 @@ Following actions are executed for backup:
 
 5. Hidden files and folders in home directories can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings.
 
-**Restore**
+#### Restore
 
 Usage: `aptik --restore-home`
 
@@ -275,9 +276,29 @@ Following actions are executed for restore:
    {0}. The password should be specified during restore if it was specified during backup (option `--password <string>`). A default password `aptik` is used if none is specified.
 4. Backups can be restored for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user names without space.
 
+### DConf Settings
+
+The dconf database stores application settings for the user. Aptik can backup and restore any changes that were made to default settings by the user.
+
+#### Backup
+
+Usage: `aptik --backup-dconf`
+
+Following actions are executed for backup:
+
+1. For each user, dconf settings that are different from defaults are dumped to backup file `<basepath>/dconf/<username>/dconf.settings`
+
+#### Restore
+
+Usage: `aptik --restore-dconf`
+
+Following actions are executed for restore:
+
+1. For each user, dconf settings are imported from backup file `<basepath>/dconf/<username>/dconf.settings`
+
 ### Mount Entries
 
-**Backup**
+#### Backup
 
 Usage: `aptik --backup-mounts`
 
@@ -286,7 +307,7 @@ Following actions are executed for backup:
 1. Entries in `/etc/fstab` and `/etc/crypttab` are saved to backup folder  `<basepath>/mounts` . Entries are saved individually as `<dev-name>_<mount-point>.fstab` and `<dev-name>_<mount-point>.crypttab` in the backup folder. You can delete the files for any mount entries that you do not wish to restore.
      *  Device names like `/dev/sda1` and `/dev/mapper/sd2_crypt` will be replaced by UUIDs like `UUID=576be21b-3c3a-4287-b971-40b8e8b39823` while saving backup files. This makes the entries portable so that they can be used on other systems where the device names may be different.
 
-**Restore**
+#### Restore
 
 Usage: `aptik --restore-mounts`
 

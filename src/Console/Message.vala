@@ -68,6 +68,7 @@ public class Message : GLib.Object {
 	public const string TASK_GROUP = _("Groups");
 	public const string TASK_CONFIG = _("Application Settings");
 	public const string TASK_HOME = _("Home Directory Data");
+	public const string TASK_DCONF = _("Dconf Settings");
 	public const string TASK_CRON = _("Scheduled Tasks");
 }
 

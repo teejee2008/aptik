@@ -1,6 +1,6 @@
 ## Aptik NG
 
-> **Aptik NG is the next generation version of the Aptik System Migration Utility. It is more powerful than ever and supports more distributions such as Fedora, Arch, and derivatives.**
+> **Aptik NG is the next generation of the Aptik System Migration Utility. It is more powerful than ever and supports more distributions such as Fedora, Arch, and derivatives.**
 
 > **Status - In Development (Not ready for release)**
 
@@ -18,11 +18,11 @@ Aptik should only be used to migrate between two installations of **same archite
 
 ## **Features**
 
-- **Migrate Software Packages** - Aptik saves a list of installed software packages to the selected backup location. The packages will be re-installed on the new system on restore. Supports Debian, Ubuntu, Fedora, Arch and derivatives. On Debian, Ubuntu and derivatives the list of packages that are saved include only those software that was installed by the user. The list does not include packages that came with the distribution or that were installed to satisfy dependencies. This makes it easy to review and edit the list of packages.
+- **Migrate Software Packages** - Saves a list of installed software packages to the selected backup location. The packages will be re-installed on the new system on restore. Supports Debian, Ubuntu, Fedora, Arch and derivatives. On Debian, Ubuntu and derivatives the list of packages that are saved include only those software that was installed by the user. The list does not include packages that came with the distribution or that were installed to satisfy dependencies. This makes it easy to review and edit the list of packages.
 - **Migrate Software Repositories** - Saves a list of extra software repositories added to the system. The repos will be added to the new system on restore. Supports Debian, Ubuntu and derivatives. On Debian, Ubuntu and derivatives, both Launchpad PPAs and custom repositories (Google Chrome, Oracle VirtualBox, etc) are supported. Missing GPG keys for repositories will be imported on restore.
 - **Migrate Package Manager Cache** - Saves downloaded packages from system cache to the selected backup location. Copies packages to system cache of the new system on restore. This saves time in downloading packages while re-installing software. Supports Debian, Ubuntu and derivatives (which use apt); and Arch and derivatives (which use pacman).
 - **Migrate Fonts, Icons, Themes, Wallpapers** - Saves fonts, icons, themes and wallpapers to the selected backup location. Copies items to the new system on restore. Supports Debian, Ubuntu, Fedora, Arch and derivatives.
-- **Migrate User Accounts, Groups and Group Memberships** - Saves a list of users, groups and group memberships to the selected backup location. Re-creates missing users, groups and group memberships on the new system on restore. Users accounts are migrated along with encrypted account passwords and account settings (such home directory path, password expiry rules, etc). Supports Debian, Ubuntu, Fedora, Arch and derivatives.
+- **Migrate User Accounts, Groups and Group Memberships** - Saves a list of users, groups and group memberships to the selected backup location. Re-creates missing users, groups and group memberships on the new system on restore. Users accounts are migrated along with account passwords and account settings (such home directory path, password expiry rules, etc). Supports Debian, Ubuntu, Fedora, Arch and derivatives.
 - **Migrate Home Directory Data** - Saves data from user home directories to selected backup location using duplicity. Data is compressed before saving. Supports Debian, Ubuntu, Fedora, Arch and derivatives.
 - **Migrate Device Mount Settings** - Saves and restores device mount settings in /etc/fstab and /etc/crypttab. Supports Debian, Ubuntu, Fedora, Arch and derivatives.
 - **Migrate Cron Tasks** - Saves and restores cron jobs for each user. Supports Debian, Ubuntu, Fedora, Arch and derivatives.

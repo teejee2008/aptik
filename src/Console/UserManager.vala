@@ -262,7 +262,6 @@ public class UserManager : GLib.Object {
 			if (!all && user.is_system) { continue; }
 
 			string txt = (user.full_name.length > 0) ? "-- " + user.full_name : "" ;
-			
 			log_msg("%5d %-20s %s".printf(user.uid, user.name, txt));
 		}
 	}

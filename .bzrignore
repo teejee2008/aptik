@@ -12,3 +12,4 @@ release/*.run
 .git
 *.c
 *.o
+*~

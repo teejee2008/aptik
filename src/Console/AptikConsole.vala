@@ -93,9 +93,6 @@ public class AptikConsole : GLib.Object {
 		distro = new LinuxDistro();
 
 		basepath = Environment.get_current_dir();
-
-		//user_mgr = new UserManager();
-		//user_mgr.query_users(true);
 	}
 
 	public void print_backup_path(){
@@ -122,7 +119,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--import-missing-keys", _("Find and import missing keys for apt repos"));
 		msg += "\n";
 
-		msg += "%s: %s, %s, %s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
+		msg += "%s: %s, %s,\n%s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
 		
 		msg += fmt2.printf(Message.TASK_CACHE);
 
@@ -146,7 +143,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--restore-packages", _("Install missing packages from backup"));
 		msg += "\n";
 
-		msg += "%s: %s, %s, %s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
+		msg += "%s: %s, %s,\n%s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
 
 		msg += fmt2.printf(Message.TASK_USER);
 
@@ -171,14 +168,23 @@ public class AptikConsole : GLib.Object {
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--backup-home", _("Backup data in users' home directories"));
 		msg += fmt.printf("--restore-home", _("Restore data in users' home directories from backup"));
-		msg += fmt.printf("--fix-ownership", _("Make every user the owner of their home directory contents"));
+		msg += fmt.printf("--fix-ownership", _("Updates ownership for users' home directory contents"));
 
 		msg += "\n%s:\n".printf(_("Options"));
-		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore (default: all users)"));
-		msg += fmt.printf("--duplicity", _("Use duplicity for backup instead of TAR (default: TAR)"));
-		msg += fmt.printf("--password <string>", _("Password for encryption/decryption with duplicity (default: 'aptik')"));
-		msg += fmt.printf("--full", _("Do full backup with duplicity (default: incremental if backup exists, else full)"));
-		msg += fmt.printf("--exclude-hidden", _("Exclude hidden files and directories (application config files)(default: include)"));
+		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
+		msg += fmt.printf("", _("default: all users"));
+		msg += "\n";
+		msg += fmt.printf("--duplicity", _("Use duplicity for backup instead of TAR"));
+		msg += fmt.printf("", _("default: TAR"));
+		msg += "\n";
+		msg += fmt.printf("--password <string>", _("Password for encryption/decryption with duplicity"));
+		msg += fmt.printf("", _("default: 'aptik'"));
+		msg += "\n";
+		msg += fmt.printf("--full", _("Do full backup with duplicity"));
+		msg += fmt.printf("", _("default: incremental if backup exists, else full"));
+		msg += "\n";
+		msg += fmt.printf("--exclude-hidden", _("Exclude hidden files and directories (app configs)"));
+		msg += fmt.printf("", _("default: include"));
 		msg += "\n";
 		
 		msg += fmt2.printf(Message.TASK_MOUNT);
@@ -195,16 +201,24 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--list-dconf", _("List dconf settings changed by user"));
 		msg += fmt.printf("--backup-dconf", _("Backup dconf settings changed by user"));
 		msg += fmt.printf("--restore-dconf", _("Restore dconf settings from backup"));
-		msg += "\n";
 
+		msg += "\n%s:\n".printf(_("Options"));
+		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
+		msg += fmt.printf("", _("default: all users"));
+		msg += "\n";
+		
 		msg += fmt2.printf(Message.TASK_CRON);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-cron", _("List cron tasks"));
 		msg += fmt.printf("--backup-cron", _("Backup cron tasks"));
 		msg += fmt.printf("--restore-cron", _("Restore cron tasks"));
-		msg += "\n";
 
+		msg += "\n%s:\n".printf(_("Options"));
+		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
+		msg += fmt.printf("", _("default: all users"));
+		msg += "\n";
+		
 		msg += fmt2.printf(_("All Items"));
 
 		msg += "%s:\n".printf(_("Commands"));
@@ -218,34 +232,9 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--basepath <dir>", _("Backup directory (default: current directory)"));
 		msg += fmt.printf("--scripted", _("Run in non-interactive mode"));
 		msg += fmt.printf("--dry-run", _("Show actions for restore without making changes to system"));
-		//msg += fmt.printf("user <username>" + _("Select username for listing config files"));
-		//msg += fmt.printf("password <password>" + _("Specify password for encrypting and decrypting backups"));
-		//msg += fmt.printf("[show-]desc" + _("Show package description if available"));
 		msg += fmt.printf("--help", _("Show all options"));
 		msg += "\n";
 		
-		/*
-		msg += "%s:\n".printf(Message.TASK_CONFIG);
-		msg += "\n";
-		msg += fmt.printf("list-configs        " + _("List config dirs in /home/<user>") + "\n";
-		msg += fmt.printf("backup-configs      " + _("Backup config files from /home/<user>") + "\n";
-		msg += fmt.printf("restore-configs     " + _("Restore config files to /home/<user>") + "\n";
-		msg += fmt.printf("size-limit <bytes>  " + _("Skip config dirs larger than specified size") + "\n";
-		msg += "\n";
-		*/
-		
-		/*
-		msg += "%s:\n".printf(Message.TASK_CRON);
-		msg += "\n";
-		msg += fmt.printf("backup-crontab         " + _("Backup user's scheduled tasks (crontab)") + "\n";
-		msg += fmt.printf("restore-crontab        " + _("Restore user's scheduled tasks (crontab)") + "\n";
-		msg += "\n";
-		*/
-		
-
-		//msg += fmt.printf("clean               " + _("Remove all backups from backup location") + "\n";
-		//msg += "\n";
-
 		return msg;
 	}
 

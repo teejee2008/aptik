@@ -7,16 +7,17 @@ Usage: aptik <command> [options]
 
 Commands:
   --backup-repos                 Save list of software repositories
-  --restore-repos                Add missing software repositories
+  --restore-repos                Add missing software repositories from backup
   --import-missing-keys          Find and import missing keys for apt repos
 
-Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives), dnf/yum (Fedora & Derivatives)
+Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives),
+dnf/yum (Fedora & Derivatives)
 
 ▰▰▰ Downloaded Packages ▰▰▰
 
 Commands:
   --backup-cache                 Copy downloaded packages from system cache
-  --restore-cache                Copy packages to system cache
+  --restore-cache                Copy packages to system cache from backup
   --clear-cache                  Remove downloaded packages from system cache
 
 Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives)
@@ -30,17 +31,18 @@ Commands:
   --list-extra                   List extra packages installed by user
   --list-{default|dist|base}     List default packages for linux distribution
   --backup-packages              Save list of installed packages
-  --restore-packages             Install missing packages
+  --restore-packages             Install missing packages from backup
 
-Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives), dnf/yum (Fedora & Derivatives)
+Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives),
+dnf/yum (Fedora & Derivatives)
 
 ▰▰▰ User Accounts ▰▰▰
 
 Commands:
   --list-users                   List users
   --list-users-all               List all users (including system user accounts)
-  --backup-users                 Backup users and groups
-  --restore-users                Restore users and groups
+  --backup-users                 Backup users
+  --restore-users                Restore users from backup
 
 ▰▰▰ Groups ▰▰▰
 
@@ -48,33 +50,65 @@ Commands:
   --list-groups                  List groups
   --list-groups-all              List all groups (including system groups)
   --backup-groups                Backup groups
-  --restore-groups               Restore groups
+  --restore-groups               Restore groups from backup
 
 ▰▰▰ Home Directory Data ▰▰▰
 
 Commands:
   --backup-home                  Backup data in users' home directories
-  --restore-home                 Restore data in users' home directories
-  --fix-ownership                Make every user the owner of their home directory contents
+  --restore-home                 Restore data in users' home directories from backup
+  --fix-ownership                Updates ownership for users' home directory contents
 
 Options:
-  --users <usr1,usr2,..>         Users to backup and restore (default: all users)
-  --duplicity                    Use duplicity for backup instead of TAR (default: TAR)
-  --password <string>            Password for encryption/decryption with duplicity (default: 'aptik')
-  --full                         Do full backup with duplicity (default: incremental if backup exists, else full)
-  --exclude-hidden               Exclude hidden files and directories (application config files)(default: include)
+  --users <usr1,usr2,..>         Users to backup and restore
+                                 default: all users
+
+  --duplicity                    Use duplicity for backup instead of TAR
+                                 default: TAR
+
+  --password <string>            Password for encryption/decryption with duplicity
+                                 default: 'aptik'
+
+  --full                         Do full backup with duplicity
+                                 default: incremental if backup exists, else full
+
+  --exclude-hidden               Exclude hidden files and directories (app configs)
+                                 default: include
 
 ▰▰▰ Filesystem Mounts ▰▰▰
 
 Commands:
+  --list-mounts                  List /etc/fstab and /etc/crypttab entries
   --backup-mounts                Backup /etc/fstab and /etc/crypttab entries
-  --restore-mounts               Restore /etc/fstab and /etc/crypttab entries
+  --restore-mounts               Restore /etc/fstab and /etc/crypttab entries from backup
+
+▰▰▰ Dconf Settings ▰▰▰
+
+Commands:
+  --list-dconf                   List dconf settings changed by user
+  --backup-dconf                 Backup dconf settings changed by user
+  --restore-dconf                Restore dconf settings from backup
+
+Options:
+  --users <usr1,usr2,..>         Users to backup and restore
+                                 default: all users
+
+▰▰▰ Scheduled Tasks ▰▰▰
+
+Commands:
+  --list-cron                    List cron tasks
+  --backup-cron                  Backup cron tasks
+  --restore-cron                 Restore cron tasks
+
+Options:
+  --users <usr1,usr2,..>         Users to backup and restore
+                                 default: all users
 
 ▰▰▰ All Items ▰▰▰
 
 Commands:
   --backup-all                   Backup all items
-  --restore-all                  Restore all items
+  --restore-all                  Restore all items from backup
 
 ▰▰▰ Common ▰▰▰
 

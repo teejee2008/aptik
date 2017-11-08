@@ -16,7 +16,11 @@ Aptik should only be used to migrate between two installations of **same distrib
 
 Aptik should only be used to migrate between two installations of **same architecture**. For example, you can migrate from 32-bit to 32-bit system, or from 64-bit to 64-bit system, but not from 32-bit to 64-bit. This is because package names and respositories vary between different architecures and cannot be safely migrated.
 
-## **Features**
+## Usage
+
+Available command and options are documented in the [User Manual](USAGE.md)
+
+## Features**
 
 - **Migrate Software Packages** - Saves a list of installed software packages to the selected backup location. The packages will be re-installed on the new system on restore. Supports Debian, Ubuntu, Fedora, Arch and derivatives. On Debian, Ubuntu and derivatives the list of packages that are saved include only those software that was installed by the user. The list does not include packages that came with the distribution or that were installed to satisfy dependencies. This makes it easy to review and edit the list of packages.
 - **Migrate Software Repositories** - Saves a list of extra software repositories added to the system. The repos will be added to the new system on restore. Supports Debian, Ubuntu and derivatives. On Debian, Ubuntu and derivatives, both Launchpad PPAs and custom repositories (Google Chrome, Oracle VirtualBox, etc) are supported. Missing GPG keys for repositories will be imported on restore.

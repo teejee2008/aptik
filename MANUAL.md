@@ -152,11 +152,11 @@ Following actions are executed for restore:
    4. Package information is updated by running `apt update`
 2. Fedora-based distros
    1. Restoring repos is not supported.
-      2. Package information is updated by running `dnf check-update`
+   2. Package information is updated by running `dnf check-update`
 3. Arch-based distros 
-   2. Custom repos are installed by appending the source lines to `/etc/pacman.conf`
-   3. Pacman keys are imported from file `<basepath>/repos/pacman.keys`
-   4. Package information is updated by running `pacman -Sy`
+   1. Custom repos are installed by appending the source lines to `/etc/pacman.conf`
+   2. Pacman keys are imported from file `<basepath>/repos/pacman.keys`
+   3. Package information is updated by running `pacman -Sy`
 
 ### Downloaded Packages
 

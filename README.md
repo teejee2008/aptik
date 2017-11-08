@@ -18,7 +18,7 @@ Aptik should only be used to migrate between two installations of **same archite
 
 ## Usage
 
-Available command and options are documented in the [User Manual](USAGE.md)
+Available command and options are documented in the [User Manual](MANUAL.md)
 
 ## Features**
 

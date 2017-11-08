@@ -278,7 +278,7 @@ Following actions are executed for restore:
 
 ### DConf Settings
 
-The dconf database stores application settings for the user. Aptik can backup and restore any changes that were made to default settings by the user.
+dconf database stores application settings for users. Aptik can backup and restore any changes that were made to the default settings. The binary database file for dconf `~/.config/dconf/user` will be excluded while taking backup of user's home directories.
 
 #### Backup
 
@@ -295,6 +295,28 @@ Usage: `aptik --restore-dconf`
 Following actions are executed for restore:
 
 1. For each user, dconf settings are imported from backup file `<basepath>/dconf/<username>/dconf.settings`
+
+### Scheduled Tasks
+
+#### Backup
+
+Usage: `aptik --backup-cron`
+
+Following actions are executed for backup:
+
+1. For each user, crontab entries are dumped to backup file `<basepath>/cron/<username>.crontab`
+2. Script files in system directories `/etc/cron.*` are saved to backup folders `<basepath>/cron/cron.*`
+
+#### Restore
+
+Usage: `aptik --restore-cron`
+
+Following actions are executed for restore:
+
+1. For each user, crontab file is replaced from backup file `<basepath>/cron/<username>.crontab`. 
+2. Script files are copied from backup folders  `<basepath>/cron/cron.*` to system directories `/etc/cron.*` 
+3. Permissions are updated to 644 for files in folder `/etc/cron.d`
+4. Permissions are updated to 755 for files in folder `/etc/cron.{daily,hourly,monthly,weekly}`
 
 ### Mount Entries
 

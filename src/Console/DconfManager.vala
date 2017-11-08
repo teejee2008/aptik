@@ -122,7 +122,7 @@ public class DconfManager : GLib.Object {
 
 		bool status = true;
 
-		log_msg(_("Loading dconf settings..."));
+		log_msg(_("Restoring dconf settings..."));
 		
 		string backup_path = path_combine(basepath, "dconf");
 		

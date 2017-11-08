@@ -197,6 +197,14 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--restore-dconf", _("Restore dconf settings from backup"));
 		msg += "\n";
 
+		msg += fmt2.printf(Message.TASK_CRON);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-cron", _("List cron tasks"));
+		msg += fmt.printf("--backup-cron", _("Backup cron tasks"));
+		msg += fmt.printf("--restore-cron", _("Restore cron tasks"));
+		msg += "\n";
+
 		msg += fmt2.printf(_("All Items"));
 
 		msg += "%s:\n".printf(_("Commands"));
@@ -349,6 +357,10 @@ public class AptikConsole : GLib.Object {
 			case "--list-dconf":
 			case "--backup-dconf":
 			case "--restore-dconf":
+
+			case "--list-cron":
+			case "--backup-cron":
+			case "--restore-cron":
 
 			case "--backup-all":
 			case "--restore-all":
@@ -570,18 +582,17 @@ public class AptikConsole : GLib.Object {
 		case "--restore-dconf":
 			return restore_dconf_settings();
 
-		// crontab -------------------------------------------
+		// cron tasks -------------------------------------------
 
-		//case "--backup-crontab":
-		//case "--backup-crontabs":
-			//return backup_crontab();
-			//return true;
+		case "--list-cron":
+			return list_cron_tasks();
 
-		//case "--restore-crontab":
-		//case "--restore-crontabs":
-			//return restore_crontab();
-			//return true;
-			
+		case "--backup-cron":
+			return backup_cron_tasks();
+
+		case "--restore-cron":
+			return restore_cron_tasks();
+
 		// all ---------------------------------------------
 
 		case "--backup-all":
@@ -1289,6 +1300,48 @@ public class AptikConsole : GLib.Object {
 		
 		var mgr = new DconfManager(dry_run);
 		bool ok = mgr.restore_dconf_settings(basepath, userlist);
+		if (!ok){ status = false; }
+		
+		return status;
+	}
+
+	// cron tasks -----------------------------
+	
+	public bool list_cron_tasks(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		var mgr = new CronTaskManager(false);
+		mgr.list_cron_tasks(userlist);
+		return true;
+	}
+	
+	public bool backup_cron_tasks(){
+
+		dir_create(basepath);
+
+		copy_binary();
+
+		bool status = true;
+
+		var mgr = new CronTaskManager(dry_run);
+		bool ok = mgr.backup_cron_tasks(basepath, userlist);
+		if (!ok){ status = false; }
+		
+		return status; 
+	}
+
+	public bool restore_cron_tasks(){
+		
+		check_basepath();
+		if (!check_backup_dir_exists(BackupType.CRON)) { return false; }
+
+		bool status = true;
+		
+		var mgr = new CronTaskManager(dry_run);
+		bool ok = mgr.restore_cron_tasks(basepath, userlist);
 		if (!ok){ status = false; }
 		
 		return status;

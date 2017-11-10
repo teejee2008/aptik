@@ -33,7 +33,7 @@ public class MountEntryManager : GLib.Object {
 
 	public bool dry_run = false;
 
-	public MountEntryManager(bool _dry_run = false){
+	public MountEntryManager(bool _dry_run){
 
 		dry_run = _dry_run;
 		
@@ -338,7 +338,7 @@ public class MountEntryManager : GLib.Object {
 
 		query_mount_entries();
 
-		var mgr = new MountEntryManager();
+		var mgr = new MountEntryManager(dry_run);
 		mgr.read_mount_entries_from_folder(backup_path);
 
 		ok = restore_mount_entries_fstab(mgr.fstab);

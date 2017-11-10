@@ -375,7 +375,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		bool status = true;
 
-		var grpmgr = new GroupManager();
+		var grpmgr = new GroupManager(dry_run);
 		grpmgr.query_groups(false);
 		
 		foreach(var user in users){
@@ -458,7 +458,7 @@ public class UserHomeDataManager : GLib.Object {
 		
 		bool status = true;
 
-		var grpmgr = new GroupManager();
+		var grpmgr = new GroupManager(dry_run);
 		grpmgr.query_groups(false);
 		
 		foreach(var user in users){
@@ -561,7 +561,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		bool ok = true;
 
-		var grpmgr = new GroupManager();
+		var grpmgr = new GroupManager(dry_run);
 		grpmgr.query_groups(false);
 		
 		foreach(var user in users){

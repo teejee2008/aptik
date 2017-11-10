@@ -32,7 +32,7 @@ public class GroupManager : GLib.Object {
 
 	public bool dry_run = false;
 
-	public GroupManager(bool _dry_run = false){
+	public GroupManager(bool _dry_run){
 
 		dry_run = _dry_run;
 		

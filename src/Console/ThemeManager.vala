@@ -39,15 +39,12 @@ public class ThemeManager : GLib.Object {
 
 	public LinuxDistro distro;
 	public bool dry_run = false;
-	public bool list_only = false;
-	
-	public ThemeManager(LinuxDistro _distro, bool _dry_run, bool _list_only, string _type){
+
+	public ThemeManager(LinuxDistro _distro, bool _dry_run, string _type){
 	
 		distro = _distro;
 
 		dry_run = _dry_run;
-
-		list_only = _list_only;
 
 		type = _type;
 
@@ -271,6 +268,7 @@ public class ThemeManager : GLib.Object {
 			}
 		}
 
+		file_delete(index_file);
 		file_write(index_file, txt);
 	}
 

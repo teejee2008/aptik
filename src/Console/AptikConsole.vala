@@ -806,7 +806,7 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_packages_installed(){
 		
-		var mgr = new PackageManager(distro, false, true);
+		var mgr = new PackageManager(distro, dry_run);
 		
 		string txt = "";
 		int count = 0;
@@ -840,7 +840,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_packages_foreign(){
 		
-		var mgr = new PackageManager(distro, false, true);
+		var mgr = new PackageManager(distro, dry_run);
 		
 		string txt = "";
 		int count = 0;
@@ -874,7 +874,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_packages_dist(){
 		
-		var mgr = new PackageManager(distro, false, true);
+		var mgr = new PackageManager(distro, dry_run);
 		
 		string txt = "";
 		int count = 0;
@@ -908,7 +908,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_packages_extra(){
 		
-		var mgr = new PackageManager(distro, false, true);
+		var mgr = new PackageManager(distro, dry_run);
 		
 		string txt = "";
 		int count = 0;
@@ -942,7 +942,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_packages_available(){
 		
-		var mgr = new PackageManager(distro, false, true);
+		var mgr = new PackageManager(distro, dry_run);
 		
 		string txt = "";
 		int count = 0;
@@ -980,7 +980,7 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 		
-		var mgr = new PackageManager(distro, dry_run, false);
+		var mgr = new PackageManager(distro, dry_run);
 		return mgr.save_package_list(basepath);
 	}
 
@@ -989,7 +989,7 @@ public class AptikConsole : GLib.Object {
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.PACKAGES)) { return false; }
 		
-		var mgr = new PackageManager(distro, dry_run, false);
+		var mgr = new PackageManager(distro, dry_run);
 		return mgr.restore_packages(basepath, no_prompt);
 	}
 
@@ -1023,7 +1023,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_repos(){
 
-		var mgr = new RepoManager(distro, dry_run, true);
+		var mgr = new RepoManager(distro, dry_run);
 		return mgr.list_repos();
 	}
 	
@@ -1033,7 +1033,7 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 		
-		var mgr = new RepoManager(distro, dry_run, false);
+		var mgr = new RepoManager(distro, dry_run);
 		return mgr.save_repos(basepath);
 	}
 
@@ -1042,12 +1042,12 @@ public class AptikConsole : GLib.Object {
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.REPOS)) { return false; }
 		
-		var mgr = new RepoManager(distro, dry_run, false);
+		var mgr = new RepoManager(distro, dry_run);
 		return mgr.restore_repos(basepath);
 	}
 
 	public bool import_missing_keys(){
-		var mgr = new RepoManager(distro, dry_run, false);
+		var mgr = new RepoManager(distro, dry_run);
 		return mgr.import_missing_keys(true);
 	}
 
@@ -1055,7 +1055,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_themes(){
 
-		var mgr = new ThemeManager(distro, false, true, "themes");
+		var mgr = new ThemeManager(distro, dry_run, "themes");
 		mgr.check_installed_themes();
 		mgr.list_themes();
 		return true;
@@ -1067,7 +1067,7 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 
-		var mgr = new ThemeManager(distro, dry_run, false, "themes");
+		var mgr = new ThemeManager(distro, dry_run, "themes");
 		mgr.check_installed_themes();
 		return mgr.save_themes(basepath);
 	}
@@ -1077,7 +1077,7 @@ public class AptikConsole : GLib.Object {
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.THEMES)) { return false; }
 		
-		var mgr = new ThemeManager(distro, dry_run, false, "themes");
+		var mgr = new ThemeManager(distro, dry_run, "themes");
 		mgr.check_archived_themes(basepath);
 		return mgr.restore_themes(basepath);
 	}
@@ -1086,7 +1086,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_icons(){
 
-		var mgr = new ThemeManager(distro, false, true, "icons");
+		var mgr = new ThemeManager(distro, dry_run, "icons");
 		mgr.check_installed_themes();
 		return true;
 	}
@@ -1097,7 +1097,7 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 
-		var mgr = new ThemeManager(distro, dry_run, false, "icons");
+		var mgr = new ThemeManager(distro, dry_run, "icons");
 		mgr.check_installed_themes();
 		return mgr.save_themes(basepath);
 	}
@@ -1107,7 +1107,7 @@ public class AptikConsole : GLib.Object {
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.ICONS)) { return false; }
 		
-		var mgr = new ThemeManager(distro, dry_run, false, "icons");
+		var mgr = new ThemeManager(distro, dry_run, "icons");
 		mgr.check_archived_themes(basepath);
 		return mgr.restore_themes(basepath);
 	}
@@ -1116,7 +1116,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_fonts(){
 
-		var mgr = new FontManager(distro, false, true);
+		var mgr = new FontManager(distro, dry_run);
 		mgr.list_fonts();
 		return true;
 	}
@@ -1127,7 +1127,7 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 
-		var mgr = new FontManager(distro, dry_run, false);
+		var mgr = new FontManager(distro, dry_run);
 		return mgr.backup_fonts(basepath);
 	}
 
@@ -1136,7 +1136,7 @@ public class AptikConsole : GLib.Object {
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.ICONS)) { return false; }
 		
-		var mgr = new FontManager(distro, dry_run, false);
+		var mgr = new FontManager(distro, dry_run);
 		return mgr.restore_fonts(basepath);
 	}
 

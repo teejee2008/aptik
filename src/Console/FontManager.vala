@@ -34,17 +34,14 @@ public class FontManager : GLib.Object {
 	
 	public LinuxDistro distro;
 	public bool dry_run = false;
-	public bool list_only = false;
 
 	public Gee.HashMap<string,Font> fonts;
 	
-	public FontManager(LinuxDistro _distro, bool _dry_run, bool _list_only){
+	public FontManager(LinuxDistro _distro, bool _dry_run){
 
 		distro = _distro;
 
 		dry_run = _dry_run;
-
-		list_only = _list_only;
 
 		fonts = new Gee.HashMap<string, Font>();
 	}

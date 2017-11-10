@@ -45,14 +45,12 @@ public class PackageManager : GLib.Object {
 	public bool dry_run = false;
 	public bool list_only = false;
 
-	public PackageManager(LinuxDistro _distro, bool _dry_run, bool _list_only){
+	public PackageManager(LinuxDistro _distro, bool _dry_run){
 
 		distro = _distro;
 
 		dry_run = _dry_run;
 
-		list_only = _list_only;
-		
 		check_packages();
 	}
 

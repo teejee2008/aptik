@@ -134,7 +134,7 @@ public class RepoManager : GLib.Object {
 
 		foreach(string list_file in list){
 			
-			if (!list_file.has_suffix(".list")){ continue; }
+			if (!list_file.has_suffix(".list")){ continue; } // .list.save will be excluded as well
 			if (file_basename(list_file) == "sources.list"){ continue; }
 
 			bool repo_added = false;
@@ -152,7 +152,7 @@ public class RepoManager : GLib.Object {
 					var repo = new Repo.from_name(name);
 					repo.is_selected = true;
 					repo.is_installed = true;
-					repo.type = "launchpad";
+					repo.type = "lp";
 					repos[name] = repo;
 
 					repo_added = true;
@@ -160,15 +160,109 @@ public class RepoManager : GLib.Object {
 			}
 
 			if (!repo_added){
-				var repo = new Repo.from_list_file(list_file);
+				var repo = new Repo.from_list_file_debian(list_file);
 				repo.is_selected = true;
 				repo.is_installed = true;
-				repo.type = "unoffical";
+				repo.type = "";
 				repos[repo.name] = repo;
 			}
 		}
+
+		check_packages_in_repo_debian();
 	}
 
+	private void check_packages_in_repo_debian(){
+
+		try{
+			FileInfo info;
+			File file = File.new_for_path("/var/lib/apt/lists");
+			FileEnumerator enumerator = file.enumerate_children ("%s".printf(FileAttribute.STANDARD_NAME), 0);
+			
+			while ((info = enumerator.next_file()) != null) {
+				
+				string file_name = info.get_name();
+				if (!file_name.has_suffix("_Packages")){ continue; }
+
+				Repo? repo = null;
+				
+				var match = regex_match("""ppa\.launchpad\.net_([^_]*)_([^_]*)""", file_name);
+				
+				if (match != null){
+					
+					string name = "%s/%s".printf(match.fetch(1), match.fetch(2));
+					
+					if (repos.has_key(name)){
+						repo = repos[name];
+					}
+				}
+				
+				if (repo == null){
+
+					//log_debug("file_name: " + file_name);
+
+					foreach(var item in repos.values){
+						
+						var suggested = item.suggested_list_file_name();
+
+						if ((suggested.length > 0) && file_name.contains(suggested)){
+							repo = item;
+							//log_debug("repo-match: " + repo.name);
+							break;
+						}
+					}
+				}
+
+				if (repo == null){
+					//log_msg("W: Repo not found for package list: %s".printf(file_name));
+					continue;
+				}
+
+				string file_path = path_combine("/var/lib/apt/lists", file_name);
+
+				var list = new Gee.ArrayList<string>();
+				
+				foreach(string line in file_read(file_path).split("\n")){
+
+					var match2 = regex_match("""Package: (.*)""", line);
+					
+					if (match2 != null){
+
+						string pkgname = match2.fetch(1);
+						
+						if (!list.contains(pkgname)){
+							list.add(pkgname);
+						}
+						
+						continue;
+					}
+
+					// NOTE: A single list file can have info for packages of multiple architectures
+				}
+
+				if (list.size == 0) { continue; } // continue with next file
+
+				list.sort((a,b) => {
+					return (a.length - b.length);
+				});
+
+				repo.description = "";
+				for(int i=0; (i < 10) && (i < list.size) && (repo.description.length < 50); i++){
+					if (repo.description.length > 0){
+						repo.description += " ";
+					}
+					repo.description += list[i];
+				}
+
+				if (repo.is_disabled){
+					repo.description += "(disabled) ";
+				}
+			}
+		}
+		catch(Error e){
+			log_error(e.message);
+		}
+	}
+	
 	public Gee.ArrayList<Repo> repos_sorted {
 		owned get{
 
@@ -196,8 +290,20 @@ public class RepoManager : GLib.Object {
 	public bool list_repos(){
 
 		repos_sorted.foreach((repo) => {
+
+			string txt = "";
+			if (repo.type.length > 0){
+				txt += "%s:".printf(repo.type);
+			}
+			txt += repo.name;
 			
-			log_msg("repo-%s: %s".printf(repo.type, repo.name));
+			txt = "%-40s".printf(txt);
+
+			if (repo.description.length > 0){
+				txt += " -- %s".printf(repo.description);
+			}
+			
+			log_msg(txt);
 
 			return true;
 		});

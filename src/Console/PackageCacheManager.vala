@@ -50,11 +50,11 @@ public class PackageCacheManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), Message.TASK_CACHE));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_cache = path_combine(basepath, "cache/%s".printf(distro.dist_type));
+		string backup_path = path_combine(basepath, "cache");
+		dir_create(backup_path);
 
-		if (!dry_run){
-			dir_create(backup_cache);
-		}
+		string backup_path_distro = path_combine(backup_path, distro.dist_type);
+		dir_create(backup_path_distro);
 
 		string system_cache = "";
 		string filter = "";
@@ -88,7 +88,7 @@ public class PackageCacheManager : GLib.Object {
 		cmd += " --exclude=lock --exclude=partial/ --exclude=apt-fast/";
 		cmd += filter;
 		cmd += " '%s/'".printf(escape_single_quote(system_cache));
-		cmd += " '%s/'".printf(escape_single_quote(backup_cache));
+		cmd += " '%s/'".printf(escape_single_quote(backup_path_distro));
 
 		int status = 0;
 		
@@ -101,11 +101,52 @@ public class PackageCacheManager : GLib.Object {
 		}
 
 		log_msg("");
+		
+		update_permissions_for_backup_packages(backup_path);
+		
+		log_msg("");
 		log_msg(Message.BACKUP_OK);
 
 		return (status == 0);
 	}
 
+	public bool update_permissions_for_backup_packages(string backup_path) {
+
+		// files  -----------------
+		
+		string cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(backup_path);
+
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+
+		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", backup_path));
+
+		// folders -----------------
+		
+		cmd = "find '%s' -type d -exec chmod 777 '{}' ';'".printf(backup_path);
+
+		status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+
+		log_msg("%s: %s: %s".printf(_("Updated permissions (dirs)"), "777", backup_path));
+
+		return (status == 0);
+	}
+	
 	// restore ---------------------------------------
 	
 	public bool restore_cache(string basepath){
@@ -150,7 +191,7 @@ public class PackageCacheManager : GLib.Object {
 			cmd += " --dry-run";
 		}
 		
-		cmd += " --exclude=lock --exclude=partial/ --exclude=apt-fast/";
+		cmd += " --exclude=lock --exclude=partial --exclude=apt-fast";
 		cmd += filter;
 		cmd += " '%s/'".printf(escape_single_quote(backup_cache));
 		cmd += " '%s/'".printf(escape_single_quote(system_cache));
@@ -166,7 +207,31 @@ public class PackageCacheManager : GLib.Object {
 		}
 
 		log_msg("");
+		update_permissions_for_restored_packages(system_cache);
+		
+		log_msg("");
 		log_msg(Message.RESTORE_OK);
+
+		return (status == 0);
+	}
+
+	public bool update_permissions_for_restored_packages(string system_cache_path) {
+
+		// files -----------------
+		
+		string cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(system_cache_path);
+
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+
+		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", system_cache_path));
 
 		return (status == 0);
 	}
@@ -222,4 +287,5 @@ public class PackageCacheManager : GLib.Object {
 
 		return (status == 0);
 	}
+
 }

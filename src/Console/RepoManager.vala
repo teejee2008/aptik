@@ -36,12 +36,15 @@ public class RepoManager : GLib.Object {
 
 	public LinuxDistro distro;
 	public bool dry_run = false;
+	public bool list_only = false;
 	
-	public RepoManager(LinuxDistro _distro, bool _dry_run){
+	public RepoManager(LinuxDistro _distro, bool _dry_run, bool _list_only){
 
 		distro = _distro;
 
 		dry_run = _dry_run;
+
+		list_only = _list_only;
 
 		check_repos();
 	}
@@ -50,7 +53,9 @@ public class RepoManager : GLib.Object {
 
 	public void check_repos(){
 
-		log_msg("Checking installed repos...");
+		if (!list_only){
+			log_msg("Checking installed repos...");
+		}
 
 		log_debug("check_repos()");
 
@@ -68,9 +73,10 @@ public class RepoManager : GLib.Object {
 			break;
 		}
 
-		log_msg("Found: %d".printf(repos.size));
-
-		log_msg(string.nfill(70,'-'));
+		if (!list_only){
+			log_msg("Found: %d".printf(repos.size));
+			log_msg(string.nfill(70,'-'));
+		}
 	}
 
 	public void check_repos_fedora(){
@@ -101,6 +107,7 @@ public class RepoManager : GLib.Object {
 				repo = new Repo.from_name(name);
 				repo.is_selected = true;
 				repo.is_installed = true;
+				repo.type = "unofficial";
 				repos[name] = repo;
 
 				repo.text = "%s\n".printf(line);
@@ -117,13 +124,6 @@ public class RepoManager : GLib.Object {
 				}
 			}
 		}
-
-		repos_sorted.foreach((repo) => {
-			if (repo.name.length > 0){
-				log_msg("repo: %s".printf(repo.name));
-			}
-			return true;
-		});
 	}
 
 	public void check_repos_debian(){
@@ -152,6 +152,7 @@ public class RepoManager : GLib.Object {
 					var repo = new Repo.from_name(name);
 					repo.is_selected = true;
 					repo.is_installed = true;
+					repo.type = "launchpad";
 					repos[name] = repo;
 
 					repo_added = true;
@@ -162,29 +163,46 @@ public class RepoManager : GLib.Object {
 				var repo = new Repo.from_list_file(list_file);
 				repo.is_selected = true;
 				repo.is_installed = true;
-
-				string name = file_basename(list_file).replace(".list","");
-				repos[name] = repo;
+				repo.type = "unoffical";
+				repos[repo.name] = repo;
 			}
 		}
-
-		repos_sorted.foreach((repo) => {
-			
-			if (repo.name.length > 0){
-				log_msg("repo-launchpad: %s".printf(repo.name));
-			}
-			else if (repo.list_file_path.length > 0){
-				log_msg("repo-custom: %s".printf(repo.list_file_path));
-			}
-
-			return true;
-		});
 	}
 
 	public Gee.ArrayList<Repo> repos_sorted {
 		owned get{
-			return get_sorted_array(repos);
+
+			var list = new Gee.ArrayList<Repo>();
+		
+			foreach(var pkg in repos.values) {
+				list.add(pkg);
+			}
+
+			list.sort((a, b) => {
+				if (a.type == b.type){
+					return strcmp(a.name, b.name);
+				}
+				else{
+					return strcmp(a.type, b.type);
+				}
+			});
+
+			return list;
 		}
+	}
+
+	// list ---------------------------------------
+
+	public bool list_repos(){
+
+		repos_sorted.foreach((repo) => {
+			
+			log_msg("repo-%s: %s".printf(repo.type, repo.name));
+
+			return true;
+		});
+
+		return true;
 	}
 
 	// save ---------------------------------------
@@ -933,22 +951,5 @@ public class RepoManager : GLib.Object {
 		
 		return (status == 0);
 	}
-		
-	// static ----------------------
-
-	public static Gee.ArrayList<Repo> get_sorted_array(Gee.HashMap<string,Repo> dict){
-
-		var list = new Gee.ArrayList<Repo>();
-		
-		foreach(var pkg in dict.values) {
-			list.add(pkg);
-		}
-
-		list.sort((a, b) => {
-			return strcmp(a.name, b.name);
-		});
-
-		return list;
-	}
-
+	
 }

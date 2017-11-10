@@ -112,8 +112,8 @@ public class AptikConsole : GLib.Object {
 
 		msg += fmt2.printf(Message.TASK_PPA);
 		
-		//msg += fmt.printf("list-repo            ",  _("List PPAs"));
 		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-repos", _("List software repositories"));
 		msg += fmt.printf("--backup-repos", _("Save list of software repositories"));
 		msg += fmt.printf("--restore-repos", _("Add missing software repositories from backup"));
 		msg += fmt.printf("--import-missing-keys", _("Find and import missing keys for apt repos"));
@@ -292,6 +292,7 @@ public class AptikConsole : GLib.Object {
 				dry_run = true;
 				break;
 
+			case "--list-repos":
 			case "--backup-repos":
 			case "--restore-repos":
 			case "--import-missing-keys":
@@ -383,17 +384,10 @@ public class AptikConsole : GLib.Object {
 		
 		switch (command) {
 
-		// ppa --------------------------------------------
+		// repos --------------------------------------------
 		
-		//case "--list-repo":
-		//case "--list-repos":
-			//App.ppa_backup_init(show_desc);
-			//foreach(Ppa ppa in App.ppa_list_master.values) {
-			//	ppa.is_selected = true;
-			//}
-			//print_ppa_list(show_desc);
-			//TODO: call the faster method for getting ppas?
-			//break;
+		case "--list-repos":
+			return list_repos();
 
 		case "--backup-repos":
 			distro.print_system_info();
@@ -464,24 +458,6 @@ public class AptikConsole : GLib.Object {
 			distro.print_system_info();
 			return restore_fonts();
 						
-		// config ---------------------------------------
-
-		//case "--list-config":
-		//case "--list-configs":
-			//print_config_list(App.list_app_config_directories_from_home(false));
-			//break;
-
-		//case "--backup-appsettings":
-		//case "--backup-configs":
-		//case "--backup-config":
-			//return backup_config();
-			//return true;
-
-		//case "--restore-appsettings":
-		//case "--restore-configs":
-			//return restore_config();
-			//return true;
-
 		// themes ---------------------------------------------
 
 		case "--list-themes":
@@ -950,6 +926,12 @@ public class AptikConsole : GLib.Object {
 	}
 
 	// repos --------------------------
+
+	public bool list_repos(){
+
+		var mgr = new RepoManager(distro, dry_run, true);
+		return mgr.list_repos();
+	}
 	
 	public bool backup_repos(){
 		
@@ -957,7 +939,7 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 		
-		var mgr = new RepoManager(distro, dry_run);
+		var mgr = new RepoManager(distro, dry_run, false);
 		return mgr.save_repos(basepath);
 	}
 
@@ -966,22 +948,18 @@ public class AptikConsole : GLib.Object {
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.REPOS)) { return false; }
 		
-		var mgr = new RepoManager(distro, dry_run);
+		var mgr = new RepoManager(distro, dry_run, false);
 		return mgr.restore_repos(basepath);
 	}
 
 	public bool import_missing_keys(){
-		var mgr = new RepoManager(distro, dry_run);
+		var mgr = new RepoManager(distro, dry_run, false);
 		return mgr.import_missing_keys(true);
 	}
 
 	// themes -----------------------------
 
 	public bool list_themes(){
-
-		dir_create(basepath);
-
-		copy_binary();
 
 		var mgr = new ThemeManager(distro, false, true, "themes");
 		mgr.check_installed_themes();
@@ -1013,10 +991,6 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_icons(){
 
-		dir_create(basepath);
-
-		copy_binary();
-
 		var mgr = new ThemeManager(distro, false, true, "icons");
 		mgr.check_installed_themes();
 		return true;
@@ -1047,10 +1021,6 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_fonts(){
 
-		dir_create(basepath);
-
-		copy_binary();
-
 		var mgr = new FontManager(distro, false, true);
 		mgr.list_fonts();
 		return true;
@@ -1078,10 +1048,6 @@ public class AptikConsole : GLib.Object {
 	// users -----------------------------
 
 	public bool list_users(bool all = false){
-
-		dir_create(basepath);
-
-		copy_binary();
 
 		var mgr = new UserManager(false);
 		mgr.query_users(true);
@@ -1123,10 +1089,6 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_groups(bool all = false){
 
-		dir_create(basepath);
-
-		copy_binary();
-
 		var mgr = new GroupManager(false);
 		mgr.query_groups(true);
 		mgr.list_groups(all);
@@ -1167,10 +1129,6 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_mounts(){
 
-		dir_create(basepath);
-
-		copy_binary();
-
 		var mgr = new MountEntryManager(false);
 		mgr.query_mount_entries();
 		mgr.list_mount_entries();
@@ -1210,10 +1168,6 @@ public class AptikConsole : GLib.Object {
 	// home -----------------------------
 
 	public bool backup_home(){
-
-		dir_create(basepath);
-
-		copy_binary();
 
 		bool status = true;
 
@@ -1256,10 +1210,6 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_dconf_settings(){
 
-		dir_create(basepath);
-
-		copy_binary();
-
 		var mgr = new DconfManager(false);
 		mgr.list_dconf_settings(userlist);
 		return true;
@@ -1297,10 +1247,6 @@ public class AptikConsole : GLib.Object {
 	// cron tasks -----------------------------
 	
 	public bool list_cron_tasks(){
-
-		dir_create(basepath);
-
-		copy_binary();
 
 		var mgr = new CronTaskManager(false);
 		mgr.list_cron_tasks(userlist);

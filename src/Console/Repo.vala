@@ -36,6 +36,7 @@ public class Repo : GLib.Object {
 	public string description = "";
 	public string list_file_path = "";
 	public string text = "";
+	public string type = "";
 
 	public bool is_selected = false;
 	public bool is_installed = false;
@@ -46,5 +47,6 @@ public class Repo : GLib.Object {
 
 	public Repo.from_list_file(string file_path){
 		list_file_path = file_path;
+		name = file_basename(file_path).replace(".list","");
 	}
 }

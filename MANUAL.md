@@ -361,7 +361,7 @@ Usage: `aptik --backup-mounts`
 Following actions are executed for backup:
 
 1. Entries in `/etc/fstab` and `/etc/crypttab` are saved to backup folder  `<basepath>/mounts` . Entries are saved individually as `<dev-name>_<mount-point>.fstab` and `<dev-name>_<mount-point>.crypttab` in the backup folder. You can delete the files for any mount entries that you do not wish to restore.
-     *  Device names like `/dev/sda1` and `/dev/mapper/sd2_crypt` will be replaced by UUIDs like `UUID=576be21b-3c3a-4287-b971-40b8e8b39823` while saving backup files. This makes the entries portable so that they can be used on other systems where the device names may be different.
+2. Device names like `/dev/sda1` and `/dev/mapper/sd2_crypt` will be replaced by UUIDs like `UUID=576be21b-3c3a-4287-b971-40b8e8b39823` while saving backup files. This makes the entries portable so that they can be used on other systems where the device names may be different.
 
 #### Restore
 
@@ -371,7 +371,9 @@ Following actions are executed for restore:
 
 1. Backups are created for  `/etc/fstab` and `/etc/crypttab` by moving existing files to  `/etc/fstab.bkup.<timestamp>` and `/etc/crypttab.bkup.<timestamp>`
 2. Extra entries in the backup folder are added to `/etc/fstab` and `/etc/crypttab` . Existing entries in `/etc/fstab` and `/etc/crypttab` will be preserved. Extra entries are determined by checking if the mount point is used by an existing entry.
-   * All entries are sorted on the mount point field. This ensures that base mount points are mounted before mounting subdirectories.
-   * Backup entry for `/boot/efi` will not be added, if not already existing in `/etc/fstab`
-   * It is recommended to review changes after restore completes. Run `sudo aptik --list-mounts` or `cat /etc/fstab; cat /etc/crypttab;` to view the updated entries.
+
+**Notes:**
+* All entries are sorted on mount point field before the fstab file is written to disk. This ensures that base mount points are mounted before mounting subdirectories.
+* Backup entry for `/boot/efi` will not be added, if not already existing in `/etc/fstab`
+* It is recommended to review changes after restore completes. Run `sudo aptik --list-mounts` or `cat /etc/fstab; cat /etc/crypttab;` to view the updated entries.
 

@@ -126,14 +126,19 @@ public class UserHomeDataManager : GLib.Object {
 
 			string tar_file = path_combine(backup_path_user, "data.tar.gz");
 			file_delete(tar_file);
+
+			string temp_file = tar_file + ".temp";
 			
 			var cmd = "";
 
-			cmd += "tar -zcf";
+			//tar cf - /folder-with-big-files -P | pv -s $(du -sb /folder-with-big-files | awk '{print $1}') | gzip
 
-			cmd += " '%s'".printf(escape_single_quote(tar_file));
+			cmd += "tar -cf";
 
-			cmd += " --totals --checkpoint";
+			//cmd += " '%s'".printf(escape_single_quote(tar_file));
+			cmd += " -"; // stdout
+
+			//cmd += " --totals"; //--checkpoint=.1000";
 
 			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
 
@@ -141,8 +146,12 @@ public class UserHomeDataManager : GLib.Object {
 			
 			cmd += " '%s'".printf(escape_single_quote(file_basename(user.home_path)));
 
+			cmd += " | pv -s $(du -sb '%s' | awk '{print $1}') | gzip > '%s'".printf(escape_single_quote(user.home_path), escape_single_quote(temp_file));
+
 			// execute ---------------------------------
 
+			log_msg("%s (TAR+GZ): '%s'\n".printf(_("Archiving"), user.home_path));
+			
 			if (dry_run){
 				log_msg("$ %s".printf(cmd));
 			}
@@ -151,7 +160,15 @@ public class UserHomeDataManager : GLib.Object {
 				retval = Posix.system(cmd);
 			}
 			
-			if (retval != 0){ status = false; }
+			if (retval != 0){
+				status = false;
+				file_delete(temp_file);
+				log_msg("Deleted: %s".printf(temp_file));
+			}
+			else{
+				file_move(temp_file, tar_file);
+				log_msg("Created: %s".printf(tar_file));
+			}
 
 			log_msg(string.nfill(70,'-'));
 		}
@@ -420,17 +437,22 @@ public class UserHomeDataManager : GLib.Object {
 
 			var cmd = "";
 
-			cmd += "tar -zvxf";
+			cmd += "pv '%s' | ".printf(escape_single_quote(tar_file_user));
 			
-			cmd += " '%s'".printf(escape_single_quote(tar_file_user));
-
-			cmd += " --totals --checkpoint";
+			cmd += "tar -xvf";
+			
+			//cmd += " '%s'".printf(escape_single_quote(tar_file_user));
+			cmd += " -";
+			
+			//cmd += " --totals"; // --checkpoint=.1000";
 			
 			cmd += " -C '%s'".printf(escape_single_quote(file_parent(user.home_path)));
 
 			// execute ---------------------------------
 
 			int retval = 0;
+
+			log_msg("%s '%s'...\n".printf(_("Extracting"), user.home_path));
 			
 			if (dry_run){
 				log_msg("$ %s".printf(cmd));

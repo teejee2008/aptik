@@ -456,6 +456,8 @@ public class RepoManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Restore"), Message.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
 
+		check_repos();
+
 		string backup_path = path_combine(basepath, "repos");
 		
 		if (!dir_exists(backup_path)) {
@@ -574,6 +576,8 @@ public class RepoManager : GLib.Object {
 		import_keys_debian(backup_path);
 
 		// update repos and import missing keys -----------------
+
+		log_msg(string.nfill(70,'-'));
 		
 		import_missing_keys_debian(false);
 		if (!ok){ status = false; }
@@ -625,7 +629,7 @@ public class RepoManager : GLib.Object {
 			
 			if (line.strip().has_prefix("#")) { continue; }
 
-			string name = line;
+			string name = line.split("#",2)[0].strip();
 			
 			if (name.length == 0){ continue; }
 			if (repos.has_key(name)){ continue; }

@@ -612,6 +612,8 @@ public class PackageManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Message.TASK_PACKAGES));
 		log_msg(string.nfill(70,'-'));
+
+		check_packages();
 		
 		string backup_path = path_combine(basepath, "packages");
 		
@@ -637,56 +639,16 @@ public class PackageManager : GLib.Object {
 		string list_missing, list_install;
 		read_package_list_from_backup_file(backup_file, out list_missing, out list_install);
 
-		return install_packages(basepath, list_install, list_missing, no_prompt);
-
-		/*
-		App.read_package_info();
-		App.update_pkg_list_master_for_restore(true);
-		
-		if (App.pkg_list_missing.length > 0) {
-			log_msg(_("Following packages are not available") + ":\n%s\n".printf(App.pkg_list_missing));
-		}
-
-		if ((App.pkg_list_install.length == 0) && (App.pkg_list_deb.length == 0)) {
-			log_msg(_("Selected packages are already installed"));
-		}
-		else{
-			if (App.pkg_list_install.length > 0){
-				log_msg(_("Following packages will be installed") + ":\n%s\n".printf(App.pkg_list_install));
-
-				var command = "apt-get";
-				var cmd_path = get_cmd_path ("apt-fast");
-				if ((cmd_path != null) && (cmd_path.length > 0)) {
-					command = "apt-fast";
-				}
-
-				int status = Posix.system("%s%s install %s".printf(command, (no_prompt) ? " -y" : "", App.pkg_list_install));
-
-				if (status != 0){
-					Posix.system("echo '\n\n%s' \n".printf(string.nfill(70,'=')));
-					Posix.system("echo '%s' \n".printf(Message.APT_GET_ERROR));
-					Posix.system("echo '%s\n\n' \n".printf(string.nfill(70,'=')));
-					return false;
-				}
-	
-				ok = ok && (status == 0);
-			}
-			if (App.pkg_list_deb.length > 0){
-				log_msg(_("Following packages will be installed") + ":\n%s\n".printf(App.pkg_list_deb));
-				foreach(string line in App.gdebi_list.split("\n")){
-					Posix.system("gdebi -n %s".printf(line));
-				}
-			}
-		}
+		bool ok = install_packages(basepath, list_install, list_missing, no_prompt);
 
 		if (ok){
 			log_msg(Message.RESTORE_OK);
 		}
 		else{
-			log_msg(Message.RESTORE_ERROR);
+			log_error(Message.RESTORE_ERROR);
 		}
-		*
-		* */
+
+		return ok;
 	}
 
 	private void read_package_list_from_backup_file(string backup_file, out string list_missing, out string list_install) {

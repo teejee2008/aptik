@@ -10,7 +10,7 @@ Homepage: http://teejeetech.blogspot.in/
 
 Package: aptik-ng
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, apt, aptitude, gdebi, apt-transport-https
+Depends: ${shlibs:Depends}, ${misc:Depends}, apt, aptitude, gdebi, apt-transport-https, pv
 #Recommends:
 Replaces: aptik
 Description: Aptik system migration utility

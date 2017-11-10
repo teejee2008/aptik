@@ -72,12 +72,10 @@ public class AptikConsole : GLib.Object {
 			exit(0);
 		}
 
-		//App = new Aptik(args);
-		
+		check_dependencies();
+
 		var console =  new AptikConsole();
 		bool is_success = console.parse_arguments(args);
-		//App.exit_app();
-
 		return (is_success) ? 0 : 1;
 	}
 
@@ -88,6 +86,26 @@ public class AptikConsole : GLib.Object {
 		Intl.bindtextdomain(GETTEXT_PACKAGE, LOCALE_DIR);
 	}
 
+	public static void check_dependencies(){
+
+		string[] dependencies = {
+			"rsync","cp","rm","touch","ln","grep","find","awk","pv","mount","umount","crontab","sync", "lsblk"
+		};
+
+		string msg = "";
+		foreach(string cmd in dependencies){
+			if (!cmd_exists(cmd)){
+				msg += " * " + cmd + "\n";
+			}
+		}
+
+		if (msg.length > 0){
+			msg = "%s:\n\n%s\n".printf(Message.MISSING_COMMAND, msg);
+			log_error(msg);
+			exit(1);
+		}
+	}
+	
 	public AptikConsole(){
 
 		distro = new LinuxDistro();
@@ -724,6 +742,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool remove_all(){
 
+		log_msg(string.nfill(70,'-'));
+		
 		bool ok = true, status = true;
 		
 		ok = remove_backup("repos");
@@ -773,10 +793,14 @@ public class AptikConsole : GLib.Object {
 		if (dir_exists(path)){
 			
 			var list = dir_list_names(path, false);
+			int count = 0;
+			foreach(var fpath in list){
+				if (fpath.has_suffix(".deb")) { count++; }
+			}
 			
-			if (list.size > 0){
+			if (count > 0){
 				// skip if not empty
-				log_msg("%s: %s".printf(_("Skipped"), path));
+				log_msg("%s: %s (%d debs found)".printf(_("Skipped"), path, count));
 			}
 			else{
 				// remove if empty

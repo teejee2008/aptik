@@ -414,7 +414,7 @@ public class RepoManager : GLib.Object {
 
 		repos_sorted.foreach((repo) => {
 	
-			if (repo.is_installed && (repo.name.length > 0)){
+			if (repo.is_installed && (repo.type == "lp")){
 				text += "%s\n".printf(repo.name);
 				//text += "%s #%s\n".printf(ppa.name, ppa.description); // TODO: ppa description
 			}
@@ -437,7 +437,7 @@ public class RepoManager : GLib.Object {
 		
 		foreach(var repo in repos_sorted){
 			
-			if (repo.is_installed && (repo.name.length == 0) && (repo.list_file_path.length > 0)){
+			if (repo.is_installed && (repo.type == "") && (repo.list_file_path.length > 0)){
 
 				string backup_name = file_basename(repo.list_file_path).replace(distro.codename, "CODENAME");
 				string backup_file = path_combine(backup_path, backup_name);

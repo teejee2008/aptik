@@ -56,11 +56,13 @@ public class User : GLib.Object {
 	public bool is_selected = false;
 
 	public User(string name){
+		
 		this.name = name;
 	}
 
-	public int add(){
-		return UserManager.add_user(name, is_system);
+	public int add(bool dry_run){
+		
+		return UserManager.add_user(name, is_system, dry_run);
 	}
 	
 	public bool is_system{
@@ -137,7 +139,7 @@ public class User : GLib.Object {
 
 	// update file ------------------------------------
 
-	public bool update_passwd_file(){
+	public bool update_passwd_file(bool dry_run){
 		
 		string file_path = "/etc/passwd";
 		string txt = file_read(file_path);
@@ -163,14 +165,16 @@ public class User : GLib.Object {
 			}
 		}
 
-		file_write(file_path, txt_new);
+		if (!dry_run){
+			file_write(file_path, txt_new);
+		}
 		
 		log_msg("%s %s: %s".printf(_("Updated"), "/etc/passwd", name));
 		
 		return true;
 	}
 
-	public bool update_shadow_file(){
+	public bool update_shadow_file(bool dry_run){
 		
 		string file_path = "/etc/shadow";
 		string txt = file_read(file_path);
@@ -196,7 +200,9 @@ public class User : GLib.Object {
 			}
 		}
 
-		file_write(file_path, txt_new);
+		if (!dry_run){
+			file_write(file_path, txt_new);
+		}
 		
 		log_msg("%s %s: %s".printf(_("Updated"), "/etc/shadow", name));
 		

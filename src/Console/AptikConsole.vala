@@ -224,6 +224,7 @@ public class AptikConsole : GLib.Object {
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--backup-all", _("Backup all items"));
 		msg += fmt.printf("--restore-all", _("Restore all items from backup"));
+		msg += fmt.printf("--remove-all", _("Remove all items from backup"));
 		msg += "\n";
 		
 		msg += fmt2.printf(("Common"));
@@ -231,7 +232,7 @@ public class AptikConsole : GLib.Object {
 		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--basepath <dir>", _("Backup directory (default: current directory)"));
 		msg += fmt.printf("--scripted", _("Run in non-interactive mode"));
-		msg += fmt.printf("--dry-run", _("Show actions for restore without making changes to system"));
+		msg += fmt.printf("--dry-run", _("(restore only) Simulate restore actions without making changes to system"));
 		msg += fmt.printf("--help", _("Show all options"));
 		msg += "\n";
 		
@@ -354,7 +355,7 @@ public class AptikConsole : GLib.Object {
 
 			case "--backup-all":
 			case "--restore-all":
-			case "--clean":
+			case "--remove-backups":
 
 				command = args[k].down();
 				break;
@@ -528,13 +529,13 @@ public class AptikConsole : GLib.Object {
 		// mounts -------------------------------------------
 
 		case "--list-mounts":
-			return list_mounts();
+			return list_mount_entries();
 
 		case "--backup-mounts":
-			return backup_mounts();
+			return backup_mount_entries();
 
 		case "--restore-mounts":
-			return restore_mounts();
+			return restore_mount_entries();
 
 		// dconf settings -------------------------------------------
 
@@ -568,7 +569,7 @@ public class AptikConsole : GLib.Object {
 			distro.print_system_info();
 			return restore_all();
 
-		case "--clean":
+		case "--remove-backups":
 			distro.print_system_info();
 			return remove_backups();
 		}
@@ -589,6 +590,33 @@ public class AptikConsole : GLib.Object {
 		ok = backup_packages();
 		if (!ok) { status = false; }
 
+		ok = backup_users();
+		if (!ok) { status = false; }
+
+		ok = backup_groups();
+		if (!ok) { status = false; }
+
+		ok = backup_home();
+		if (!ok) { status = false; }
+
+		ok = backup_mount_entries();
+		if (!ok) { status = false; }
+
+		ok = backup_icons();
+		if (!ok) { status = false; }
+
+		ok = backup_themes();
+		if (!ok) { status = false; }
+
+		ok = backup_fonts();
+		if (!ok) { status = false; }
+
+		ok = backup_dconf_settings();
+		if (!ok) { status = false; }
+
+		ok = backup_cron_tasks();
+		if (!ok) { status = false; }
+
 		return status;
 	}
 
@@ -600,11 +628,38 @@ public class AptikConsole : GLib.Object {
 
 		bool ok = restore_repos();
 		if (!ok) { status = false; }
-
+		
 		ok = restore_cache();
 		if (!ok) { status = false; }
-		
+
 		ok = restore_packages();
+		if (!ok) { status = false; }
+
+		ok = restore_users();
+		if (!ok) { status = false; }
+
+		ok = restore_groups();
+		if (!ok) { status = false; }
+
+		ok = restore_home();
+		if (!ok) { status = false; }
+
+		ok = restore_mount_entries();
+		if (!ok) { status = false; }
+
+		ok = restore_icons();
+		if (!ok) { status = false; }
+
+		ok = restore_themes();
+		if (!ok) { status = false; }
+
+		ok = restore_fonts();
+		if (!ok) { status = false; }
+
+		ok = restore_dconf_settings();
+		if (!ok) { status = false; }
+
+		ok = restore_cron_tasks();
 		if (!ok) { status = false; }
 
 		return status;
@@ -687,21 +742,24 @@ public class AptikConsole : GLib.Object {
 		ok = dir_delete(path_combine(basepath, "groups"), true);
 		if (!ok) { status = false; return status; }
 
+		ok = dir_delete(path_combine(basepath, "home"), true);
+		if (!ok) { status = false; return status; }
+
 		ok = dir_delete(path_combine(basepath, "mounts"), true);
+		if (!ok) { status = false; return status; }
+		
+		ok = dir_delete(path_combine(basepath, "icons"), true);
 		if (!ok) { status = false; return status; }
 
 		ok = dir_delete(path_combine(basepath, "themes"), true);
 		if (!ok) { status = false; return status; }
-
-		ok = dir_delete(path_combine(basepath, "icons"), true);
-		if (!ok) { status = false; return status; }
-
+		
 		ok = dir_delete(path_combine(basepath, "fonts"), true);
 		if (!ok) { status = false; return status; }
 
-		ok = dir_delete(path_combine(basepath, "home"), true);
+		ok = dir_delete(path_combine(basepath, "dconf"), true);
 		if (!ok) { status = false; return status; }
-
+		
 		ok = dir_delete(path_combine(basepath, "cron"), true);
 		if (!ok) { status = false; return status; }
 
@@ -1127,7 +1185,7 @@ public class AptikConsole : GLib.Object {
 
 	// mounts -----------------------------
 	
-	public bool list_mounts(){
+	public bool list_mount_entries(){
 
 		var mgr = new MountEntryManager(false);
 		mgr.query_mount_entries();
@@ -1135,7 +1193,7 @@ public class AptikConsole : GLib.Object {
 		return true;
 	}
 	
-	public bool backup_mounts(){
+	public bool backup_mount_entries(){
 
 		dir_create(basepath);
 
@@ -1151,7 +1209,7 @@ public class AptikConsole : GLib.Object {
 		return status; 
 	}
 
-	public bool restore_mounts(){
+	public bool restore_mount_entries(){
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.MOUNTS)) { return false; }

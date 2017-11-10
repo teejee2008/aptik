@@ -315,12 +315,6 @@ public class RepoManager : GLib.Object {
 
 	public bool save_repos(string basepath){
 
-		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
-			return true;
-		}
-
 		log_msg(_("Saving installed repos..."));
 
 		string backup_path = path_combine(basepath, "repos");
@@ -354,17 +348,19 @@ public class RepoManager : GLib.Object {
 
 		bool status = true;
 
-		repos_sorted.foreach((repo) => {
+		foreach(var repo in repos_sorted){
 	
 			if (repo.is_installed && (repo.name.length > 0)){
+				
 				string backup_file = path_combine(backup_path, "%s.repo".printf(repo.name));
+				
 				bool ok = file_write(backup_file, repo.text);
+				
 				if (!ok){ status = false; }
+				
 				if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
 			}
-			
-			return true;
-		});
+		}
 
 		bool ok = export_keys_arch(backup_path);
 		if (!ok){ status = false; }
@@ -412,14 +408,19 @@ public class RepoManager : GLib.Object {
 
 		string text = "\n# Comment-out or remove lines for unwanted items\n\n";
 
-		repos_sorted.foreach((repo) => {
+		foreach(var repo in repos_sorted){
 	
 			if (repo.is_installed && (repo.type == "lp")){
-				text += "%s\n".printf(repo.name);
-				//text += "%s #%s\n".printf(ppa.name, ppa.description); // TODO: ppa description
+				
+				text += "%s".printf(repo.name);
+				
+				if (repo.description.length > 0){
+					text += " # %s".printf(repo.description);
+				}
+				
+				text += "\n";
 			}
-			return true;
-		});
+		}
 
 		bool ok = file_write(backup_file, text);
 
@@ -505,47 +506,46 @@ public class RepoManager : GLib.Object {
 
 	public bool restore_repos_arch(string backup_path){
 
-		bool status = true;
+		bool status = true, ok = true;
 
 		// add repos -------------------------------------
 		
 		var list = dir_list_names(backup_path, true);
 		
-		list.foreach((backup_file) => {
+		foreach(var backup_file in list){
 
 			string file_name = file_basename(backup_file);
 			
-			if (file_name == "sources.list"){ return true; } // ignore debian file
+			if (file_name == "sources.list"){ continue; } // ignore debian file
 
-			if (file_name == "installed.list"){ return true; } // ignore debian file
+			if (file_name == "installed.list"){ continue; } // ignore debian file
 
-			if (!file_name.has_suffix(".repo")){ return true; }
+			if (!file_name.has_suffix(".repo")){ continue; }
 
 			string name = file_name.replace(".repo","");
 
-			if (name == "options"){ return true; }
+			if (name == "options"){ continue; }
 			
-			if (repos.has_key(name)){ return true; }
-
-			if (dry_run){
-				log_msg("Add repo: %s".printf(name));
-				return true;
-			}
+			if (repos.has_key(name)){ continue; }
 
 			string pacman_file = "/etc/pacman.conf";
 			string pacman_text = file_read(pacman_file);
 			string repo_text = file_read(backup_file);
 			pacman_text += "\n%s\n".printf(repo_text);
-			
-			bool ok = file_write(pacman_file, pacman_text);
-			if (!ok){ status = false; return true; }
+
+			if (dry_run){
+				log_msg("updated: %s".printf(pacman_file));
+				ok = true;
+			}
+			else{
+				ok = file_write(pacman_file, pacman_text);
+				if (!ok){ status = false; continue; }
+			}
 
 			log_msg("%s: %s".printf(_("Added Repo"), name));
+		}
 
-			return true;
-		});
-
-		bool ok = import_keys_arch(backup_path);
+		ok = import_keys_arch(backup_path);
 		if (!ok){ status = false; }
 
 		// update repos -------------------------------------
@@ -570,10 +570,8 @@ public class RepoManager : GLib.Object {
 
 		bool status = true;
 
-		int retval = Posix.system("dpkg -s apt-transport-https | grep Status | grep installed > /dev/null");
-		if (retval != 0){
-			Posix.system("apt-get install -y apt-transport-https");
-			log_msg(string.nfill(70,'-'));
+		if (!check_package_installed_debian("apt-transport-https")){
+			install_package_debian("apt-transport-https");
 		}
 
 		// add repos -------------------------------------
@@ -584,12 +582,6 @@ public class RepoManager : GLib.Object {
 		ok = restore_repos_apt_custom(backup_path);
 		if (!ok){ status = false; }
 				
-		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
-			return true;
-		}
-
 		import_keys_debian(backup_path);
 
 		// update repos and import missing keys -----------------
@@ -611,12 +603,29 @@ public class RepoManager : GLib.Object {
 	
 	public bool restore_repos_apt_launchpad(string backup_path) {
 
+		bool status = true;
+		
 		string backup_file = path_combine(backup_path, "launchpad-ppas.list");
 
 		if (!file_exists(backup_file)) {
+			
 			string msg = "%s: %s".printf(Message.FILE_MISSING, backup_file);
 			log_error(msg);
 			return false;
+		}
+
+		if (!check_package_installed_debian("software-properties-common")){
+			install_package_debian("software-properties-common");
+		}
+
+		if (!cmd_exists("add-apt-repository")){
+			
+			log_error("%s: %s".printf(_("Missing command"), "add-apt-repository"));
+			log_error(_("Install required packages and try again"));
+			return false; // exit method
+
+			// NOTE: Debian does not have this command, but in that case
+			// the installed.list file should be empty. Return error and exit method.
 		}
 
 		var added_list = new Gee.ArrayList<string>();
@@ -632,34 +641,31 @@ public class RepoManager : GLib.Object {
 			if (name.length == 0){ continue; }
 			if (repos.has_key(name)){ continue; }
 
-			if (dry_run){
-				log_msg("Add Launchpad PPA: %s".printf(name));
-				continue;
-			}
-
-			if (!cmd_exists("add-apt-repository")){
-				log_error("%s: %s".printf(_("Missing command"), "add-apt-repository"));
-				log_error(_("Install required packages and try again"));
-				return false; // exit method
-
-				// NOTE: Debian does not have this command, but in that case
-				// the installed.list file should be empty. Return error and exit method.
-			}
-
 			added_list.add(name);
 
 			log_msg("%s: %s\n".printf(_("Repo"), name)); 
-			string cmd = "add-apt-repository -y ppa:%s\n".printf(name);
-			Posix.system(cmd);
+			string cmd = "add-apt-repository -y ppa:%s".printf(name);
+
+			int retval = 0;
+		
+			if (dry_run){
+				log_msg("$ %s".printf(cmd));
+			}
+			else{
+				log_debug("$ %s".printf(cmd));
+				retval = Posix.system(cmd);
+				if (retval != 0){ status = false; }
+			}
+		
 			log_msg(string.nfill(70,'-'));
 		}
 		
-		return true;
+		return status;
 	}
 
 	public bool restore_repos_apt_custom(string backup_path) {
 
-		bool status = true;
+		bool status = true, ok;
 
 		string codename = "";
 		string codename_file = path_combine(backup_path, "CODENAME");
@@ -704,12 +710,13 @@ public class RepoManager : GLib.Object {
 			string list_file = path_combine("/etc/apt/sources.list.d", list_name);
 
 			if (dry_run){
-				log_msg("%s: %s".printf(_("Install source list"), list_file));
+				log_msg("cp: '%s' -> '%s'".printf(backup_file, list_file));
+				log_msg("%s: %s".printf(_("Installed"), list_file));
 				log_msg(string.nfill(70,'-'));
 				continue;
 			}
 
-			bool ok = file_copy(backup_file, list_file);
+			ok = file_copy(backup_file, list_file);
 			if (!ok){ status = false; }
 			else{
 				txt = file_read(list_file);
@@ -727,6 +734,34 @@ public class RepoManager : GLib.Object {
 		return status;
 	}
 
+	public bool check_package_installed_debian(string pkgname){
+
+		string cmd = "dpkg -s %s 2>/dev/null | grep Status | grep installed > /dev/null".printf(pkgname);
+		
+		int retval = Posix.system(cmd);
+
+		return (retval == 0);
+	}
+	
+	public bool install_package_debian(string pkgname){
+
+		string cmd = "apt-get install -y %s".printf(pkgname);
+
+		int retval = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			retval = Posix.system(cmd);
+		}
+
+		log_msg(string.nfill(70,'-'));
+
+		return (retval == 0);
+	}
+	
 	// keys ------------------------------------
 
 	public bool import_keys(string basepath){
@@ -767,15 +802,21 @@ public class RepoManager : GLib.Object {
 			return false; // exit method
 		}
 
-		bool ok = true;
-
 		string backup_file = path_combine(backup_path, "pacman.keys");
 
 		file_delete(backup_file); // delete existing
 
 		string cmd = "pacman-key -e > '%s'".printf(escape_single_quote(backup_file));
-		log_debug(cmd);
-		Posix.system(cmd);
+
+		int retval = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			retval = Posix.system(cmd);
+		}
 		
 		if (file_exists(backup_file)){
 			log_msg("%s: %s".printf(_("Keys exported"), backup_file));
@@ -786,7 +827,7 @@ public class RepoManager : GLib.Object {
 			log_error(string.nfill(70,'-'));
 		}
 
-		return ok;
+		return (retval == 0);
 	}
 	
 	public bool import_keys_arch(string backup_path){
@@ -797,8 +838,6 @@ public class RepoManager : GLib.Object {
 			return false; // exit method
 		}
 
-		bool ok = true;
-
 		string backup_file = path_combine(backup_path, "pacman.keys");
 
 		if (!file_exists(backup_file)){
@@ -806,8 +845,16 @@ public class RepoManager : GLib.Object {
 		}
 
 		string cmd = "pacman-key --add '%s'".printf(escape_single_quote(backup_file));
-		log_debug(cmd);
-		int retval = Posix.system(cmd);
+
+		int retval = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			retval = Posix.system(cmd);
+		}
 		
 		if (retval == 0){
 			log_msg("%s: %s".printf(_("Keys imported"), backup_file));
@@ -818,7 +865,7 @@ public class RepoManager : GLib.Object {
 			log_error(string.nfill(70,'-'));
 		}
 
-		return ok;
+		return (retval == 0);
 	}
 
 	public bool export_keys_debian(string backup_path){
@@ -829,26 +876,30 @@ public class RepoManager : GLib.Object {
 			return false; // exit method
 		}
 
-		bool ok = true;
-
 		string backup_file = path_combine(backup_path, "apt.keys");
 
 		file_delete(backup_file);
 
 		string cmd = "apt-key exportall > '%s'".printf(escape_single_quote(backup_file));
-		log_debug(cmd);
-		int retval = Posix.system(cmd);
+
+		int retval = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			retval = Posix.system(cmd);
+		}
 		
 		if (retval == 0){
 			log_msg("%s: %s".printf(_("Keys exported"), backup_file));
-			log_msg(string.nfill(70,'-'));
 		}
 		else{
-			//log_error(_("Error while exporting keys"));
-			log_error(string.nfill(70,'-'));
+			log_error(_("Error while exporting keys"));
 		}
 
-		return ok;
+		return (retval == 0);
 	}
 	
 	public bool import_keys_debian(string backup_path){
@@ -859,8 +910,6 @@ public class RepoManager : GLib.Object {
 			return false; // exit method
 		}
 
-		bool ok = true;
-
 		string backup_file = path_combine(backup_path, "apt.keys");
 
 		if (!file_exists(backup_file)){
@@ -868,19 +917,25 @@ public class RepoManager : GLib.Object {
 		}
 
 		string cmd = "apt-key add '%s'".printf(escape_single_quote(backup_file));
-		log_debug(cmd);
-		int retval = Posix.system(cmd);
+
+		int retval = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			retval = Posix.system(cmd);
+		}
 		
 		if (retval == 0){
 			log_msg("%s: %s".printf(_("Keys imported"), backup_file));
-			log_msg(string.nfill(70,'-'));
 		}
 		else{
-			//log_error(_("Error while importing keys"));
-			log_error(string.nfill(70,'-'));
+			log_error(_("Error while importing keys"));
 		}
 
-		return ok;
+		return (retval == 0);
 	}
 	
 	// missing keys  ----------------------------
@@ -946,9 +1001,17 @@ public class RepoManager : GLib.Object {
 				keys_added.add(key);
 
 				string cmd = "apt-key adv --keyserver keyserver.ubuntu.com --recv-keys %s".printf(key);
-				log_debug(cmd);
+
+				int retval = 0;
 		
-				int retval = Posix.system(cmd);
+				if (dry_run){
+					log_msg("$ %s".printf(cmd));
+				}
+				else{
+					log_debug("$ %s".printf(cmd));
+					retval = Posix.system(cmd);
+				}
+		
 				if (retval != 0){
 					ok = false;
 				}
@@ -984,12 +1047,6 @@ public class RepoManager : GLib.Object {
 
 		temp_file = "";
 		
-		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
-			return true;
-		}
-
 		switch(distro.dist_type){
 		case "fedora":
 			return update_repos_fedora(out temp_file);
@@ -1006,7 +1063,7 @@ public class RepoManager : GLib.Object {
 
 	public bool update_repos_fedora(out string temp_file){
 
-		log_msg(_("Updating package information..."));
+		log_msg("%s\n".printf(_("Updating package information...")));
 		
 		temp_file = get_temp_file_path();
 		log_debug(temp_file);
@@ -1015,7 +1072,15 @@ public class RepoManager : GLib.Object {
 		cmd += " check-update | tee '%s'".printf(escape_single_quote(temp_file));
 		log_debug(cmd);
 		
-		int status = Posix.system(cmd);
+		int status = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
 		log_msg(string.nfill(70,'-'));
 		
@@ -1024,7 +1089,7 @@ public class RepoManager : GLib.Object {
 
 	public bool update_repos_arch(out string temp_file){
 
-		log_msg(_("Updating package information..."));
+		log_msg("%s\n".printf(_("Updating package information...")));
 		
 		temp_file = get_temp_file_path();
 		log_debug(temp_file);
@@ -1033,7 +1098,15 @@ public class RepoManager : GLib.Object {
 		cmd += " -Sy | tee '%s'".printf(escape_single_quote(temp_file));
 		log_debug(cmd);
 		
-		int status = Posix.system(cmd);
+		int status = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
 		log_msg(string.nfill(70,'-'));
 		
@@ -1042,7 +1115,7 @@ public class RepoManager : GLib.Object {
 
 	public bool update_repos_debian(out string temp_file){
 	
-		log_msg(_("Updating package information..."));
+		log_msg("%s\n".printf(_("Updating package information...")));
 		
 		temp_file = get_temp_file_path();
 		log_debug(temp_file);
@@ -1051,11 +1124,18 @@ public class RepoManager : GLib.Object {
 		cmd += " update | tee '%s'".printf(escape_single_quote(temp_file));
 		log_debug(cmd);
 		
-		int status = Posix.system(cmd);
+		int status = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
 		log_msg(string.nfill(70,'-'));
 		
 		return (status == 0);
 	}
-	
 }

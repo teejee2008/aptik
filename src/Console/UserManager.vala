@@ -239,17 +239,20 @@ public class UserManager : GLib.Object {
 		}
 	}
 
-	public static int add_user(string name, bool system_account = false){
-		string std_out, std_err;
+	public static int add_user(string name, bool system_account, bool dry_run){
+		
+		int status = 0;
+		
 		string cmd = "adduser%s --gecos '' --disabled-login %s".printf((system_account ? " --system" : ""), name);
-		log_debug(cmd);
-		int status = exec_sync(cmd, out std_out, out std_err);
-		if (status != 0){
-			log_error(std_err);
+
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
 		}
 		else{
-			//log_msg(std_out);
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
 		}
+		
 		return status;
 	}
 
@@ -355,7 +358,7 @@ public class UserManager : GLib.Object {
 			
 			if (users.has_key(user.name)){ continue; }
 
-			ok = (user.add() == 0);
+			ok = (user.add(dry_run) == 0);
 		
 			if (!ok){
 				log_error(Message.USER_ADD_ERROR + ": %s".printf(user.name));
@@ -402,7 +405,7 @@ public class UserManager : GLib.Object {
 				user.shell_path = old_user.shell_path;
 				// keep name, uid, gid
 
-				bool ok = user.update_passwd_file();
+				bool ok = user.update_passwd_file(dry_run);
 				if (!ok){ status = false; }
 			}
 
@@ -418,7 +421,7 @@ public class UserManager : GLib.Object {
 				user.reserved_field = old_user.reserved_field;
 				// keep name
 				
-				bool ok = user.update_shadow_file();
+				bool ok = user.update_shadow_file(dry_run);
 				if (!ok){ status = false; }
 			}
 		}

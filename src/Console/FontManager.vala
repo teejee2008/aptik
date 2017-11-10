@@ -99,7 +99,7 @@ public class FontManager : GLib.Object {
 		}
 
 		if (!dry_run){
-			log_msg(_("Copying installed fonts..."));
+			log_msg(_("Saving installed fonts..."));
 		}
 
 		// system fonts --------------------------
@@ -122,14 +122,8 @@ public class FontManager : GLib.Object {
 			backup_fonts_from_path(path, backup_path);
 		}
 
-		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
-		}
-		else{
-			log_msg(Message.BACKUP_OK);
-			log_msg(string.nfill(70,'-'));
-		}
+		log_msg(Message.BACKUP_OK);
+		log_msg(string.nfill(70,'-'));
 
 		return true;
 	}
@@ -139,8 +133,9 @@ public class FontManager : GLib.Object {
 		if (!dir_exists(system_path)){ return false; }
 
 		log_msg("%s: %s".printf(_("Path"), system_path));
-
-		string cmd = "rsync -ai --numeric-ids";
+		log_msg("");
+		
+		string cmd = "rsync -avh";
 		
 		cmd += " -L"; // dereference symlinks to font files
 
@@ -152,9 +147,17 @@ public class FontManager : GLib.Object {
 		cmd += " '%s/'".printf(escape_single_quote(system_path));
 		cmd += " '%s/'".printf(escape_single_quote(backup_path));
 
-		int status = Posix.system(cmd);
+		int status = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug(cmd);
+			status = Posix.system(cmd);
+		}
 
-		log_msg(string.nfill(70,'-'));
+		log_msg("");
 
 		return (status == 0);
 	}
@@ -172,10 +175,8 @@ public class FontManager : GLib.Object {
 			return false;
 		}
 
-		if (!dry_run){
-			log_msg(_("Installing fonts..."));
-		}
-	
+		log_msg(_("Installing fonts..."));
+
 		string cmd = "rsync -ai --numeric-ids";
 
 		cmd += " --ignore-existing";
@@ -188,26 +189,49 @@ public class FontManager : GLib.Object {
 		cmd += " '%s/'".printf(escape_single_quote(backup_path));
 		cmd += " '%s/'".printf(escape_single_quote(system_path));
 
-		log_debug(cmd);
-		int status = Posix.system(cmd);
-		log_msg(string.nfill(70,'-'));
-
-		if (!dry_run){
-			cmd = "fc-cache -fv";
-			log_debug(cmd);
-			status = Posix.system(cmd);
-			log_msg(string.nfill(70,'-'));
-		}
-
+		int status = 0;
+	
 		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
+			log_msg("$ %s".printf(cmd));
 		}
 		else{
-			log_msg(Message.RESTORE_OK);
-			log_msg(string.nfill(70,'-'));
+			log_debug(cmd);
+			status = Posix.system(cmd);
 		}
 		
+		log_msg(string.nfill(70,'-'));
+
+		update_font_cache();
+
+		log_msg(Message.RESTORE_OK);
+		log_msg(string.nfill(70,'-'));
+
+		return (status == 0);
+	}
+
+	private bool update_font_cache(){
+
+		string cmd = "fc-cache";
+		if (!cmd_exists(cmd)){
+			log_error("%s: %s".printf(Message.MISSING_COMMAND, cmd));
+			return false;
+		}
+
+		cmd = "fc-cache -fv";
+		log_debug(cmd);
+
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug(cmd);
+			status = Posix.system(cmd);
+		}
+	
+		log_msg(string.nfill(70,'-'));
+
 		return (status == 0);
 	}
 

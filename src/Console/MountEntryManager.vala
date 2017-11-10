@@ -349,6 +349,8 @@ public class MountEntryManager : GLib.Object {
 
 	private bool restore_mount_entries_fstab(Gee.ArrayList<FsTabEntry> fstab_bkup){
 
+		bool ok = true;
+		
 		var list = new Gee.ArrayList<FsTabEntry>();
 
 		// add current entries and remove duplicates from bkup ------
@@ -397,10 +399,12 @@ public class MountEntryManager : GLib.Object {
 		}
 		
 		// save changes -----------
-
-		fstab = list;
-
-		bool ok = save_fstab_file(fstab);
+		
+		if (!dry_run){
+			
+			fstab = list;
+			ok = save_fstab_file(fstab);
+		}
 
 		// print ---------------------
 
@@ -418,6 +422,8 @@ public class MountEntryManager : GLib.Object {
 
 	private bool restore_mount_entries_crypttab(Gee.ArrayList<CryptTabEntry> crypttab_bkup){
 
+		bool ok = true;
+		
 		var list = new Gee.ArrayList<CryptTabEntry>();
 
 		// add current entries and remove duplicates from bkup ------
@@ -463,9 +469,11 @@ public class MountEntryManager : GLib.Object {
 		
 		// save changes -----------
 
-		crypttab = list;
-
-		bool ok = save_crypttab_file(crypttab);
+		if (!dry_run){
+			
+			crypttab = list;
+			ok = save_crypttab_file(crypttab);
+		}
 
 		// print ---------------------
 

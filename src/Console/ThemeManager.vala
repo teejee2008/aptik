@@ -60,7 +60,7 @@ public class ThemeManager : GLib.Object {
 	public void check_installed_themes(){
 
 		if (!list_only){
-			log_msg("Checking installed themes...");
+			log_msg("Checking installed themes (%s)...".printf(type));
 		}
 
 		// system themes ------------------------
@@ -226,13 +226,7 @@ public class ThemeManager : GLib.Object {
 
 	public bool save_themes(string basepath){
 
-		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
-			return true;
-		}
-
-		log_msg(_("Saving installed themes..."));
+		log_msg(_("Saving installed themes (%s)...").printf(type));
 
 		string backup_path = path_combine(basepath, type);
 		dir_delete(backup_path); // remove existing .list files
@@ -281,29 +275,23 @@ public class ThemeManager : GLib.Object {
 
 			theme.is_selected = !theme.is_installed;
 
-			if (dry_run && !theme.is_installed){
-				log_msg("install: %s".printf(theme.name));
-			}
-		}
-
-		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
-			return true;
+			//if (dry_run && !theme.is_installed){
+			//	log_msg("install: %s".printf(theme.name));
+			//}
 		}
 
 		foreach(var theme in themes_sorted) {
 
 			if (theme.is_selected && !theme.is_installed) {
 
-				theme.unzip();
+				theme.unzip(dry_run);
 				
 				while (theme.is_running) {
 					sleep(500);
 				}
 
-				theme.update_permissions();
-				theme.update_owner();
+				theme.update_permissions(dry_run);
+				theme.update_owner(dry_run);
 			}
 		}
 
@@ -317,16 +305,27 @@ public class ThemeManager : GLib.Object {
 		return false;
 	}
 
-	public static void refresh_icon_cache(){
+	public bool refresh_icon_cache(){
 
-		if (!cmd_exists("gtk-update-icon-cache")){
-			log_error("gtk-update-icon-cache not found");
-			return;
+		string cmd = "gtk-update-icon-cache";
+		if (!cmd_exists(cmd)){
+			log_error("%s: %s".printf(Message.MISSING_COMMAND, cmd));
+			return false;
 		}
+
+		cmd = "gtk-update-icon-cache -f /usr/share/icons/*";
+
+		int status = 0;
 		
-		string cmd = "sudo gtk-update-icon-cache -f /usr/share/icons/*";
-		log_debug(cmd);
-		Posix.system(cmd);
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+
+		return (status == 0);
 	}
 
 
@@ -592,7 +591,7 @@ public class Theme : GLib.Object{
 		}
 	}
 	
-	public bool unzip() {
+	public bool unzip(bool dry_run) {
 
 		//check file
 		if (!file_exists(archive_path)) {
@@ -603,12 +602,23 @@ public class Theme : GLib.Object{
 		dir_create(theme_path);
 
 		string cmd = "tar xzvf '%s' --directory='%s'".printf(archive_path, file_parent(theme_path));
-		log_debug(cmd);
+
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+		}
 		
 		stdout.printf("%-80s".printf(_("Extracting") + " '%s'".printf(theme_path)));
 		stdout.flush();
 
-		int status = Posix.system(cmd + " 1> /dev/null");
+		int status = 0;
+		
+		if (!dry_run){
+			status = Posix.system(cmd);
+		}
+		
 		if (status == 0) {
 			stdout.printf("[ OK ]\n");
 		}
@@ -621,36 +631,46 @@ public class Theme : GLib.Object{
 	
 	//permissions -------------
 	
-	public bool update_permissions() {
-		try {
-			int exit_code;
-			string cmd;
+	public bool update_permissions(bool dry_run) {
 
-			log_debug("set_permission (755)(dirs) : %s".printf(theme_path));
-			cmd = "find '%s' -type d -exec chmod 755 '{}' ';'".printf(theme_path);
-			Process.spawn_command_line_sync(cmd, null, null, out exit_code);
-			if (exit_code != 0) {
-				return false;
-			}
+		string cmd = "";
 
-			log_debug("set_permission (644)(files): %s".printf(theme_path));
-			cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(theme_path);
-			Process.spawn_command_line_sync(cmd, null, null, out exit_code);
-			if (exit_code != 0) {
-				return false;
-			}
+		//log_debug("set_permission (755)(dirs) : %s".printf(theme_path));
+		cmd = "find '%s' -type d -exec chmod 755 '{}' ';'".printf(theme_path);
 
-			return true;
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
 		}
-		catch (Error e) {
-			log_error (e.message);
-			return false;
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
 		}
+
+		//log_debug("set_permission (644)(files): %s".printf(theme_path));
+		cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(theme_path);
+
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+
+		return (status == 0);
 	}
 	
-	public void update_owner() {
-		log_debug("set_owner (root:root)      : %s".printf(theme_path));
-		chown(theme_path, "root", "root");
+	public void update_owner(bool dry_run) {
+
+		if (dry_run){
+			log_msg("set_owner (root:root): %s".printf(theme_path));
+		}
+		else{
+			log_debug("set_owner (root:root): %s".printf(theme_path));
+			chown(theme_path, "root", "root");
+		}
 	}
 
 	//enums and helpers ------------------

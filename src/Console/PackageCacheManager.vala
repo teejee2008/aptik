@@ -88,19 +88,19 @@ public class PackageCacheManager : GLib.Object {
 		cmd += " '%s/'".printf(escape_single_quote(system_cache));
 		cmd += " '%s/'".printf(escape_single_quote(backup_cache));
 
-		int status = Posix.system(cmd);
-
-		log_msg(string.nfill(70,'-'));
-
+		int status = 0;
+		
 		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
+			log_msg("$ %s".printf(cmd));
 		}
 		else{
-			log_msg(Message.BACKUP_OK);
-			log_msg(string.nfill(70,'-'));
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
 		}
-		
+
+		log_msg(Message.BACKUP_OK);
+		log_msg(string.nfill(70,'-'));
+
 		return (status == 0);
 	}
 
@@ -151,19 +151,21 @@ public class PackageCacheManager : GLib.Object {
 		cmd += " '%s/'".printf(escape_single_quote(backup_cache));
 		cmd += " '%s/'".printf(escape_single_quote(system_cache));
 
-		int status = Posix.system(cmd);
+		int status = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
 		log_msg(string.nfill(70,'-'));
 
-		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			log_msg(string.nfill(70,'-'));
-		}
-		else{
-			log_msg(Message.RESTORE_OK);
-			log_msg(string.nfill(70,'-'));
-		}
-		
+		log_msg(Message.RESTORE_OK);
+		log_msg(string.nfill(70,'-'));
+
 		return (status == 0);
 	}
 
@@ -199,13 +201,15 @@ public class PackageCacheManager : GLib.Object {
 			return false;
 		}
 
-		if (dry_run){
-			log_msg(string.nfill(70,'-'));
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			return true;
-		}
+		int status = 0;
 		
-		int status = Posix.system(cmd);
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
 		log_msg(string.nfill(70,'-'));
 

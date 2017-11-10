@@ -76,7 +76,7 @@ public class CronTaskManager : GLib.Object {
 	public bool backup_cron_tasks(string basepath, string userlist){
 
 		bool status = true;
-
+		
 		log_msg("%s\n".printf(_("Saving cron tasks...")));
 		
 		string backup_path = path_combine(basepath, "cron");
@@ -218,8 +218,6 @@ public class CronTaskManager : GLib.Object {
 
 	public bool restore_cron_tasks_for_user(string backup_path, User user){
 
-		bool status = true;
-		
 		string backup_file = path_combine(backup_path, "%s.crontab".printf(user.name));
 
 		if (!file_exists(backup_file)) {
@@ -231,28 +229,44 @@ public class CronTaskManager : GLib.Object {
 		string cmd = "su -s /bin/bash -c \"crontab '%s'\" %s".printf(escape_single_quote(backup_file), user.name);
 		log_debug(cmd);
 
-		int retval = Posix.system(cmd);
-		status = (retval == 0);
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
-		if (status){
+		if (status == 0){
 			log_msg("%s: (%s) %s".printf(_("Restored"), user.name, backup_file));
 		}
 		else{
 			log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file));
 		}
 		
-		return status;
+		return (status == 0);
 	}
 
 	public bool rsync_copy(string src_path, string dst_path){
 
 		// NOTE: copy links as links (no -L)
-		
+
 		string cmd = "rsync -avh '%s/' '%s/'".printf(escape_single_quote(src_path), escape_single_quote(dst_path));
 		log_debug(cmd);
 		
-		int retval = Posix.system(cmd);
-		return (retval == 0);
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
+		return (status == 0);
 	}
 
 	public bool update_permissions_for_cron_directory(string path){
@@ -267,8 +281,18 @@ public class CronTaskManager : GLib.Object {
 		
 		string cmd = "find '%s' -type f -exec chmod %s '{}' ';'".printf(path, permissions);
 		log_debug(cmd);
-		int retval = Posix.system(cmd);
-		return (retval == 0);
+
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
+		return (status == 0);
 	}
 
 	public Gee.ArrayList<User> get_users(string userlist){

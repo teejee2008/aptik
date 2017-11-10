@@ -156,8 +156,6 @@ public class DconfManager : GLib.Object {
 
 	public bool restore_dconf_settings_for_user(string backup_path, User user){
 
-		bool status = true;
-		
 		string backup_file = path_combine(backup_path, "%s.dconf-settings".printf(user.name));
 
 		if (!file_exists(backup_file)) {
@@ -167,19 +165,25 @@ public class DconfManager : GLib.Object {
 		}
 		
 		string cmd = "su -s /bin/bash -c \"dconf load / < '%s'\" %s".printf(escape_single_quote(backup_file), user.name);
-		log_debug(cmd);
 
-		int retval = Posix.system(cmd);
-		status = (retval == 0);
-
-		if (status){
+		int status = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
+		if (status == 0){
 			log_msg("%s: (%s) %s".printf(_("Restored"), user.name, backup_file));
 		}
 		else{
 			log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file));
 		}
 		
-		return status;
+		return (status == 0);
 	}
 
 	public Gee.ArrayList<User> get_users(string userlist){

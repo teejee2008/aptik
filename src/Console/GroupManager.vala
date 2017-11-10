@@ -182,30 +182,37 @@ public class GroupManager : GLib.Object {
 		}
 	}
 
-	public static int add_group(string group_name, bool system_account = false){
-		string std_out, std_err;
+	public static int add_group(string group_name, bool system_account, bool dry_run){
+
+		int status = 0;
+		
 		string cmd = "groupadd%s %s".printf((system_account)? " --system" : "", group_name);
-		int status = exec_sync(cmd, out std_out, out std_err);
-		if (status != 0){
-			log_error(std_err);
+
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
 		}
 		else{
-			//log_msg(std_out);
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
 		}
+		
 		return status;
 	}
 
-	public static int add_user_to_group(string user_name, string group_name){
-		string std_out, std_err;
+	public static int add_user_to_group(string user_name, string group_name, bool dry_run){
+		
+		int status = 0;
+		
 		string cmd = "adduser %s %s".printf(user_name, group_name);
-		log_debug(cmd);
-		int status = exec_sync(cmd, out std_out, out std_err);
-		if (status != 0){
-			log_error(std_err);
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
 		}
 		else{
-			//log_msg(std_out);
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
 		}
+		
 		return status;
 	}
 
@@ -330,7 +337,7 @@ public class GroupManager : GLib.Object {
 			
 			if (groups.has_key(group.name)){ continue; }
 
-			bool ok = (group.add() == 0);
+			bool ok = (group.add(dry_run) == 0);
 		
 			if (!ok){
 				log_error(Message.GROUP_ADD_ERROR + ": %s".printf(group.name));
@@ -379,7 +386,7 @@ public class GroupManager : GLib.Object {
 				group.user_names = Group.remove_missing_user_names(current_user_names, old_group.user_names); 
 				// keep name, gid
 				
-				bool ok = group.update_group_file();
+				bool ok = group.update_group_file(dry_run);
 				if (!ok){ status = false; }
 			}
 
@@ -390,7 +397,7 @@ public class GroupManager : GLib.Object {
 				group.member_names = Group.remove_missing_user_names(current_user_names, old_group.member_names);
 				// keep name
 
-				bool ok = group.update_gshadow_file();
+				bool ok = group.update_gshadow_file(dry_run);
 				if (!ok){ status = false; }
 			}
 		}
@@ -436,7 +443,7 @@ public class GroupManager : GLib.Object {
 					var group = groups[name];
 					if (group.user_names != user_names){
 						group.user_names = Group.remove_missing_user_names(current_user_names, user_names);
-						bool ok = group.update_group_file();
+						bool ok = group.update_group_file(dry_run);
 						if (!ok){ status = false; }
 					}
 				}

@@ -513,11 +513,6 @@ public class PackageManager : GLib.Object {
 	
 	public bool save_package_list(string basepath){
 
-		if (dry_run){
-			log_msg(_("Nothing to do (--dry-run mode)"));
-			return true;
-		}
-		
 		log_msg(_("Saving list of packages..."));
 		
 		bool ok, status = true;
@@ -549,8 +544,6 @@ public class PackageManager : GLib.Object {
 			break;
 		}
 
-		log_msg(string.nfill(70,'-'));
-		
 		if (status){
 			log_msg(Message.BACKUP_OK);
 		}
@@ -745,22 +738,20 @@ public class PackageManager : GLib.Object {
 
 		if (dry_run){
 			
-			log_msg("Packages to install: %'d".printf(list_install.split(" ").length));
+			log_msg("Packages to install: %'d\n".printf(list_install.split(" ").length));
 			if (list_install.length > 0){
 				log_msg(list_install);
 			}
 			log_msg(string.nfill(70,'-'));
 
-			log_msg("Packages not available: %'d".printf(list_missing.split(" ").length));
+			log_msg("Packages not available: %'d\n".printf(list_missing.split(" ").length));
 			if (list_missing.length > 0){
 				log_msg(list_missing);
 			}
 			log_msg(string.nfill(70,'-'));
-
-			log_msg(_("Nothing to do (--dry-run mode)"));
-
-			return true;
 		}
+
+		log_msg("%s\n".printf("Installing packages..."));
 
 		switch(distro.dist_type){
 		case "fedora":
@@ -787,8 +778,16 @@ public class PackageManager : GLib.Object {
 		}
 
 		cmd += " install %s".printf(list_install);
+
+		int status = 0;
 		
-		int status = Posix.system(cmd);
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
 		log_msg(string.nfill(70,'-'));
 		log_msg(Message.RESTORE_OK);
@@ -809,8 +808,16 @@ public class PackageManager : GLib.Object {
 		}
 
 		cmd += " -S %s".printf(list_install);
+
+		int status = 0;
 		
-		int status = Posix.system(cmd);
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
 		log_msg(string.nfill(70,'-'));
 		log_msg(Message.RESTORE_OK);
@@ -832,7 +839,16 @@ public class PackageManager : GLib.Object {
 
 		cmd += " install %s".printf(list_install);
 		
-		int status = Posix.system(cmd);
+		int status = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
 		log_msg(string.nfill(70,'-'));
 
 		install_packages_deb(basepath);
@@ -853,7 +869,7 @@ public class PackageManager : GLib.Object {
 		var list = dir_list_names(backup_path, true);
 		if (list.size == 0){ return true; }
 
-		log_msg(_("Installing DEB packages..."));
+		log_msg("%s\n".printf(_("Installing DEB packages...")));
 		
 		if (cmd_exists("apt")){
 			return install_packages_deb_apt(list);
@@ -881,9 +897,17 @@ public class PackageManager : GLib.Object {
 		}
 
 		string cmd = "apt install %s".printf(txt.strip());
-		log_debug(cmd);
+
+		int status = 0;
 		
-		int status = Posix.system(cmd);
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
 		log_msg(string.nfill(70,'-'));
 
 		return (status == 0);
@@ -904,9 +928,17 @@ public class PackageManager : GLib.Object {
 		}
 
 		string cmd = "gdebi -n %s".printf(txt.strip());
-		log_debug(cmd);
+
+		int status = 0;
 		
-		int status = Posix.system(cmd);
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
 		log_msg(string.nfill(70,'-'));
 
 		return (status == 0);

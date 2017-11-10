@@ -44,14 +44,14 @@ public class Group : GLib.Object {
 		this.name = name;
 	}
 
-	public int add(){
+	public int add(bool dry_run){
 		
-		return GroupManager.add_group(name, is_system);
+		return GroupManager.add_group(name, is_system, dry_run);
 	}
 
-	public int add_to_group(string user_name){
+	public int add_to_group(string user_name, bool dry_run){
 		
-		return GroupManager.add_user_to_group(user_name, name);
+		return GroupManager.add_user_to_group(user_name, name, dry_run);
 	}
 	
 	public bool is_system{
@@ -119,7 +119,7 @@ public class Group : GLib.Object {
 
 	// update file ------------------------------------
 
-	public bool update_group_file(){
+	public bool update_group_file(bool dry_run){
 		
 		string file_path = "/etc/group";
 		string txt = file_read(file_path);
@@ -145,14 +145,16 @@ public class Group : GLib.Object {
 			}
 		}
 
-		file_write(file_path, txt_new);
+		if (!dry_run){
+			file_write(file_path, txt_new);
+		}
 		
 		log_msg("%s %s: %s".printf(_("Updated"), "/etc/group", name));
 		
 		return true;
 	}
 
-	public bool update_gshadow_file(){
+	public bool update_gshadow_file(bool dry_run){
 		
 		string file_path = "/etc/gshadow";
 		string txt = file_read(file_path);
@@ -178,7 +180,9 @@ public class Group : GLib.Object {
 			}
 		}
 
-		file_write(file_path, txt_new);
+		if (!dry_run){
+			file_write(file_path, txt_new);
+		}
 		
 		log_msg("%s %s: %s".printf(_("Updated"), "/etc/gshadow", name));
 		

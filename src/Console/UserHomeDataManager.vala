@@ -39,14 +39,11 @@ public class UserHomeDataManager : GLib.Object {
 	public bool backup_home(string basepath, string userlist, HomeDataBackupMode mode, string password, bool full_backup, bool exclude_hidden){
 
 		string backup_path = path_combine(basepath, "home");
+		dir_create(backup_path);
 
-		if (!dry_run){
-			dir_create(backup_path);
-		}
-
-		if (!dry_run){
-			log_msg(_("Saving home directory data..."));
-		}
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_HOME));
+		log_msg(string.nfill(70,'-'));
 
 		bool status = true;
 
@@ -93,8 +90,6 @@ public class UserHomeDataManager : GLib.Object {
 			log_error(Message.BACKUP_ERROR);
 		}
 
-		log_msg(string.nfill(70,'-'));
-
 		return status;
 	}
 
@@ -107,7 +102,7 @@ public class UserHomeDataManager : GLib.Object {
 
 			if (user.is_system){ continue; }
 
-			log_msg("\n%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
+			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
 				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
@@ -134,9 +129,11 @@ public class UserHomeDataManager : GLib.Object {
 			
 			var cmd = "";
 
-			cmd += "tar -zvcf";
+			cmd += "tar -zcf";
 
 			cmd += " '%s'".printf(escape_single_quote(tar_file));
+
+			cmd += " --totals --checkpoint";
 
 			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
 
@@ -155,6 +152,8 @@ public class UserHomeDataManager : GLib.Object {
 			}
 			
 			if (retval != 0){ status = false; }
+
+			log_msg(string.nfill(70,'-'));
 		}
 
 		return status;
@@ -171,7 +170,7 @@ public class UserHomeDataManager : GLib.Object {
 
 			if (user.is_system){ continue; }
 
-			log_msg("\n%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
+			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
 				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
@@ -243,6 +242,8 @@ public class UserHomeDataManager : GLib.Object {
 			}
 			
 			if (retval != 0){ status = false; }
+
+			log_msg(string.nfill(70,'-'));
 		}
 
 		return status;
@@ -291,6 +292,10 @@ public class UserHomeDataManager : GLib.Object {
 
 	public bool restore_home(string basepath, string userlist, string password){
 
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_HOME));
+		log_msg(string.nfill(70,'-'));
+		
 		string backup_path = path_combine(basepath, "home");
 
 		if (!dir_exists(backup_path)) {
@@ -298,8 +303,6 @@ public class UserHomeDataManager : GLib.Object {
 			log_error(msg);
 			return false;
 		}
-
-		log_msg(_("Restoring home directory data..."));
 
 		bool status = true;
 
@@ -365,8 +368,6 @@ public class UserHomeDataManager : GLib.Object {
 			log_error(Message.RESTORE_ERROR);
 		}
 
-		log_msg(string.nfill(70,'-'));
-
 		return status;
 	}
 
@@ -381,7 +382,6 @@ public class UserHomeDataManager : GLib.Object {
 
 			if (user.is_system){ continue; }
 
-			log_msg(string.nfill(70,'-'));
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
@@ -423,22 +423,24 @@ public class UserHomeDataManager : GLib.Object {
 			cmd += "tar -zvxf";
 			
 			cmd += " '%s'".printf(escape_single_quote(tar_file_user));
+
+			cmd += " --totals --checkpoint";
 			
 			cmd += " -C '%s'".printf(escape_single_quote(file_parent(user.home_path)));
 
-			cmd += "\n";
-
 			// execute ---------------------------------
 
-			if (!dry_run){
-				log_debug(cmd);
-				string sh_file = save_bash_script_temp(cmd);
-				int retval = Posix.system(sh_file);
-				if (retval != 0){ status = false; }
+			int retval = 0;
+			
+			if (dry_run){
+				log_msg("$ %s".printf(cmd));
 			}
 			else{
-				log_msg("cmd: %s".printf(cmd));
+				log_debug("$ %s".printf(cmd));
+				retval = Posix.system(cmd);
 			}
+			
+			if (retval != 0){ status = false; }
 
 			// update ownership --------------------------
 
@@ -463,7 +465,6 @@ public class UserHomeDataManager : GLib.Object {
 
 			if (user.is_system){ continue; }
 
-			log_msg(string.nfill(70,'-'));
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
@@ -481,14 +482,6 @@ public class UserHomeDataManager : GLib.Object {
 				continue;
 			}
 
-			// save exclude list -----------------------
-			
-			//var exclude_list = path_combine(backup_path_user, "exclude.list");
-			//if (file_exists(exclude_list)){
-			//	file_delete(exclude_list);
-			//}
-			//file_write(exclude_list, exclude_list_create(user));
-
 			// create script ---------------------------
 			
 			var cmd = "";
@@ -502,8 +495,6 @@ public class UserHomeDataManager : GLib.Object {
 			cmd += " restore";
 
 			cmd += " --verbosity i --force";
-			
-			//cmd += " --exclude-filelist '%s'".printf(escape_single_quote(exclude_list));
 
 			cmd += " 'file://%s'".printf(escape_single_quote(backup_path_user));
 
@@ -515,15 +506,17 @@ public class UserHomeDataManager : GLib.Object {
 
 			// execute ---------------------------------
 
-			if (!dry_run){
-				log_debug(cmd);
-				string sh_file = save_bash_script_temp(cmd);
-				int retval = Posix.system(sh_file);
-				if (retval != 0){ status = false; }
+			int retval = 0;
+			
+			if (dry_run){
+				log_msg("$ %s".printf(cmd));
 			}
 			else{
-				log_msg("cmd: %s".printf(cmd));
+				log_debug("$ %s".printf(cmd));
+				retval = Posix.system(cmd);
 			}
+			
+			if (retval != 0){ status = false; }
 
 			// update ownership --------------------------
 			

@@ -283,11 +283,12 @@ public class MountEntryManager : GLib.Object {
 
 	public bool backup_mount_entries(string basepath){
 
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_MOUNTS));
+		log_msg(string.nfill(70,'-'));
+		
 		string backup_path = path_combine(basepath, "mounts");
-
 		dir_create(backup_path);
-
-		log_msg(_("Saving mount entries..."));
 
 		bool status = true;
 
@@ -316,12 +317,14 @@ public class MountEntryManager : GLib.Object {
 			log_error(Message.BACKUP_ERROR);
 		}
 
-		log_msg(string.nfill(70,'-'));
-
 		return status;
 	}
 
 	public bool restore_mount_entries(string basepath){
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_MOUNTS));
+		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "mounts");
 		
@@ -340,6 +343,8 @@ public class MountEntryManager : GLib.Object {
 
 		ok = restore_mount_entries_fstab(mgr.fstab);
 		if (!ok){ status = false; }
+
+		log_msg(string.nfill(70,'-'));
 		
 		ok = restore_mount_entries_crypttab(mgr.crypttab);
 		if (!ok){ status = false; }
@@ -415,8 +420,6 @@ public class MountEntryManager : GLib.Object {
 			entry.print_line();
 		}
 
-		log_msg(string.nfill(70,'-'));
-
 		return ok;
 	}
 
@@ -483,8 +486,6 @@ public class MountEntryManager : GLib.Object {
 			
 			entry.print_line();
 		}
-
-		log_msg(string.nfill(70,'-'));
 
 		return ok;
 	}

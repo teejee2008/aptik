@@ -76,8 +76,10 @@ public class CronTaskManager : GLib.Object {
 	public bool backup_cron_tasks(string basepath, string userlist){
 
 		bool status = true;
-		
-		log_msg("%s\n".printf(_("Saving cron tasks...")));
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_CRON));
+		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "cron");
 		dir_create(backup_path);
@@ -118,7 +120,7 @@ public class CronTaskManager : GLib.Object {
 			log_error(Message.BACKUP_ERROR);
 		}
 
-		log_msg(string.nfill(70,'-'));
+		//log_msg(string.nfill(70,'-'));
 
 		return status;
 	}
@@ -161,7 +163,9 @@ public class CronTaskManager : GLib.Object {
 
 		bool status = true;
 
-		log_msg(_("Restoring cron tasks..."));
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_CRON));
+		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "cron");
 		

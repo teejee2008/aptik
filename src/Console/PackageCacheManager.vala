@@ -46,6 +46,10 @@ public class PackageCacheManager : GLib.Object {
 
 	public bool backup_cache(string basepath){
 
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_CACHE));
+		log_msg(string.nfill(70,'-'));
+		
 		string backup_cache = path_combine(basepath, "cache/%s".printf(distro.dist_type));
 
 		if (!dry_run){
@@ -75,9 +79,7 @@ public class PackageCacheManager : GLib.Object {
 			return false;
 		}
 
-		log_msg(_("Copying packages from cache..."));
-	
-		string cmd = "rsync -ai --numeric-ids";
+		string cmd = "rsync -avh";
 
 		if (dry_run){
 			cmd += " --dry-run";
@@ -98,8 +100,8 @@ public class PackageCacheManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
+		log_msg("");
 		log_msg(Message.BACKUP_OK);
-		log_msg(string.nfill(70,'-'));
 
 		return (status == 0);
 	}
@@ -107,6 +109,10 @@ public class PackageCacheManager : GLib.Object {
 	// restore ---------------------------------------
 	
 	public bool restore_cache(string basepath){
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_CACHE));
+		log_msg(string.nfill(70,'-'));
 
 		string backup_cache = path_combine(basepath, "cache/%s".printf(distro.dist_type));
 
@@ -138,9 +144,7 @@ public class PackageCacheManager : GLib.Object {
 			return false;
 		}
 
-		log_msg(_("Copying packages to cache..."));
-	
-		string cmd = "rsync -ai --numeric-ids";
+		string cmd = "rsync -avh";
 
 		if (dry_run){
 			cmd += " --dry-run";
@@ -161,10 +165,8 @@ public class PackageCacheManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
-		log_msg(string.nfill(70,'-'));
-
+		log_msg("");
 		log_msg(Message.RESTORE_OK);
-		log_msg(string.nfill(70,'-'));
 
 		return (status == 0);
 	}

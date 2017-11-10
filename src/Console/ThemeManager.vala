@@ -59,9 +59,9 @@ public class ThemeManager : GLib.Object {
 
 	public void check_installed_themes(){
 
-		if (!list_only){
-			log_msg("Checking installed themes (%s)...".printf(type));
-		}
+		//if (!list_only){
+		//	log_msg("Checking installed themes (%s)...".printf(type));
+		//}
 
 		// system themes ------------------------
 		
@@ -89,16 +89,6 @@ public class ThemeManager : GLib.Object {
 				subtypes[theme.name] = theme.subtypes_desc;
 			}
 		}
-
-		if (list_only){
-			foreach(var theme in themes.values){
-				log_msg("%-50s -- %s".printf(theme.theme_path, theme.subtypes_desc));
-			}
-			return;
-		}
-
-		log_msg("Found: %d".printf(themes.size));
-		log_msg(string.nfill(70,'-'));
 	}
 
 	public void add_themes_from_path(string path){
@@ -137,18 +127,17 @@ public class ThemeManager : GLib.Object {
 		}
 	}
 
-
 	public void check_archived_themes(string basepath) {
 
-		log_msg("Checking archived themes...");
+		//log_msg("Checking archived themes...");
 
 		string backup_path = "%s/%s".printf(basepath, type);
 		add_archived_themes_from_path(backup_path);
 
 		load_index_file(basepath);
 
-		log_msg("Found: %d".printf(themes.size));
-		log_msg(string.nfill(70,'-'));
+		//log_msg("Found: %d".printf(themes.size));
+		//log_msg(string.nfill(70,'-'));
 	}
 	
 	public void add_archived_themes_from_path(string path) {
@@ -218,7 +207,28 @@ public class ThemeManager : GLib.Object {
 
 	public Gee.ArrayList<Theme> themes_sorted {
 		owned get{
-			return get_sorted_array(themes);
+
+			var list = new Gee.ArrayList<Theme>();
+			
+			foreach(var item in themes.values) {
+				list.add(item);
+			}
+
+			list.sort((a, b) => {
+				return strcmp(a.name.down(), b.name.down());
+			});
+
+			return list;
+		}
+	}
+
+	// list  --------------------------
+
+	public void list_themes(){
+
+		foreach(var theme in themes_sorted){
+			
+			log_msg("%-50s -- %s".printf(theme.theme_path, theme.subtypes_desc));
 		}
 	}
 
@@ -226,7 +236,9 @@ public class ThemeManager : GLib.Object {
 
 	public bool save_themes(string basepath){
 
-		log_msg(_("Saving installed themes (%s)...").printf(type));
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), (type == "themes") ? Message.TASK_THEMES : Message.TASK_ICONS));
+		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, type);
 		dir_delete(backup_path); // remove existing .list files
@@ -244,7 +256,6 @@ public class ThemeManager : GLib.Object {
 		save_index(backup_path);
 
 		log_msg(Message.BACKUP_OK);
-		log_msg(string.nfill(70,'-'));
 
 		return false;
 	}
@@ -254,14 +265,20 @@ public class ThemeManager : GLib.Object {
 		string index_file = path_combine(backup_path, "index.list");
 		
 		string txt = "";
-		foreach(string key in subtypes.keys){
-			txt += "%s:%s\n".printf(key, subtypes[key]);
+		foreach(var theme in themes_sorted){
+			if (subtypes.has_key(theme.name)){
+				txt += "%s:%s\n".printf(theme.name, subtypes[theme.name]);
+			}
 		}
 
 		file_write(index_file, txt);
 	}
 
 	public bool restore_themes(string basepath){
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), (type == "themes") ? Message.TASK_THEMES : Message.TASK_ICONS));
+		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, type);
 		
@@ -274,10 +291,6 @@ public class ThemeManager : GLib.Object {
 		foreach(var theme in themes_sorted){
 
 			theme.is_selected = !theme.is_installed;
-
-			//if (dry_run && !theme.is_installed){
-			//	log_msg("install: %s".printf(theme.name));
-			//}
 		}
 
 		foreach(var theme in themes_sorted) {
@@ -296,11 +309,13 @@ public class ThemeManager : GLib.Object {
 		}
 
 		//Theme.fix_nested_folders(); // Not needed
-
+		log_msg("");
+		
 		refresh_icon_cache();
+
+		log_msg("");
 		
 		log_msg(Message.RESTORE_OK);
-		log_msg(string.nfill(70,'-'));
 
 		return false;
 	}
@@ -327,25 +342,6 @@ public class ThemeManager : GLib.Object {
 
 		return (status == 0);
 	}
-
-
-	// static ----------------------
-
-	public static Gee.ArrayList<Theme> get_sorted_array(Gee.HashMap<string,Theme> dict){
-
-		var list = new Gee.ArrayList<Theme>();
-		
-		foreach(var pkg in dict.values) {
-			list.add(pkg);
-		}
-
-		list.sort((a, b) => {
-			return strcmp(a.name, b.name);
-		});
-
-		return list;
-	}
-
 }
 
 public class Theme : GLib.Object{
@@ -383,7 +379,7 @@ public class Theme : GLib.Object{
 		
 		name = _name;
 		type = _type;
-		theme_path = path_combine(_path,_name);
+		theme_path = path_combine(_path, _name);
 		
 		is_installed = true;
 		
@@ -569,13 +565,15 @@ public class Theme : GLib.Object{
 				f.make_directory_with_parents();
 			}
 
-			string cmd = "tar czvf '%s' -C '%s/%s' '%s'".printf(zip_file, base_path, type, name);
+			// silent -- no -v
+			string cmd = "tar czf '%s' -C '%s' '%s' 1> /dev/null".printf(zip_file, file_parent(theme_path), name);
 			log_debug(cmd);
 
 			stdout.printf("%-80s".printf(_("Archiving") + " '%s'".printf(theme_path)));
 			stdout.flush();
 
-			int status = Posix.system(cmd + " 1> /dev/null");
+			int status = Posix.system(cmd);
+			
 			if (status == 0) {
 				stdout.printf("[ OK ]\n");
 			}
@@ -601,7 +599,8 @@ public class Theme : GLib.Object{
 
 		dir_create(theme_path);
 
-		string cmd = "tar xzvf '%s' --directory='%s'".printf(archive_path, file_parent(theme_path));
+		// silent -- no -v
+		string cmd = "tar xzf '%s' --directory='%s' 1> /dev/null".printf(archive_path, file_parent(theme_path));
 
 		if (dry_run){
 			log_msg("$ %s".printf(cmd));

@@ -306,7 +306,7 @@ public class LinuxDistro : GLib.Object{
 
 	public void print_system_info(){
 		
-		log_msg(string.nfill(70,'-'));
+		//log_msg(string.nfill(70,'-'));
 		
 		if (dist_full_name.length > 0){
 			log_msg("Distribution: %s".printf(dist_full_name));
@@ -318,7 +318,7 @@ public class LinuxDistro : GLib.Object{
 		log_msg("Architecture-Kern: %s".printf(kernel_arch));
 		log_msg("Architecture-Type: %d-bit".printf(machine_arch));
 		
-		log_msg(string.nfill(70,'-'));
+		//log_msg(string.nfill(70,'-'));
 	}
 }
 

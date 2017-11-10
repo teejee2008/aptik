@@ -60,10 +60,8 @@ public class PackageManager : GLib.Object {
 	
 	private void check_packages(){
 
-		if (!list_only){
-			log_msg("Checking installed packages...");
-		}
-
+		//log_msg("Checking installed packages...");
+	
 		log_debug("check_packages()");
 
 		packages = new Gee.HashMap<string,Package>();
@@ -93,12 +91,12 @@ public class PackageManager : GLib.Object {
 			return true;
 		});
 
-		if (!list_only){
-			log_msg("Available: %'6d".printf(available_count));
-			log_msg("Installed: %'6d".printf(installed_count));
-			log_msg("Selected : %'6d".printf(selected_count));
-			log_msg(string.nfill(70,'-'));
-		}
+		//if (!list_only){
+		//	log_msg("Available: %'6d".printf(available_count));
+		//	log_msg("Installed: %'6d".printf(installed_count));
+		//	log_msg("Selected : %'6d".printf(selected_count));
+		//	log_msg(string.nfill(70,'-'));
+		//}
 	}
 
 	private void check_packages_fedora(){
@@ -495,7 +493,7 @@ public class PackageManager : GLib.Object {
 			}
 
 			if ((count > 0) && !list_only){
-				log_msg("Dist-Base: %'6d".printf(count));
+				//log_msg("Dist-Base: %'6d".printf(count));
 			}
 		}
 		catch (Error e) {
@@ -513,7 +511,9 @@ public class PackageManager : GLib.Object {
 	
 	public bool save_package_list(string basepath){
 
-		log_msg(_("Saving list of packages..."));
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_PACKAGES));
+		log_msg(string.nfill(70,'-'));
 		
 		bool ok, status = true;
 
@@ -551,7 +551,7 @@ public class PackageManager : GLib.Object {
 			log_error(Message.BACKUP_ERROR);
 		}
 
-		log_msg(string.nfill(70,'-'));
+		//log_msg(string.nfill(70,'-'));
 
 		return status;
 	}
@@ -610,6 +610,10 @@ public class PackageManager : GLib.Object {
 	// restore ---------------------
 
 	public bool restore_packages(string basepath, bool no_prompt){
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_PACKAGES));
+		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "packages");
 		
@@ -854,8 +858,7 @@ public class PackageManager : GLib.Object {
 		install_packages_deb(basepath);
 		
 		log_msg(Message.RESTORE_OK);
-		log_msg(string.nfill(70,'-'));
-		
+
 		return (status == 0);
 	}
 
@@ -908,8 +911,6 @@ public class PackageManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 		
-		log_msg(string.nfill(70,'-'));
-
 		return (status == 0);
 	}
 
@@ -939,8 +940,6 @@ public class PackageManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 		
-		log_msg(string.nfill(70,'-'));
-
 		return (status == 0);
 	}
 

@@ -90,17 +90,14 @@ public class FontManager : GLib.Object {
 
 	public bool backup_fonts(string basepath){
 
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_FONTS));
+		log_msg(string.nfill(70,'-'));
+		
 		string backup_path = path_combine(basepath, "fonts");
 
 		string system_path = "/usr/share/fonts";
-
-		if (!dry_run){
-			dir_create(backup_path);
-		}
-
-		if (!dry_run){
-			log_msg(_("Saving installed fonts..."));
-		}
+		dir_create(backup_path);
 
 		// system fonts --------------------------
 
@@ -116,14 +113,21 @@ public class FontManager : GLib.Object {
 			if (user.is_system) { continue; }
 			
 			string path = "%s/.fonts".printf(user.home_path);
-			backup_fonts_from_path(path, backup_path);
-
+			var list = dir_list_names(path, true);
+			if (list.size > 0){
+				log_msg(string.nfill(70,'-'));
+				backup_fonts_from_path(path, backup_path);
+			}
+			
 			path = "%s/.local/share/fonts".printf(user.home_path);
-			backup_fonts_from_path(path, backup_path);
+			list = dir_list_names(path, true);
+			if (list.size > 0){
+				log_msg(string.nfill(70,'-'));
+				backup_fonts_from_path(path, backup_path);
+			}
 		}
 
 		log_msg(Message.BACKUP_OK);
-		log_msg(string.nfill(70,'-'));
 
 		return true;
 	}
@@ -166,6 +170,10 @@ public class FontManager : GLib.Object {
 	
 	public bool restore_fonts(string basepath){
 
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_FONTS));
+		log_msg(string.nfill(70,'-'));
+		
 		string backup_path = path_combine(basepath, "fonts");
 
 		string system_path = "/usr/share/fonts";
@@ -174,8 +182,6 @@ public class FontManager : GLib.Object {
 			log_error("%s: %s".printf(_("Directory not found"), backup_path));
 			return false;
 		}
-
-		log_msg(_("Installing fonts..."));
 
 		string cmd = "rsync -ai --numeric-ids";
 
@@ -204,7 +210,6 @@ public class FontManager : GLib.Object {
 		update_font_cache();
 
 		log_msg(Message.RESTORE_OK);
-		log_msg(string.nfill(70,'-'));
 
 		return (status == 0);
 	}

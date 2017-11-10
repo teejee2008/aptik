@@ -59,15 +59,16 @@ public class Message : GLib.Object {
 	public const string PASSWORD_EMPTY = _("Password cannot be empty!");
 	public const string PASSWORD_NOT_MATCHING = _("Passwords do not match!");
 
-	public const string TASK_PPA = _("Software Repositories");
+	public const string TASK_REPOS = _("Software Repositories");
 	public const string TASK_CACHE = _("Downloaded Packages");
-	public const string TASK_PACKAGE = _("Installed Software");
-	public const string TASK_MOUNT = _("Filesystem Mounts");
-	public const string TASK_THEME = _("Themes and Icons");
-	public const string TASK_USER = _("User Accounts");
-	public const string TASK_GROUP = _("Groups");
-	public const string TASK_CONFIG = _("Application Settings");
+	public const string TASK_PACKAGES = _("Installed Software");
 	public const string TASK_HOME = _("Home Directory Data");
+	public const string TASK_MOUNTS = _("Mount Entries");
+	public const string TASK_ICONS = _("Icons");
+	public const string TASK_THEMES = _("Themes");
+	public const string TASK_FONTS = _("Fonts");
+	public const string TASK_USERS = _("User Accounts");
+	public const string TASK_GROUPS = _("Groups");
 	public const string TASK_DCONF = _("Dconf Settings");
 	public const string TASK_CRON = _("Scheduled Tasks");
 }

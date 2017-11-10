@@ -271,15 +271,12 @@ public class UserManager : GLib.Object {
 
 	public bool backup_users(string basepath){
 
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_USERS));
+		log_msg(string.nfill(70,'-'));
+		
 		string backup_path = path_combine(basepath, "users");
-
-		if (!dry_run){
-			dir_create(backup_path);
-		}
-
-		if (!dry_run){
-			log_msg(_("Saving users..."));
-		}
+		dir_create(backup_path);
 
 		bool status = true;
 
@@ -307,14 +304,16 @@ public class UserManager : GLib.Object {
 			log_error(Message.BACKUP_ERROR);
 		}
 
-		log_msg(string.nfill(70,'-'));
+		//log_msg(string.nfill(70,'-'));
 
 		return status;
 	}
 
 	public bool restore_users(string basepath){
 
-		// REMOVE THIS
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_USERS));
+		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "users");
 		

@@ -53,10 +53,6 @@ public class RepoManager : GLib.Object {
 
 	public void check_repos(){
 
-		if (!list_only){
-			log_msg("Checking installed repos...");
-		}
-
 		log_debug("check_repos()");
 
 		repos = new Gee.HashMap<string,Repo>();
@@ -71,11 +67,6 @@ public class RepoManager : GLib.Object {
 		case "debian":
 			check_repos_debian();
 			break;
-		}
-
-		if (!list_only){
-			log_msg("Found: %d".printf(repos.size));
-			log_msg(string.nfill(70,'-'));
 		}
 	}
 
@@ -315,7 +306,9 @@ public class RepoManager : GLib.Object {
 
 	public bool save_repos(string basepath){
 
-		log_msg(_("Saving installed repos..."));
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_REPOS));
+		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, "repos");
 		dir_delete(backup_path); // remove existing .list files
@@ -331,7 +324,6 @@ public class RepoManager : GLib.Object {
 		}
 
 		log_msg(_("Nothing to save"));
-		log_msg(string.nfill(70,'-'));
 
 		return false;
 	}
@@ -372,8 +364,6 @@ public class RepoManager : GLib.Object {
 			log_error(Message.BACKUP_ERROR);
 		}
 
-		log_msg(string.nfill(70,'-'));
-
 		return status;
 	}
 
@@ -396,8 +386,6 @@ public class RepoManager : GLib.Object {
 		else{
 			log_error(Message.BACKUP_ERROR);
 		}
-
-		log_msg(string.nfill(70,'-'));
 
 		return status;
 	}
@@ -466,6 +454,10 @@ public class RepoManager : GLib.Object {
 	// restore ---------------------------
 
 	public bool restore_repos(string basepath){
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_REPOS));
+		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, "repos");
 		
@@ -1082,8 +1074,6 @@ public class RepoManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
-		log_msg(string.nfill(70,'-'));
-		
 		return (status == 0);
 	}
 
@@ -1108,8 +1098,6 @@ public class RepoManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
-		log_msg(string.nfill(70,'-'));
-		
 		return (status == 0);
 	}
 
@@ -1134,8 +1122,6 @@ public class RepoManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
-		log_msg(string.nfill(70,'-'));
-		
 		return (status == 0);
 	}
 }

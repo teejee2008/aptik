@@ -110,7 +110,7 @@ public class AptikConsole : GLib.Object {
 
 		msg += _("Usage") + ": aptik <command> [options]\n\n";
 
-		msg += fmt2.printf(Message.TASK_PPA);
+		msg += fmt2.printf(Message.TASK_REPOS);
 		
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-repos", _("List software repositories"));
@@ -131,7 +131,7 @@ public class AptikConsole : GLib.Object {
 
 		msg += "%s: %s, %s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)");
 
-		msg += fmt2.printf(Message.TASK_PACKAGE);
+		msg += fmt2.printf(Message.TASK_PACKAGES);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-installed", _("List installed packages"));
@@ -145,7 +145,7 @@ public class AptikConsole : GLib.Object {
 
 		msg += "%s: %s, %s,\n%s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
 
-		msg += fmt2.printf(Message.TASK_USER);
+		msg += fmt2.printf(Message.TASK_USERS);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-users", _("List users"));
@@ -154,7 +154,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--restore-users", _("Restore users from backup"));
 		msg += "\n";
 		
-		msg += fmt2.printf(Message.TASK_GROUP);
+		msg += fmt2.printf(Message.TASK_GROUPS);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-groups", _("List groups"));
@@ -187,7 +187,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("", _("default: include"));
 		msg += "\n";
 		
-		msg += fmt2.printf(Message.TASK_MOUNT);
+		msg += fmt2.printf(Message.TASK_MOUNTS);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-mounts", _("List /etc/fstab and /etc/crypttab entries"));
@@ -355,7 +355,7 @@ public class AptikConsole : GLib.Object {
 
 			case "--backup-all":
 			case "--restore-all":
-			case "--remove-backups":
+			case "--remove-all":
 
 				command = args[k].down();
 				break;
@@ -569,9 +569,9 @@ public class AptikConsole : GLib.Object {
 			distro.print_system_info();
 			return restore_all();
 
-		case "--remove-backups":
+		case "--remove-all":
 			distro.print_system_info();
-			return remove_backups();
+			return remove_all();
 		}
 
 		return true;
@@ -722,50 +722,86 @@ public class AptikConsole : GLib.Object {
 		}
 	}
 	
-	public bool remove_backups(){
+	public bool remove_all(){
 
-		bool status = true;
-		bool ok;
+		bool ok = true, status = true;
 		
-		ok = dir_delete(path_combine(basepath, "repos"), true);
-		if (!ok) { status = false; return status; }
+		ok = remove_backup("repos");
+		if (!ok) { status = false; }
 		
-		ok = dir_delete(path_combine(basepath, "cache"), true);
-		if (!ok) { status = false; return status; }
-
-		ok = dir_delete(path_combine(basepath, "packages"), true);
-		if (!ok) { status = false; return status; }
-
-		ok = dir_delete(path_combine(basepath, "users"), true);
-		if (!ok) { status = false; return status; }
-
-		ok = dir_delete(path_combine(basepath, "groups"), true);
-		if (!ok) { status = false; return status; }
-
-		ok = dir_delete(path_combine(basepath, "home"), true);
-		if (!ok) { status = false; return status; }
-
-		ok = dir_delete(path_combine(basepath, "mounts"), true);
-		if (!ok) { status = false; return status; }
+		ok = remove_backup("cache");
+		if (!ok) { status = false; }
 		
-		ok = dir_delete(path_combine(basepath, "icons"), true);
-		if (!ok) { status = false; return status; }
-
-		ok = dir_delete(path_combine(basepath, "themes"), true);
-		if (!ok) { status = false; return status; }
+		ok = remove_backup("packages");
+		if (!ok) { status = false; }
 		
-		ok = dir_delete(path_combine(basepath, "fonts"), true);
-		if (!ok) { status = false; return status; }
-
-		ok = dir_delete(path_combine(basepath, "dconf"), true);
-		if (!ok) { status = false; return status; }
+		ok = remove_backup("users");
+		if (!ok) { status = false; }
 		
-		ok = dir_delete(path_combine(basepath, "cron"), true);
-		if (!ok) { status = false; return status; }
+		ok = remove_backup("groups");
+		if (!ok) { status = false; }
+		
+		ok = remove_backup("home");
+		if (!ok) { status = false; }
+		
+		ok = remove_backup("mounts");
+		if (!ok) { status = false; }
+		
+		ok = remove_backup("icons");
+		if (!ok) { status = false; }
+		
+		ok = remove_backup("themes");
+		if (!ok) { status = false; }
+		
+		ok = remove_backup("fonts");
+		if (!ok) { status = false; }
+		
+		ok = remove_backup("dconf");
+		if (!ok) { status = false; }
+		
+		ok = remove_backup("cron");
+		if (!ok) { status = false; }
+
+		string path = path_combine(basepath, AppShortName);
+		if (file_exists(path)){
+			file_delete(path);
+			log_msg("%s: %s".printf(_("Removed"), path));
+		}
+
+		path = path_combine(basepath, "debs");
+		
+		if (dir_exists(path)){
+			
+			var list = dir_list_names(path, false);
+			
+			if (list.size > 0){
+				// skip if not empty
+				log_msg("%s: %s".printf(_("Skipped"), path));
+			}
+			else{
+				// remove if empty
+				remove_backup("debs");
+			}
+		}
 
 		return status;
 	}
 
+	public bool remove_backup(string item_name){
+
+		string path = path_combine(basepath, item_name);
+
+		bool ok = dir_delete(path);
+		if (ok) {
+			log_msg("%s: %s".printf(_("Removed"), path));
+		}
+		else {
+			log_msg("%s: %s".printf(_("Error"), path));
+		}
+
+		return ok;
+	}
+	
 	// packages ------------------------------
 	
 	public bool list_packages_installed(){
@@ -1021,6 +1057,7 @@ public class AptikConsole : GLib.Object {
 
 		var mgr = new ThemeManager(distro, false, true, "themes");
 		mgr.check_installed_themes();
+		mgr.list_themes();
 		return true;
 	}
 	

@@ -58,7 +58,9 @@ public class DconfManager : GLib.Object {
 
 		bool status = true;
 
-		log_msg(_("Saving dconf settings..."));
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Message.TASK_DCONF));
+		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "dconf");
 		dir_create(backup_path);
@@ -79,8 +81,6 @@ public class DconfManager : GLib.Object {
 		else{
 			log_error(Message.BACKUP_ERROR);
 		}
-
-		log_msg(string.nfill(70,'-'));
 
 		return status;
 	}
@@ -122,7 +122,9 @@ public class DconfManager : GLib.Object {
 
 		bool status = true;
 
-		log_msg(_("Restoring dconf settings..."));
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_DCONF));
+		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "dconf");
 		
@@ -148,8 +150,6 @@ public class DconfManager : GLib.Object {
 		else{
 			log_error(Message.RESTORE_ERROR);
 		}
-
-		log_msg(string.nfill(70,'-'));
 
 		return status;
 	}

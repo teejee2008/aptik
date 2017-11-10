@@ -232,11 +232,12 @@ public class GroupManager : GLib.Object {
 
 	public bool backup_groups(string basepath){
 
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_GROUPS));
+		log_msg(string.nfill(70,'-'));
+
 		string backup_path = path_combine(basepath, "groups");
-
 		dir_create(backup_path);
-
-		log_msg(_("Saving groups..."));
 
 		bool status = true;
 
@@ -267,7 +268,7 @@ public class GroupManager : GLib.Object {
 			log_error(Message.BACKUP_ERROR);
 		}
 
-		log_msg(string.nfill(70,'-'));
+		//log_msg(string.nfill(70,'-'));
 
 		return status;
 	}
@@ -291,6 +292,10 @@ public class GroupManager : GLib.Object {
 	}
 	
 	public bool restore_groups(string basepath){
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Restore"), Message.TASK_GROUPS));
+		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "groups");
 		

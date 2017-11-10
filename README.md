@@ -20,7 +20,7 @@ Aptik should only be used to migrate between two installations of **same archite
 
 Available command and options are documented in the [User Manual](MANUAL.md)
 
-## Features**
+## Features
 
 - **Migrate Software Packages** - Saves a list of installed software packages to the selected backup location. The packages will be re-installed on the new system on restore. Supports Debian, Ubuntu, Fedora, Arch and derivatives. On Debian, Ubuntu and derivatives the list of packages that are saved include only those software that was installed by the user. The list does not include packages that came with the distribution or that were installed to satisfy dependencies. This makes it easy to review and edit the list of packages.
 - **Migrate Software Repositories** - Saves a list of extra software repositories added to the system. The repos will be added to the new system on restore. Supports Debian, Ubuntu and derivatives. On Debian, Ubuntu and derivatives, both Launchpad PPAs and custom repositories (Google Chrome, Oracle VirtualBox, etc) are supported. Missing GPG keys for repositories will be imported on restore.
@@ -51,8 +51,6 @@ PPA and DEB files are available for Ubuntu and Ubuntu-based distributions. Binar
 ## Donation Plugins
 
 Aptik includes a few extra plugins for people who have contributed to the project through donations, translations, etc. You can make a donation for $10 or more via PayPal to receive the plugins by email. Your contributions will help keep the project alive and support future development.
-
-[**Donation Features**](https://github.com/teejee2008/polo/wiki/Donation-Features)
 
 **PayPal** ~ If you find this application useful and wish to say thanks, you can buy me a coffee by making a one-time donation with Paypal. 
 

@@ -280,7 +280,7 @@ public class GroupManager : GLib.Object {
 		string txt = "";
 		
 		foreach(var group in groups_sorted){
-			txt += "%s:%s".printf(group.name, group.user_names);
+			txt += "%s:%s\n".printf(group.name, group.user_names);
 		}
 
 		bool ok = file_write(backup_file, txt);

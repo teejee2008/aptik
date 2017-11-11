@@ -92,16 +92,23 @@ public class AptikConsole : GLib.Object {
 			"rsync","cp","rm","touch","ln","grep","find","awk","pv","mount","umount","crontab","sync", "lsblk"
 		};
 
-		string msg = "";
+		string missing = "";
+		
 		foreach(string cmd in dependencies){
+			
 			if (!cmd_exists(cmd)){
-				msg += " * " + cmd + "\n";
+				
+				if (missing.length > 0){
+					missing = ", ";
+				}
+				missing += cmd;
 			}
 		}
 
-		if (msg.length > 0){
-			msg = "%s:\n\n%s\n".printf(Message.MISSING_COMMAND, msg);
+		if (missing.length > 0){
+			string msg ="%s: %s".printf(Message.MISSING_COMMAND, missing);
 			log_error(msg);
+			log_error(_("Install required packages for missing commands"));
 			exit(1);
 		}
 	}

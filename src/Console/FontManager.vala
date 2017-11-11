@@ -180,7 +180,7 @@ public class FontManager : GLib.Object {
 			return false;
 		}
 
-		string cmd = "rsync -ai --numeric-ids";
+		string cmd = "rsync -avh";
 
 		cmd += " --ignore-existing";
 

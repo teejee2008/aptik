@@ -384,6 +384,14 @@ public class MountEntryManager : GLib.Object {
 				continue; // do not add if not already existing
 			}
 
+			if (entry.mount_point == "/boot"){
+				continue; // do not add if not already existing
+			}
+
+			if (entry.mount_point == "/home"){
+				continue; // do not add if not already existing
+			}
+
 			list.add(entry);
 		}
 

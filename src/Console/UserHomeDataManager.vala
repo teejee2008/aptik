@@ -628,7 +628,7 @@ public class UserHomeDataManager : GLib.Object {
 			chown(user.home_path, user.name, usergroup);
 		}
 		
-		log_msg("%s: %s (%s,%s)".printf(_("Updated owner for directory contents"), user.home_path, user.name, usergroup));
+		log_msg("%s: %s (%s,%s)".printf(_("Updated owner for home directory contents"), user.home_path, user.name, usergroup));
 
 		return ok;
 	}

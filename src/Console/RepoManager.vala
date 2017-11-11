@@ -589,8 +589,6 @@ public class RepoManager : GLib.Object {
 			log_error(Message.RESTORE_ERROR);
 		}
 		
-		log_msg(string.nfill(70,'-'));
-
 		return status;
 	}
 	

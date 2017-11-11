@@ -78,7 +78,7 @@ public class CronTaskManager : GLib.Object {
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Message.TASK_CRON));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_CRON));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "cron");
@@ -114,10 +114,10 @@ public class CronTaskManager : GLib.Object {
 		}
 		
 		if (status){
-			log_msg(Message.BACKUP_OK);
+			log_msg(Messages.BACKUP_OK);
 		}
 		else{
-			log_error(Message.BACKUP_ERROR);
+			log_error(Messages.BACKUP_ERROR);
 		}
 
 		//log_msg(string.nfill(70,'-'));
@@ -157,13 +157,13 @@ public class CronTaskManager : GLib.Object {
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_CRON));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_CRON));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "cron");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -202,10 +202,10 @@ public class CronTaskManager : GLib.Object {
 		}
 
 		if (status){
-			log_msg(Message.RESTORE_OK);
+			log_msg(Messages.RESTORE_OK);
 		}
 		else{
-			log_error(Message.RESTORE_ERROR);
+			log_error(Messages.RESTORE_ERROR);
 		}
 
 		log_msg(string.nfill(70,'-'));

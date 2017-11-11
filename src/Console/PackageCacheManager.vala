@@ -47,7 +47,7 @@ public class PackageCacheManager : GLib.Object {
 	public bool backup_cache(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Message.TASK_CACHE));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_CACHE));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "cache");
@@ -61,7 +61,7 @@ public class PackageCacheManager : GLib.Object {
 
 		switch(distro.dist_type){
 		case "fedora":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED," dnf/yum"));
+			log_error("%s: %s".printf(Messages.CACHE_NOT_SUPPORTED," dnf/yum"));
 			return false;
 
 		case "arch":
@@ -75,7 +75,7 @@ public class PackageCacheManager : GLib.Object {
 			break;
 
 		default:
-			log_error(Message.UNKNOWN_DISTRO);
+			log_error(Messages.UNKNOWN_DISTRO);
 			return false;
 		}
 
@@ -105,7 +105,7 @@ public class PackageCacheManager : GLib.Object {
 		update_permissions_for_backup_packages(backup_path);
 		
 		log_msg("");
-		log_msg(Message.BACKUP_OK);
+		log_msg(Messages.BACKUP_OK);
 
 		return (status == 0);
 	}
@@ -152,7 +152,7 @@ public class PackageCacheManager : GLib.Object {
 	public bool restore_cache(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_CACHE));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_CACHE));
 		log_msg(string.nfill(70,'-'));
 
 		string backup_cache = path_combine(basepath, "cache/%s".printf(distro.dist_type));
@@ -167,7 +167,7 @@ public class PackageCacheManager : GLib.Object {
 
 		switch(distro.dist_type){
 		case "fedora":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"dnf/yum"));
+			log_error("%s: %s".printf(Messages.CACHE_NOT_SUPPORTED,"dnf/yum"));
 			return false;
 			
 		case "arch":
@@ -181,7 +181,7 @@ public class PackageCacheManager : GLib.Object {
 			break;
 
 		default:
-			log_error(Message.UNKNOWN_DISTRO);
+			log_error(Messages.UNKNOWN_DISTRO);
 			return false;
 		}
 
@@ -210,7 +210,7 @@ public class PackageCacheManager : GLib.Object {
 		update_permissions_for_restored_packages(system_cache);
 		
 		log_msg("");
-		log_msg(Message.RESTORE_OK);
+		log_msg(Messages.RESTORE_OK);
 
 		return (status == 0);
 	}
@@ -245,7 +245,7 @@ public class PackageCacheManager : GLib.Object {
 		switch(distro.dist_type){
 			
 		case "fedora":
-			log_error("%s: %s".printf(Message.CACHE_NOT_SUPPORTED,"dnf/yum"));
+			log_error("%s: %s".printf(Messages.CACHE_NOT_SUPPORTED,"dnf/yum"));
 			return false;
 
 		case "arch":
@@ -264,7 +264,7 @@ public class PackageCacheManager : GLib.Object {
 			break;
 
 		default:
-			log_error(Message.UNKNOWN_DISTRO);
+			log_error(Messages.UNKNOWN_DISTRO);
 			return false;
 		}
 

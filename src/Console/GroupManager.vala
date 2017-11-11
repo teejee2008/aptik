@@ -233,7 +233,7 @@ public class GroupManager : GLib.Object {
 	public bool backup_groups(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_GROUPS));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_GROUPS));
 		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, "groups");
@@ -262,10 +262,10 @@ public class GroupManager : GLib.Object {
 		if (!ok){ status = false; }
 		
 		if (status){
-			log_msg(Message.BACKUP_OK);
+			log_msg(Messages.BACKUP_OK);
 		}
 		else{
-			log_error(Message.BACKUP_ERROR);
+			log_error(Messages.BACKUP_ERROR);
 		}
 
 		//log_msg(string.nfill(70,'-'));
@@ -294,13 +294,13 @@ public class GroupManager : GLib.Object {
 	public bool restore_groups(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_GROUPS));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_GROUPS));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "groups");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -326,7 +326,7 @@ public class GroupManager : GLib.Object {
 		string backup_path = path_combine(basepath, "groups");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -345,11 +345,11 @@ public class GroupManager : GLib.Object {
 			bool ok = (group.add(dry_run) == 0);
 		
 			if (!ok){
-				log_error(Message.GROUP_ADD_ERROR + ": %s".printf(group.name));
+				log_error(Messages.GROUP_ADD_ERROR + ": %s".printf(group.name));
 				status = false;
 			}
 			else{
-				log_msg(Message.GROUP_ADD_OK + ": %s".printf(group.name));
+				log_msg(Messages.GROUP_ADD_OK + ": %s".printf(group.name));
 			}
 		}
 		
@@ -363,7 +363,7 @@ public class GroupManager : GLib.Object {
 		string backup_path = path_combine(basepath, "groups");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -417,7 +417,7 @@ public class GroupManager : GLib.Object {
 		string backup_path = path_combine(basepath, "groups");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -425,7 +425,7 @@ public class GroupManager : GLib.Object {
 		string backup_file = path_combine(backup_path, "memberships.list");
 
 		if (!file_exists(backup_file)) {
-			string msg = "%s: %s".printf(Message.FILE_MISSING, backup_file);
+			string msg = "%s: %s".printf(Messages.FILE_MISSING, backup_file);
 			log_error(msg);
 			return false;
 		}

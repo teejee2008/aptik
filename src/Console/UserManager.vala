@@ -272,7 +272,7 @@ public class UserManager : GLib.Object {
 	public bool backup_users(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Message.TASK_USERS));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "users");
@@ -298,10 +298,10 @@ public class UserManager : GLib.Object {
 		}
 
 		if (status){
-			log_msg(Message.BACKUP_OK);
+			log_msg(Messages.BACKUP_OK);
 		}
 		else{
-			log_error(Message.BACKUP_ERROR);
+			log_error(Messages.BACKUP_ERROR);
 		}
 
 		//log_msg(string.nfill(70,'-'));
@@ -312,13 +312,13 @@ public class UserManager : GLib.Object {
 	public bool restore_users(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_USERS));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "users");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -341,7 +341,7 @@ public class UserManager : GLib.Object {
 		string backup_path = path_combine(basepath, "users");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -360,11 +360,11 @@ public class UserManager : GLib.Object {
 			ok = (user.add(dry_run) == 0);
 		
 			if (!ok){
-				log_error(Message.USER_ADD_ERROR + ": %s".printf(user.name));
+				log_error(Messages.USER_ADD_ERROR + ": %s".printf(user.name));
 				status = false;
 			}
 			else{
-				log_msg(Message.USER_ADD_OK + ": %s".printf(user.name));
+				log_msg(Messages.USER_ADD_OK + ": %s".printf(user.name));
 			}
 		}
 
@@ -378,7 +378,7 @@ public class UserManager : GLib.Object {
 		string backup_path = path_combine(basepath, "users");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}

@@ -426,7 +426,7 @@ public class PackageManager : GLib.Object {
 		log_debug("check_packages_apt_default()");
 
 		if (!file_exists(DEF_PKG_LIST)) {
-			log_error("%s: %s".printf(Message.FILE_MISSING, DEF_PKG_LIST_UNPACKED));
+			log_error("%s: %s".printf(Messages.FILE_MISSING, DEF_PKG_LIST_UNPACKED));
 			return;
 		}
 
@@ -510,7 +510,7 @@ public class PackageManager : GLib.Object {
 	public bool save_package_list(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Message.TASK_PACKAGES));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_PACKAGES));
 		log_msg(string.nfill(70,'-'));
 		
 		bool ok, status = true;
@@ -543,10 +543,10 @@ public class PackageManager : GLib.Object {
 		}
 
 		if (status){
-			log_msg(Message.BACKUP_OK);
+			log_msg(Messages.BACKUP_OK);
 		}
 		else{
-			log_error(Message.BACKUP_ERROR);
+			log_error(Messages.BACKUP_ERROR);
 		}
 
 		//log_msg(string.nfill(70,'-'));
@@ -610,7 +610,7 @@ public class PackageManager : GLib.Object {
 	public bool restore_packages(string basepath, bool no_prompt){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_PACKAGES));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_PACKAGES));
 		log_msg(string.nfill(70,'-'));
 
 		check_packages();
@@ -618,7 +618,7 @@ public class PackageManager : GLib.Object {
 		string backup_path = path_combine(basepath, "packages");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -626,13 +626,13 @@ public class PackageManager : GLib.Object {
 		string backup_file = path_combine(backup_path, "selected.list");
 
 		if (!file_exists(backup_file)) {
-			string msg = "%s: %s".printf(Message.FILE_MISSING, backup_file);
+			string msg = "%s: %s".printf(Messages.FILE_MISSING, backup_file);
 			log_error(msg);
 			return false;
 		}
 
 		if (!check_internet_connectivity()) {
-			log_error(Message.INTERNET_OFFLINE);
+			log_error(Messages.INTERNET_OFFLINE);
 			return false;
 		}
 
@@ -642,10 +642,10 @@ public class PackageManager : GLib.Object {
 		bool ok = install_packages(basepath, list_install, list_missing, no_prompt);
 
 		if (ok){
-			log_msg(Message.RESTORE_OK);
+			log_msg(Messages.RESTORE_OK);
 		}
 		else{
-			log_error(Message.RESTORE_ERROR);
+			log_error(Messages.RESTORE_ERROR);
 		}
 
 		return ok;
@@ -754,7 +754,7 @@ public class PackageManager : GLib.Object {
 		}
 
 		log_msg(string.nfill(70,'-'));
-		log_msg(Message.RESTORE_OK);
+		log_msg(Messages.RESTORE_OK);
 		
 		return (status == 0);
 	}
@@ -784,7 +784,7 @@ public class PackageManager : GLib.Object {
 		}
 
 		log_msg(string.nfill(70,'-'));
-		log_msg(Message.RESTORE_OK);
+		log_msg(Messages.RESTORE_OK);
 		
 		return (status == 0);
 	}
@@ -817,7 +817,7 @@ public class PackageManager : GLib.Object {
 
 		install_packages_deb(basepath);
 		
-		log_msg(Message.RESTORE_OK);
+		log_msg(Messages.RESTORE_OK);
 
 		return (status == 0);
 	}
@@ -860,7 +860,7 @@ public class PackageManager : GLib.Object {
 		log_debug("install_packages_deb_apt()");
 
 		if (!cmd_exists("apt")){
-			log_error("%s: %s".printf(Message.MISSING_COMMAND, "apt"));
+			log_error("%s: %s".printf(Messages.MISSING_COMMAND, "apt"));
 			return false; // exit method
 		}
 
@@ -890,7 +890,7 @@ public class PackageManager : GLib.Object {
 		log_debug("install_packages_deb_gdebi()");
 
 		if (!cmd_exists("gdebi")){
-			log_error("%s: %s".printf(Message.MISSING_COMMAND, "gdebi"));
+			log_error("%s: %s".printf(Messages.MISSING_COMMAND, "gdebi"));
 			return false; // exit method
 		}
 

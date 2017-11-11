@@ -106,7 +106,7 @@ public class AptikConsole : GLib.Object {
 		}
 
 		if (missing.length > 0){
-			string msg ="%s: %s".printf(Message.MISSING_COMMAND, missing);
+			string msg ="%s: %s".printf(Messages.MISSING_COMMAND, missing);
 			log_error(msg);
 			log_error(_("Install required packages for missing commands"));
 			exit(1);
@@ -135,7 +135,7 @@ public class AptikConsole : GLib.Object {
 
 		msg += _("Usage") + ": aptik <command> [options]\n\n";
 
-		msg += fmt2.printf(Message.TASK_REPOS);
+		msg += fmt2.printf(Messages.TASK_REPOS);
 		
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-repos", _("List software repositories"));
@@ -146,7 +146,7 @@ public class AptikConsole : GLib.Object {
 
 		msg += "%s: %s, %s,\n%s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
 		
-		msg += fmt2.printf(Message.TASK_CACHE);
+		msg += fmt2.printf(Messages.TASK_CACHE);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--backup-cache", _("Copy downloaded packages from system cache"));
@@ -156,7 +156,7 @@ public class AptikConsole : GLib.Object {
 
 		msg += "%s: %s, %s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)");
 
-		msg += fmt2.printf(Message.TASK_PACKAGES);
+		msg += fmt2.printf(Messages.TASK_PACKAGES);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-installed", _("List installed packages"));
@@ -170,7 +170,7 @@ public class AptikConsole : GLib.Object {
 
 		msg += "%s: %s, %s,\n%s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
 
-		msg += fmt2.printf(Message.TASK_USERS);
+		msg += fmt2.printf(Messages.TASK_USERS);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-users", _("List users"));
@@ -179,7 +179,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--restore-users", _("Restore users from backup"));
 		msg += "\n";
 		
-		msg += fmt2.printf(Message.TASK_GROUPS);
+		msg += fmt2.printf(Messages.TASK_GROUPS);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-groups", _("List groups"));
@@ -188,7 +188,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--restore-groups", _("Restore groups from backup"));
 		msg += "\n";
 
-		msg += fmt2.printf(Message.TASK_HOME);
+		msg += fmt2.printf(Messages.TASK_HOME);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--backup-home", _("Backup data in users' home directories"));
@@ -212,7 +212,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("", _("default: include"));
 		msg += "\n";
 		
-		msg += fmt2.printf(Message.TASK_MOUNTS);
+		msg += fmt2.printf(Messages.TASK_MOUNTS);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-mounts", _("List /etc/fstab and /etc/crypttab entries"));
@@ -220,7 +220,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--restore-mounts", _("Restore /etc/fstab and /etc/crypttab entries from backup"));
 		msg += "\n";
 
-		msg += fmt2.printf(Message.TASK_DCONF);
+		msg += fmt2.printf(Messages.TASK_DCONF);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-dconf", _("List dconf settings changed by user"));
@@ -232,7 +232,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("", _("default: all users"));
 		msg += "\n";
 		
-		msg += fmt2.printf(Message.TASK_CRON);
+		msg += fmt2.printf(Messages.TASK_CRON);
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-cron", _("List cron tasks"));
@@ -741,7 +741,7 @@ public class AptikConsole : GLib.Object {
 			return true;
 		}
 		else {
-			log_error("%s: %s".printf(Message.DIR_MISSING, backup_path));
+			log_error("%s: %s".printf(Messages.DIR_MISSING, backup_path));
 			return false;
 		}
 	}

@@ -88,7 +88,7 @@ public class FontManager : GLib.Object {
 	public bool backup_fonts(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Message.TASK_FONTS));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_FONTS));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "fonts");
@@ -124,7 +124,7 @@ public class FontManager : GLib.Object {
 			}
 		}
 
-		log_msg(Message.BACKUP_OK);
+		log_msg(Messages.BACKUP_OK);
 
 		return true;
 	}
@@ -168,7 +168,7 @@ public class FontManager : GLib.Object {
 	public bool restore_fonts(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_FONTS));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_FONTS));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "fonts");
@@ -206,7 +206,7 @@ public class FontManager : GLib.Object {
 
 		update_font_cache();
 
-		log_msg(Message.RESTORE_OK);
+		log_msg(Messages.RESTORE_OK);
 
 		return (status == 0);
 	}
@@ -215,7 +215,7 @@ public class FontManager : GLib.Object {
 
 		string cmd = "fc-cache";
 		if (!cmd_exists(cmd)){
-			log_error("%s: %s".printf(Message.MISSING_COMMAND, cmd));
+			log_error("%s: %s".printf(Messages.MISSING_COMMAND, cmd));
 			return false;
 		}
 

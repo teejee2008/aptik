@@ -1,5 +1,5 @@
 
-public class Message : GLib.Object {
+public class Messages : GLib.Object {
 	public const string APT_GET_ERROR = _("Package installation has failed or was aborted by user");
 
 	public const string INTERNET_OFFLINE = _("Internet connection is not active. Check the connection and try again.");

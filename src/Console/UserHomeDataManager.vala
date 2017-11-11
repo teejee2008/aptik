@@ -42,7 +42,7 @@ public class UserHomeDataManager : GLib.Object {
 		dir_create(backup_path);
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Message.TASK_HOME));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_HOME));
 		log_msg(string.nfill(70,'-'));
 
 		bool status = true;
@@ -84,10 +84,10 @@ public class UserHomeDataManager : GLib.Object {
 		if (!ok){ status = false; }
 		
 		if (status){
-			log_msg(Message.BACKUP_OK);
+			log_msg(Messages.BACKUP_OK);
 		}
 		else{
-			log_error(Message.BACKUP_ERROR);
+			log_error(Messages.BACKUP_ERROR);
 		}
 
 		return status;
@@ -105,7 +105,7 @@ public class UserHomeDataManager : GLib.Object {
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
-				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
+				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
 				log_msg(string.nfill(70,'-'));
 				continue;
 			}
@@ -190,7 +190,7 @@ public class UserHomeDataManager : GLib.Object {
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
-				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
+				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
 				log_msg(string.nfill(70,'-'));
 				continue;
 			}
@@ -310,13 +310,13 @@ public class UserHomeDataManager : GLib.Object {
 	public bool restore_home(string basepath, string userlist, string password){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_HOME));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_HOME));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "home");
 
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -380,10 +380,10 @@ public class UserHomeDataManager : GLib.Object {
 		if (!ok){ status = false; }
 		
 		if (status){
-			log_msg(Message.RESTORE_OK);
+			log_msg(Messages.RESTORE_OK);
 		}
 		else{
-			log_error(Message.RESTORE_ERROR);
+			log_error(Messages.RESTORE_ERROR);
 		}
 
 		return status;
@@ -403,7 +403,7 @@ public class UserHomeDataManager : GLib.Object {
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
-				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
+				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
 				log_msg(string.nfill(70,'-'));
 				continue;
 			}
@@ -411,7 +411,7 @@ public class UserHomeDataManager : GLib.Object {
 			var backup_path_user = path_combine(backup_path, user.name);
 			
 			if (!dir_exists(backup_path_user)){
-				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
+				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
 				log_error(_("No backup found for this user"));
 				log_msg(string.nfill(70,'-'));
 				continue;
@@ -420,7 +420,7 @@ public class UserHomeDataManager : GLib.Object {
 			string tar_file_user = path_combine(backup_path_user, "data.tar.gz");
 
 			if (!file_exists(tar_file_user)){
-				log_error("%s: %s".printf(Message.FILE_MISSING, tar_file_user));
+				log_error("%s: %s".printf(Messages.FILE_MISSING, tar_file_user));
 				log_error(_("No backup found for this user"));
 				log_msg(string.nfill(70,'-'));
 				continue;
@@ -491,7 +491,7 @@ public class UserHomeDataManager : GLib.Object {
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
-				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
+				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
 				log_msg(string.nfill(70,'-'));
 				continue;
 			}
@@ -499,7 +499,7 @@ public class UserHomeDataManager : GLib.Object {
 			var backup_path_user = path_combine(backup_path, user.name);
 
 			if (!dir_exists(backup_path_user)){
-				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
+				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
 				log_error(_("No backup found for this user"));
 				log_msg(string.nfill(70,'-'));
 				continue;
@@ -594,7 +594,7 @@ public class UserHomeDataManager : GLib.Object {
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
 			if (!dir_exists(user.home_path)){
-				log_error("%s: %s".printf(Message.DIR_MISSING, user.home_path));
+				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
 				log_msg(string.nfill(70,'-'));
 				continue;
 			}
@@ -607,10 +607,10 @@ public class UserHomeDataManager : GLib.Object {
 		if (!ok){ status = false; }
 		
 		if (status){
-			log_msg(Message.RESTORE_OK);
+			log_msg(Messages.RESTORE_OK);
 		}
 		else{
-			log_error(Message.RESTORE_ERROR);
+			log_error(Messages.RESTORE_ERROR);
 		}
 
 		log_msg(string.nfill(70,'-'));

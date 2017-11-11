@@ -55,7 +55,7 @@ public class MountEntryManager : GLib.Object {
 		string tab_file = "/etc/fstab";
 
 		if (!file_exists(tab_file)){
-			log_error("%s: %s".printf(Message.FILE_MISSING, tab_file));
+			log_error("%s: %s".printf(Messages.FILE_MISSING, tab_file));
 			return false;
 		}
 		
@@ -74,7 +74,7 @@ public class MountEntryManager : GLib.Object {
 		string tab_file = "/etc/crypttab";
 
 		if (!file_exists(tab_file)){
-			log_error("%s: %s".printf(Message.FILE_MISSING, tab_file));
+			log_error("%s: %s".printf(Messages.FILE_MISSING, tab_file));
 			return false;
 		}
 		
@@ -284,7 +284,7 @@ public class MountEntryManager : GLib.Object {
 	public bool backup_mount_entries(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Message.TASK_MOUNTS));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_MOUNTS));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "mounts");
@@ -311,10 +311,10 @@ public class MountEntryManager : GLib.Object {
 		}
 
 		if (status){
-			log_msg(Message.BACKUP_OK);
+			log_msg(Messages.BACKUP_OK);
 		}
 		else{
-			log_error(Message.BACKUP_ERROR);
+			log_error(Messages.BACKUP_ERROR);
 		}
 
 		return status;
@@ -323,13 +323,13 @@ public class MountEntryManager : GLib.Object {
 	public bool restore_mount_entries(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_MOUNTS));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_MOUNTS));
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "mounts");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}

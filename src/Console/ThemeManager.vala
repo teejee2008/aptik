@@ -141,7 +141,7 @@ public class ThemeManager : GLib.Object {
 		
 		var f = File.new_for_path(path);
 		if (!f.query_exists()) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, path);
 			log_error(msg);
 			return;
 		}
@@ -234,7 +234,7 @@ public class ThemeManager : GLib.Object {
 	public bool save_themes(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), (type == "themes") ? Message.TASK_THEMES : Message.TASK_ICONS));
+		log_msg("%s: %s".printf(_("Backup"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, type);
@@ -252,7 +252,7 @@ public class ThemeManager : GLib.Object {
 
 		save_index(backup_path);
 
-		log_msg(Message.BACKUP_OK);
+		log_msg(Messages.BACKUP_OK);
 
 		return false;
 	}
@@ -275,13 +275,13 @@ public class ThemeManager : GLib.Object {
 	public bool restore_themes(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), (type == "themes") ? Message.TASK_THEMES : Message.TASK_ICONS));
+		log_msg("%s: %s".printf(_("Restore"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, type);
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -313,7 +313,7 @@ public class ThemeManager : GLib.Object {
 
 		log_msg("");
 		
-		log_msg(Message.RESTORE_OK);
+		log_msg(Messages.RESTORE_OK);
 
 		return false;
 	}
@@ -322,7 +322,7 @@ public class ThemeManager : GLib.Object {
 
 		string cmd = "gtk-update-icon-cache";
 		if (!cmd_exists(cmd)){
-			log_error("%s: %s".printf(Message.MISSING_COMMAND, cmd));
+			log_error("%s: %s".printf(Messages.MISSING_COMMAND, cmd));
 			return false;
 		}
 

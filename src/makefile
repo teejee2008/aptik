@@ -17,7 +17,7 @@ all: aptik-console
 aptik-console:
 
 	valac -X -D'GETTEXT_PACKAGE="${app_name}"' --Xcc="-lm" --thread \
-		Console/*.vala Utility/Console/*.vala \
+		*.vala Console/*.vala Utility/Console/*.vala \
 		-o ${app_name} \
 		--pkg glib-2.0 \
 		--pkg gio-unix-2.0 \
@@ -34,9 +34,17 @@ install:
 
 	#dirs
 	mkdir -p "$(DESTDIR)$(bindir)"
+	mkdir -p "$(DESTDIR)$(sharedir)"
+	mkdir -p "$(DESTDIR)$(mandir)"
+	mkdir -p "$(DESTDIR)$(man1dir)"
+	mkdir -p "$(DESTDIR)$(launcherdir)"
+	mkdir -p "$(DESTDIR)$(polkitdir)"
 
 	#binary
 	install -m 0755 aptik "$(DESTDIR)$(bindir)"
+
+	#polkit policy file
+	install -m 0644 ./share/polkit-1/actions/in.teejeetech.pkexec.aptik.policy "$(DESTDIR)$(polkitdir)"
 
 uninstall:
 

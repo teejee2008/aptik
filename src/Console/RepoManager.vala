@@ -304,7 +304,7 @@ public class RepoManager : GLib.Object {
 	public bool save_repos(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Message.TASK_REPOS));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, "repos");
@@ -355,10 +355,10 @@ public class RepoManager : GLib.Object {
 		if (!ok){ status = false; }
 
 		if (status){
-			log_msg(Message.BACKUP_OK);
+			log_msg(Messages.BACKUP_OK);
 		}
 		else{
-			log_error(Message.BACKUP_ERROR);
+			log_error(Messages.BACKUP_ERROR);
 		}
 
 		return status;
@@ -378,10 +378,10 @@ public class RepoManager : GLib.Object {
 		if (!ok){ status = false; }
 		
 		if (status){
-			log_msg(Message.BACKUP_OK);
+			log_msg(Messages.BACKUP_OK);
 		}
 		else{
-			log_error(Message.BACKUP_ERROR);
+			log_error(Messages.BACKUP_ERROR);
 		}
 
 		return status;
@@ -453,7 +453,7 @@ public class RepoManager : GLib.Object {
 	public bool restore_repos(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Message.TASK_REPOS));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
 
 		check_repos();
@@ -461,7 +461,7 @@ public class RepoManager : GLib.Object {
 		string backup_path = path_combine(basepath, "repos");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
@@ -546,10 +546,10 @@ public class RepoManager : GLib.Object {
 		if (!ok){ status = false; }
 		
 		if (status){
-			log_msg(Message.RESTORE_OK);
+			log_msg(Messages.RESTORE_OK);
 		}
 		else{
-			log_error(Message.RESTORE_ERROR);
+			log_error(Messages.RESTORE_ERROR);
 		}
 		
 		log_msg(string.nfill(70,'-'));
@@ -583,10 +583,10 @@ public class RepoManager : GLib.Object {
 		if (!ok){ status = false; }
 
 		if (status){
-			log_msg(Message.RESTORE_OK);
+			log_msg(Messages.RESTORE_OK);
 		}
 		else{
-			log_error(Message.RESTORE_ERROR);
+			log_error(Messages.RESTORE_ERROR);
 		}
 		
 		return status;
@@ -600,7 +600,7 @@ public class RepoManager : GLib.Object {
 
 		if (!file_exists(backup_file)) {
 			
-			string msg = "%s: %s".printf(Message.FILE_MISSING, backup_file);
+			string msg = "%s: %s".printf(Messages.FILE_MISSING, backup_file);
 			log_error(msg);
 			return false;
 		}
@@ -760,7 +760,7 @@ public class RepoManager : GLib.Object {
 		string backup_path = path_combine(basepath, "repos");
 		
 		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Message.DIR_MISSING, backup_path);
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}

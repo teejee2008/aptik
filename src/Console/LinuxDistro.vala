@@ -202,7 +202,7 @@ public class LinuxDistro : GLib.Object{
 			package_manager = "pacman";
 		}
 		else{
-			log_error(Message.UNKNOWN_DISTRO);
+			log_error(Messages.UNKNOWN_DISTRO);
 			dist_type = "unknown";
 			package_manager = "unknown";
 		}

@@ -2,7 +2,7 @@
 /*
  * TeeJee.System.vala
  *
- * Copyright 2016 Tony George <teejeetech@gmail.com>
+ * Copyright 2017 Tony George <teejeetech@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,13 +75,6 @@ namespace TeeJee.System{
 		return get_user_id_effective(); // normal user
 	}
 
-	public string get_username(){
-
-		// returns actual username of current user (even for applications executed with sudo and pkexec)
-		
-		return get_username_from_uid(get_user_id());
-	}
-
 	public int get_user_id_effective(){
 		
 		// returns effective user id (0 for applications executed with sudo and pkexec)
@@ -95,6 +88,20 @@ namespace TeeJee.System{
 		}
 
 		return uid;
+	}
+	
+	public string get_username(){
+
+		// returns actual username of current user (even for applications executed with sudo and pkexec)
+		
+		return get_username_from_uid(get_user_id());
+	}
+
+	public string get_username_effective(){
+
+		// returns effective user id ('root' for applications executed with sudo and pkexec)
+		
+		return get_username_from_uid(get_user_id_effective());
 	}
 
 	public int get_user_id_from_username(string username){
@@ -144,7 +151,10 @@ namespace TeeJee.System{
 
 		return userhome;
 	}
-	
+
+	public string get_user_home_effective(){
+		return get_user_home(get_username_effective());
+	}
 	
 	// application -----------------------------------------------
 	
@@ -334,10 +344,14 @@ namespace TeeJee.System{
 	
 	// open -----------------------------
 
-	public bool xdg_open (string file){
+	public bool xdg_open (string file, string user = ""){
 		string path = get_cmd_path ("xdg-open");
-		if ((path != null)&&(path != "")){
+		if ((path != null) && (path != "")){
 			string cmd = "xdg-open '%s'".printf(escape_single_quote(file));
+			if (user.length > 0){
+				cmd = "pkexec --user %s env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY ".printf(user) + cmd;
+			}
+			log_debug(cmd);
 			int status = exec_script_async(cmd);
 			return (status == 0);
 		}
@@ -497,6 +511,11 @@ namespace TeeJee.System{
 		var timer = new GLib.Timer();
 		timer.start();
 		return timer;
+	}
+
+	public void timer_restart(GLib.Timer timer){
+		timer.reset();
+		timer.start();
 	}
 
 	public ulong timer_elapsed(GLib.Timer timer, bool stop = true){

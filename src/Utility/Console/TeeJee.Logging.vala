@@ -132,6 +132,33 @@ namespace TeeJee.Logging{
 		}
 	}
 
+	public void enable_logging(string log_path){
+		
+		var now = new DateTime.now_local();
+
+		string log_file = "%s/%s.log".printf(log_path, now.format("%Y-%m-%d_%H-%M-%S"));
+
+		try{
+			var file = File.new_for_path (log_path);
+			if (!file.query_exists ()) {
+				file.make_directory_with_parents();
+			}
+
+			file = File.new_for_path (log_file);
+			if (file.query_exists ()) {
+				file.delete ();
+			}
+
+			dos_log = new DataOutputStream (file.create(FileCreateFlags.REPLACE_DESTINATION));
+			if (LOG_DEBUG){
+				log_debug(_("Session log file") + ": %s".printf(log_file));
+			}
+		}
+		catch(Error e){
+			stdout.printf (e.message);
+		}
+	}
+
 	public void log_to_file (string message, bool highlight = false){
 		try {
 			if (dos_log != null){

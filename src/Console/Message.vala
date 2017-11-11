@@ -68,7 +68,7 @@ public class Message : GLib.Object {
 	public const string TASK_THEMES = _("Themes");
 	public const string TASK_FONTS = _("Fonts");
 	public const string TASK_USERS = _("User Accounts");
-	public const string TASK_GROUPS = _("Groups");
+	public const string TASK_GROUPS = _("User Groups");
 	public const string TASK_DCONF = _("Dconf Settings");
 	public const string TASK_CRON = _("Scheduled Tasks");
 }

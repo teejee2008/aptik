@@ -1,4 +1,4 @@
-## User Manual
+## Aptik NG - User Manual
 
 ```
 Usage: aptik <command> [options]
@@ -6,6 +6,7 @@ Usage: aptik <command> [options]
 ▰▰▰ Software Repositories ▰▰▰
 
 Commands:
+  --list-repos                   List software repositories
   --backup-repos                 Save list of software repositories
   --restore-repos                Add missing software repositories from backup
   --import-missing-keys          Find and import missing keys for apt repos
@@ -75,7 +76,7 @@ Options:
   --exclude-hidden               Exclude hidden files and directories (app configs)
                                  default: include
 
-▰▰▰ Filesystem Mounts ▰▰▰
+▰▰▰ Mount Entries ▰▰▰
 
 Commands:
   --list-mounts                  List /etc/fstab and /etc/crypttab entries
@@ -109,15 +110,41 @@ Options:
 Commands:
   --backup-all                   Backup all items
   --restore-all                  Restore all items from backup
+  --remove-all                   Remove all items from backup
 
 ▰▰▰ Common ▰▰▰
 
 Options:
   --basepath <dir>               Backup directory (default: current directory)
   --scripted                     Run in non-interactive mode
-  --dry-run                      Show actions for restore without making changes to system
+  --dry-run                      Simulate actions for --restore commands
   --help                         Show all options
+  
 ```
+
+### Backup & Restore Everything
+
+> `aptik --backup-all` and `aptik --restore-all` are one-line commands for taking a backup of your system and restoring it on a new system. You can safely use these 2 commands and skip the rest of this document, if you are not interested in knowing the details of backup and restore steps.
+
+#### Backup
+
+Usage: `aptik --backup-all`
+
+This will backup all items listed in the sections below. Backups are saved in current directory unless `--basepath <path>` is specified.
+
+#### Restore
+
+Usage: `aptik --restore-all`
+
+This will restore all items listed in the sections below. Backups are restored from current directory unless `--basepath <path>` is specified.
+
+#### Remove
+
+Usage: `aptik --remove-all`
+
+This will remove all backups in backup folder that were created by Aptik.
+
+> Backups are saved and restored from current working directory unless `--basepath <path>` is specified.
 
 ### Software Repositories
 
@@ -215,7 +242,7 @@ Following actions are executed for restore:
    2. Debian-based distros - Any deb files in backup folder `<basepath>/debs` will be installed using `apt` or `gdebi` in order of preference.
 
 
-### Users
+### User Accounts
 
 #### Backup
 
@@ -238,7 +265,7 @@ Following actions are executed for restore:
 
 
 
-### Groups
+### User Groups
 
 #### Backup
 
@@ -262,7 +289,7 @@ Following actions are executed for restore:
 2. *Missing members* are added to groups
    1. Missing members are added to groups by reading the file `<basepath>/groups/memberships.list`. Members are added directly by updating `/etc/group`
 
-### Home Data
+### Home Directory Data
 
 #### Backup
 
@@ -330,7 +357,7 @@ Following actions are executed for restore:
 
 1. For each user, dconf settings are imported from backup file `<basepath>/dconf/<username>/dconf.settings`
 
-### Scheduled Tasks
+### Scheduled Tasks (Cron Jobs)
 
 #### Backup
 
@@ -352,7 +379,7 @@ Following actions are executed for restore:
 3. Permissions are updated to 644 for files in folder `/etc/cron.d`
 4. Permissions are updated to 755 for files in folder `/etc/cron.{daily,hourly,monthly,weekly}`
 
-### Mount Entries
+### Mount Entries (fstab and crypttab entries)
 
 #### Backup
 
@@ -370,10 +397,10 @@ Usage: `aptik --restore-mounts`
 Following actions are executed for restore:
 
 1. Backups are created for  `/etc/fstab` and `/etc/crypttab` by moving existing files to  `/etc/fstab.bkup.<timestamp>` and `/etc/crypttab.bkup.<timestamp>`
-2. Extra entries in the backup folder are added to `/etc/fstab` and `/etc/crypttab` . Existing entries in `/etc/fstab` and `/etc/crypttab` will be preserved. Extra entries are determined by checking if the mount point is used by an existing entry.
-
-**Notes:**
-* All entries are sorted on mount point field before the fstab file is written to disk. This ensures that base mount points are mounted before mounting subdirectories.
-* Backup entry for `/boot/efi` will not be added, if not already existing in `/etc/fstab`
-* It is recommended to review changes after restore completes. Run `sudo aptik --list-mounts` or `cat /etc/fstab; cat /etc/crypttab;` to view the updated entries.
+2. *Existing entries* in `/etc/fstab` and `/etc/crypttab` will remain *unchanged*.
+3. *New entries* in backup folder are *added* to `/etc/fstab` and `/etc/crypttab` .  New entries are determined by comparing mount point path.
+4. New entries for system mount points - `/`,  `/boot`, `/boot/efi` and  `/home` - will **not** be added to `/etc/fstab` and `/etc/crypttab` . Existing entries (if any) will remain unchanged.
+5. All entries are sorted on mount point field before the fstab file is written to disk. This ensures that base mount paths are populated before mounting subdirectories.
+6. New entries added to `/etc/crypttab` will have `nofail` appended to options if not already present. This allows the system to boot successfully even if device is missing at boot time.
+7. It's recommended to review changes before rebooting the system. Run `sudo aptik --list-mounts` to view updated entries after restore completes.
 

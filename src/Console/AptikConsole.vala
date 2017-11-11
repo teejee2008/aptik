@@ -129,7 +129,7 @@ public class AptikConsole : GLib.Object {
 
 		string fmt = "  %-30s %s\n";
 
-		string fmt2 = "▰▰▰ %s ▰▰▰\n\n"; //▰▰▰ ◈
+		string fmt2 = "--- %s -----------------------------------\n\n"; //▰▰▰ ◈
 		
 		string msg = "\n" + AppName + " v" + AppVersion + " by %s (%s)".printf(AppAuthor, AppAuthorEmail) + "\n\n";
 
@@ -252,12 +252,11 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--remove-all", _("Remove all items from backup"));
 		msg += "\n";
 		
-		msg += fmt2.printf(("Common"));
+		msg += fmt2.printf(("Common Options"));
 		
-		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--basepath <dir>", _("Backup directory (default: current directory)"));
 		msg += fmt.printf("--scripted", _("Run in non-interactive mode"));
-		msg += fmt.printf("--dry-run", _("(restore only) Simulate restore actions without making changes to system"));
+		msg += fmt.printf("--dry-run", _("Simulate actions for --restore commands"));
 		msg += fmt.printf("--help", _("Show all options"));
 		msg += "\n";
 		

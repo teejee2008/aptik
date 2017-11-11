@@ -828,9 +828,19 @@ public class PackageManager : GLib.Object {
 
 		string backup_path = path_combine(basepath, "debs");
 		if (!dir_exists(backup_path)){ return true; }
-
+		
+		// check count ---------------------
+		
 		var list = dir_list_names(backup_path, true);
-		if (list.size == 0){ return true; }
+		int count = 0;
+		
+		foreach(var file_path in list){
+			if (file_path.has_suffix(".deb")) { count++; }
+		}
+		
+		if (count == 0){ return true; }
+
+		// install ------------------------------
 
 		log_msg("%s\n".printf(_("Installing DEB packages...")));
 		
@@ -856,6 +866,7 @@ public class PackageManager : GLib.Object {
 
 		string txt = "";
 		foreach(string file_path in list){
+			if (!file_path.has_suffix(".deb")) { continue; }
 			txt += " '%s'".printf(escape_single_quote(file_path));
 		}
 

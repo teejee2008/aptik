@@ -289,7 +289,7 @@ public class UserHomeDataManager : GLib.Object {
 			list.add(path_combine(user.home_path, ".*"));
 		}
 
-		int index = file_parent(user.home_path).length;
+		int index = file_parent(user.home_path).length + 1; // +1 for / after parent path
 		
 		foreach(var item in list){
 			if (tar_format){

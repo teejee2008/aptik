@@ -127,36 +127,29 @@ public class CronTaskManager : GLib.Object {
 
 	public bool backup_cron_tasks_for_user(string backup_path, User user){
 
-		bool status = true;
-		
 		string backup_file = path_combine(backup_path, "%s.crontab".printf(user.name));
 		file_delete(backup_file);
 		
-		string cmd = "su -s /bin/bash -c 'crontab -l' %s".printf(user.name);
-		log_debug(cmd);
-		
-		string std_out, std_err;
-		int retval = exec_sync(cmd, out std_out, out std_err);
-		status = (retval == 0);
-		
-		if (retval == 0){
-			
-			bool ok = file_write(backup_file, std_out);
-			
-			if (ok){
-				log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file));
-			}
-			else {
-				status = false;
-				log_error("%s (%s) %s".printf(_("Error"), user.name, backup_file));
-			}
+		string cmd = "crontab -u %s -l > '%s'".printf(user.name, backup_file);
+
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
 		}
 		else{
-			log_error(std_err);
-			file_write(backup_file, "");
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
+		if (status == 0){
+			log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file));
+		}
+		else{
+			log_error("%s (%s) %s".printf(_("Error"), user.name, backup_file));
 		}
 
-		return status;
+		return (status == 0);
 	}
 
 	public bool restore_cron_tasks(string basepath, string userlist){
@@ -225,13 +218,10 @@ public class CronTaskManager : GLib.Object {
 		string backup_file = path_combine(backup_path, "%s.crontab".printf(user.name));
 
 		if (!file_exists(backup_file)) {
-			string msg = "%s: %s".printf(Message.FILE_MISSING, backup_file);
-			log_error(msg);
-			return false;
+			return true; // not an error
 		}
-		
-		string cmd = "su -s /bin/bash -c \"crontab '%s'\" %s".printf(escape_single_quote(backup_file), user.name);
-		log_debug(cmd);
+
+		string cmd = "crontab -u %s '%s'".printf(user.name, escape_single_quote(backup_file));
 
 		int status = 0;
 	

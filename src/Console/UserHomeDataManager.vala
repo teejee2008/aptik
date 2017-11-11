@@ -362,6 +362,7 @@ public class UserHomeDataManager : GLib.Object {
 		}
 
 		log_msg("%s: %s".printf(_("Backup mode detected"), mode.to_string().replace("HOME_DATA_BACKUP_MODE_", "")));
+		log_msg(string.nfill(70,'-'));
 		
 		// restore ----------------------------------------
 
@@ -439,7 +440,7 @@ public class UserHomeDataManager : GLib.Object {
 
 			cmd += "pv '%s' | ".printf(escape_single_quote(tar_file_user));
 			
-			cmd += "tar -xvf";
+			cmd += "tar -xzf";
 			
 			//cmd += " '%s'".printf(escape_single_quote(tar_file_user));
 			cmd += " -";

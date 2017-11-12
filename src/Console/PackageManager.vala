@@ -767,6 +767,9 @@ public class PackageManager : GLib.Object {
 					
 				txt += "#"; // comment and keep
 			}
+			else{
+				count++;
+			}
 
 			txt += "%s".printf(pkg.name);
 			
@@ -775,8 +778,6 @@ public class PackageManager : GLib.Object {
 			}
 
 			txt += "\n";
-
-			count++;
 		}
 
 		bool ok = file_write(list_file, txt);
@@ -879,11 +880,6 @@ public class PackageManager : GLib.Object {
 
 	private bool install_packages(string basepath, string list_install, string list_missing, bool no_prompt){
 
-		if (list_install.length == 0){
-			log_msg("Nothing to install");
-			return true;
-		}
-
 		if (dry_run){
 			
 			log_msg("Packages to install: %'d\n".printf(list_install.split(" ").length));
@@ -899,8 +895,6 @@ public class PackageManager : GLib.Object {
 			log_msg(string.nfill(70,'-'));
 		}
 
-		log_msg("%s\n".printf("Installing packages..."));
-
 		switch(distro.dist_type){
 		case "fedora":
 			return install_packages_fedora(list_install, no_prompt);
@@ -915,9 +909,11 @@ public class PackageManager : GLib.Object {
 
 	private bool install_packages_fedora(string list_install, bool no_prompt){
 
+		if (list_install.length == 0){ return true; }
+		
 		log_debug("install_packages_fedora()");
 		
-		if (list_install.length == 0){ return true; }
+		log_msg("%s\n".printf("Installing packages..."));
 		
 		string cmd = distro.package_manager;
 
@@ -945,9 +941,11 @@ public class PackageManager : GLib.Object {
 
 	private bool install_packages_arch(string list_install, bool no_prompt){
 
+		if (list_install.length == 0){ return true; }
+		
 		log_debug("install_packages_arch()");
 
-		if (list_install.length == 0){ return true; }
+		log_msg("%s\n".printf("Installing packages..."));
 
 		string cmd = distro.package_manager;
 
@@ -976,8 +974,32 @@ public class PackageManager : GLib.Object {
 	private bool install_packages_debian(string basepath, string list_install, bool no_prompt){
 
 		log_debug("install_packages_debian()");
+
+		bool status = true, ok = true;
+
+		if (list_install.length > 0){
+			
+			ok = install_packages_apt(basepath, list_install, no_prompt);
+			if (!ok){ status = false; }
+
+			log_msg(string.nfill(70,'-'));
+		}
+		
+		ok = install_packages_deb(basepath);
+		if (!ok){ status = false; }
+
+		log_msg(Messages.RESTORE_OK);
+
+		return status;
+	}
+
+	private bool install_packages_apt(string basepath, string list_install, bool no_prompt){
 		
 		if (list_install.length == 0){ return true; }
+
+		log_debug("install_packages_apt()");
+
+		log_msg("%s\n".printf("Installing packages..."));
 
 		string cmd = distro.package_manager;
 		
@@ -996,12 +1018,6 @@ public class PackageManager : GLib.Object {
 			log_debug("$ %s".printf(cmd));
 			status = Posix.system(cmd);
 		}
-		
-		log_msg(string.nfill(70,'-'));
-
-		install_packages_deb(basepath);
-		
-		log_msg(Messages.RESTORE_OK);
 
 		return (status == 0);
 	}
@@ -1028,11 +1044,11 @@ public class PackageManager : GLib.Object {
 
 		log_msg("%s\n".printf(_("Installing DEB packages...")));
 		
-		if (cmd_exists("apt")){
-			return install_packages_deb_apt(list);
-		}
-		else if (cmd_exists("gdebi")){
+		if (cmd_exists("gdebi")){
 			return install_packages_deb_gdebi(list);
+		}
+		else if (cmd_exists("apt")){
+			return install_packages_deb_apt(list);
 		}
 		else {
 			return false;
@@ -1071,19 +1087,29 @@ public class PackageManager : GLib.Object {
 
 	private bool install_packages_deb_gdebi(Gee.ArrayList<string> list){
 
-		log_debug("install_packages_deb_gdebi()");
+		log_debug("install_packages_deb_gdebi(): %d".printf(list.size));
 
 		if (!cmd_exists("gdebi")){
 			log_error("%s: %s".printf(Messages.MISSING_COMMAND, "gdebi"));
 			return false; // exit method
 		}
 
-		string txt = "";
+		bool status = true, ok = true;
+
 		foreach(string file_path in list){
-			txt += " '%s'".printf(escape_single_quote(file_path));
+			
+			ok = install_package_with_gdebi(file_path);
+			if (!ok){ status = false; }
 		}
 
-		string cmd = "gdebi -n %s".printf(txt.strip());
+		return status;
+	}
+
+	private bool install_package_with_gdebi(string file_path){
+
+		log_debug("install_package_with_gdebi()");
+
+		string cmd = "gdebi -n '%s'".printf(escape_single_quote(file_path));
 
 		int status = 0;
 		
@@ -1094,6 +1120,8 @@ public class PackageManager : GLib.Object {
 			log_debug("$ %s".printf(cmd));
 			status = Posix.system(cmd);
 		}
+
+		log_msg(string.nfill(70,'-'));
 		
 		return (status == 0);
 	}

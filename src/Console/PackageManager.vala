@@ -504,10 +504,192 @@ public class PackageManager : GLib.Object {
 			return get_sorted_array(packages);
 		}
 	}
+
+	// list --------------------------
+
+	public void list_available(){
+
+		string txt = "";
+		int count = 0;
+		
+		foreach(var pkg in packages_sorted){
+			
+			if (pkg.is_available){
+
+				txt += "%-50s".printf(pkg.name);
+				
+				if (description_available){
+					txt += " -- %s".printf(pkg.description);
+				}
+
+				txt += "\n";
+
+				count++;
+			}
+		}
+
+		if (txt.length > 0){
+			txt = txt[0:txt.length-1];
+		}
+
+		log_msg("%d packages".printf(count));
+		log_msg(string.nfill(70,'-'));
+		log_msg(txt);
+	}
+
+	public void list_installed(){
+
+		string txt = "";
+		int count = 0;
+		
+		foreach(var pkg in packages_sorted){
+			
+			if (pkg.is_installed){
+
+				txt += "%-50s".printf(pkg.name);
+				
+				if (description_available){
+					txt += " -- %s".printf(pkg.description);
+				}
+
+				txt += "\n";
+
+				count++;
+			}
+		}
+
+		if (txt.length > 0){
+			txt = txt[0:txt.length-1];
+		}
+
+		log_msg("%d packages".printf(count));
+		log_msg(string.nfill(70,'-'));
+		log_msg(txt);
+	}
+
+	public void list_dist(){
+
+		string txt = "";
+		int count = 0;
+		
+		foreach(var pkg in packages_sorted){
+			
+			if (pkg.is_default && pkg.is_installed){
+
+				txt += "%-50s".printf(pkg.name);
+				
+				if (description_available){
+					txt += " -- %s".printf(pkg.description);
+				}
+
+				txt += "\n";
+
+				count++;
+			}
+		}
+
+		if (txt.length > 0){
+			txt = txt[0:txt.length-1];
+		}
+
+		log_msg("%d packages".printf(count));
+		log_msg(string.nfill(70,'-'));
+		log_msg(txt);
+	}
+
+	public void list_auto_installed(){
+
+		string txt = "";
+		int count = 0;
+		
+		foreach(var pkg in packages_sorted){
+			
+			if (pkg.is_installed && pkg.is_automatic){
+
+				txt += "%-50s".printf(pkg.name);
+				
+				if (description_available){
+					txt += " -- %s".printf(pkg.description);
+				}
+
+				txt += "\n";
+
+				count++;
+			}
+		}
+
+		if (txt.length > 0){
+			txt = txt[0:txt.length-1];
+		}
+
+		log_msg("%d packages".printf(count));
+		log_msg(string.nfill(70,'-'));
+		log_msg(txt);
+	}
+
+	public void list_user_installed(){
+
+		string txt = "";
+		int count = 0;
+		
+		foreach(var pkg in packages_sorted){
+			
+			if (pkg.is_installed && !pkg.is_automatic && !pkg.is_default){
+
+				txt += "%-50s".printf(pkg.name);
+				
+				if (description_available){
+					txt += " -- %s".printf(pkg.description);
+				}
+
+				txt += "\n";
+
+				count++;
+			}
+		}
+
+		if (txt.length > 0){
+			txt = txt[0:txt.length-1];
+		}
+
+		log_msg("%d packages".printf(count));
+		log_msg(string.nfill(70,'-'));
+		log_msg(txt);
+	}
+
+	public void list_foreign(){
+		
+		string txt = "";
+		int count = 0;
+		
+		foreach(var pkg in packages_sorted){
+			
+			if (pkg.is_installed && pkg.is_foreign){
+
+				txt += "%-50s".printf(pkg.name);
+				
+				if (description_available){
+					txt += " -- %s".printf(pkg.description);
+				}
+
+				txt += "\n";
+
+				count++;
+			}
+		}
+
+		if (txt.length > 0){
+			txt = txt[0:txt.length-1];
+		}
+
+		log_msg("%d packages".printf(count));
+		log_msg(string.nfill(70,'-'));
+		log_msg(txt);
+	}
 	
 	// save --------------------------
 	
-	public bool save_package_list(string basepath){
+	public bool save_package_list(string basepath, bool exclude_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_PACKAGES));
@@ -518,12 +700,11 @@ public class PackageManager : GLib.Object {
 		string backup_path = path_combine(basepath, "packages");
 		dir_create(backup_path);
 
-		ok = save_package_list_selected(backup_path);
-		if (!ok){ status = false; }
-		
 		ok = save_package_list_installed(backup_path);
 		if (!ok){ status = false; }
-
+		
+		ok = save_package_list_selected(backup_path, exclude_foreign, exclude_icons, exclude_themes, exclude_fonts);
+		if (!ok){ status = false; }
 
 		switch(distro.dist_type){
 		case "fedora":
@@ -560,46 +741,58 @@ public class PackageManager : GLib.Object {
 
 		string text = "\n# DO NOT EDIT - This list is not used for restore\n\n";
 
-		packages_sorted.foreach((pkg)=> {
-			if (pkg.is_installed){
-				text += "%s #%s\n".printf(pkg.name, pkg.description);
-			}
-			return true;
-		});
+		int count = 0;
+		
+		foreach(var pkg in packages_sorted){
+			
+			if (!pkg.is_installed){ continue; }
+			
+			text += "%s #%s\n".printf(pkg.name, pkg.description);
+			count++;
+		}
 
 		bool ok = file_write(list_file, text);
 
 		if (ok){
 			chmod(list_file, "a+r"); // not writable
-			log_msg("%s: %s".printf(_("Saved"), list_file));
+			log_msg("%s: %s (%d packages)".printf(_("Saved"), list_file, count));
 		}
 
 		return ok;
 	}
 
-	public bool save_package_list_selected(string backup_path) {
+	public bool save_package_list_selected(string backup_path, bool exclude_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts) {
 
 		string list_file = path_combine(backup_path, "selected.list");
 
 		string text = "\n# Comment-out or remove lines for unwanted items\n\n";
 
-		packages_sorted.foreach((pkg)=> {
+		int count = 0;
+		
+		foreach( var pkg in packages_sorted){
 
-			if (pkg.name.has_prefix("linux-headers")){ return true; }
-			if (pkg.name.has_prefix("linux-signed")){ return true; }
-			if (pkg.name.has_prefix("linux-tools")){ return true; }
+			if (!pkg.is_installed){ continue; }
+			
+			if (pkg.name.has_prefix("linux-headers")){ continue; }
+			if (pkg.name.has_prefix("linux-signed")){ continue; }
+			if (pkg.name.has_prefix("linux-tools")){ continue; }
+
+			if (exclude_foreign && pkg.is_foreign){ continue; }
+			if (exclude_icons && pkg.name.contains("-icon-theme")){ continue; }
+			if (exclude_themes && pkg.name.contains("-theme") && !pkg.name.contains("-icon-theme")){ continue; }
+			if (exclude_fonts && pkg.name.has_prefix("fonts-")){ continue; }
 			
 			if (pkg.is_selected){
 				text += "%s #%s\n".printf(pkg.name, pkg.description);
+				count++;
 			}
-			return true;
-		});
+		}
 
 		bool ok = file_write(list_file, text);
 
 		if (ok){
 			chmod(list_file, "a+rw");
-			log_msg("%s: %s".printf(_("Saved"), list_file));
+			log_msg("%s: %s (%d packages)".printf(_("Saved"), list_file, count));
 		}
 
 		return ok;

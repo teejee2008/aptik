@@ -45,7 +45,7 @@ public class AptikConsole : GLib.Object {
 
 	public string basepath = "";
 	public LinuxDistro distro = null;
-	public bool no_prompt = true;
+	public bool no_prompt = false;
 	public bool dry_run = false;
 	public bool list_only = false;
 
@@ -54,6 +54,11 @@ public class AptikConsole : GLib.Object {
 	public string password = "aptik";
 	public bool full_backup = false;
 	public bool exclude_hidden = false;
+	public bool exclude_foreign = false;
+	public bool exclude_icons = false;
+	public bool exclude_themes = false;
+	public bool exclude_fonts = false;
+	
 	public HomeDataBackupMode home_mode = HomeDataBackupMode.TAR;
 
 	public uint64 config_size_limit = 0;
@@ -167,6 +172,13 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--backup-packages", _("Save list of installed packages"));
 		msg += fmt.printf("--restore-packages", _("Install missing packages from backup"));
 		msg += "\n";
+		
+		msg += "%s (--backup-packages):\n".printf(_("Options"));
+		msg += fmt.printf("--exclude-foreign", _("Exclude non-native packages"));
+		msg += fmt.printf("--exclude-icons", _("Exclude icon-theme packages"));
+		msg += fmt.printf("--exclude-themes", _("Exclude theme packages"));
+		msg += fmt.printf("--exclude-fonts", _("Exclude font packages"));
+		msg += "\n";
 
 		msg += "%s: %s, %s,\n%s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
 
@@ -194,8 +206,9 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--backup-home", _("Backup data in users' home directories"));
 		msg += fmt.printf("--restore-home", _("Restore data in users' home directories from backup"));
 		msg += fmt.printf("--fix-ownership", _("Updates ownership for users' home directory contents"));
-
-		msg += "\n%s:\n".printf(_("Options"));
+		msg += "\n";
+		
+		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
 		msg += fmt.printf("", _("default: all users"));
 		msg += "\n";
@@ -226,8 +239,9 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--list-dconf", _("List dconf settings changed by user"));
 		msg += fmt.printf("--backup-dconf", _("Backup dconf settings changed by user"));
 		msg += fmt.printf("--restore-dconf", _("Restore dconf settings from backup"));
-
-		msg += "\n%s:\n".printf(_("Options"));
+		msg += "\n";
+		
+		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
 		msg += fmt.printf("", _("default: all users"));
 		msg += "\n";
@@ -238,8 +252,9 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--list-cron", _("List cron tasks"));
 		msg += fmt.printf("--backup-cron", _("Backup cron tasks"));
 		msg += fmt.printf("--restore-cron", _("Restore cron tasks"));
-
-		msg += "\n%s:\n".printf(_("Options"));
+		msg += "\n";
+		
+		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
 		msg += fmt.printf("", _("default: all users"));
 		msg += "\n";
@@ -304,6 +319,22 @@ public class AptikConsole : GLib.Object {
 			case "--exclude-hidden":
 				exclude_hidden = true;
 				break;
+
+			case "--exclude-foreign":
+				exclude_foreign = true;
+				break;
+
+			case "--exclude-icons":
+				exclude_icons = true;
+				break;
+
+			case "--exclude-themes":
+				exclude_themes = true;
+				break;
+
+			case "--exclude-fonts":
+				exclude_fonts = true;
+				break;
 				
 			case "--duplicity":
 				home_mode = HomeDataBackupMode.DUPLICITY;
@@ -322,13 +353,13 @@ public class AptikConsole : GLib.Object {
 			case "--restore-repos":
 			case "--import-missing-keys":
 			
-			case "--list-dist":
-			case "--list-base":
-			case "--list-default":
-			case "--list-foreign":
-			case "--list-installed":
 			case "--list-available":
-			case "--list-extra":
+			case "--list-installed":
+			case "--list-installed-dist":
+			case "--list-installed-foreign":
+			case "--list-installed-user":
+			case "--list-installed-auto":
+			
 			case "--backup-packages":
 			case "--restore-packages":
 
@@ -428,22 +459,23 @@ public class AptikConsole : GLib.Object {
 
 		// package ---------------------------------------
 
-		case "--list-dist":
-		case "--list-base":
-		case "--list-default":
-			return list_packages_dist();
-
-		case "--list-foreign":
-			return list_packages_foreign();
-
-		case "--list-installed":
-			return list_packages_installed();
-
 		case "--list-available":
 			return list_packages_available();
+			
+		case "--list-installed":
+			return list_packages_installed();
+			
+		case "--list-installed-dist":
+			return list_packages_installed_dist();
 
-		case "--list-extra":
-			return list_packages_extra();
+		case "--list-installed-foreign":
+			return list_packages_installed_foreign();
+
+		case "--list-installed-user":
+			return list_packages_user_installed();
+
+		case "--list-installed-auto":
+			return list_packages_auto_installed();
 
 		case "--backup-packages":
 			distro.print_system_info();
@@ -833,174 +865,46 @@ public class AptikConsole : GLib.Object {
 	}
 	
 	// packages ------------------------------
-	
-	public bool list_packages_installed(){
-		
-		var mgr = new PackageManager(distro, dry_run);
-		
-		string txt = "";
-		int count = 0;
-		
-		foreach(var pkg in mgr.packages_sorted){
-			
-			if (pkg.is_installed){
-
-				txt += "%-50s".printf(pkg.name);
-				
-				if (mgr.description_available){
-					txt += " -- %s".printf(pkg.description);
-				}
-
-				txt += "\n";
-
-				count++;
-			}
-		}
-
-		if (txt.length > 0){
-			txt = txt[0:txt.length-1];
-		}
-
-		log_msg("%d packages".printf(count));
-		log_msg(string.nfill(70,'-'));
-		log_msg(txt);
-
-		return true;
-	}
-
-	public bool list_packages_foreign(){
-		
-		var mgr = new PackageManager(distro, dry_run);
-		
-		string txt = "";
-		int count = 0;
-		
-		foreach(var pkg in mgr.packages_sorted){
-			
-			if (pkg.is_installed && pkg.is_foreign){
-
-				txt += "%-50s".printf(pkg.name);
-				
-				if (mgr.description_available){
-					txt += " -- %s".printf(pkg.description);
-				}
-
-				txt += "\n";
-
-				count++;
-			}
-		}
-
-		if (txt.length > 0){
-			txt = txt[0:txt.length-1];
-		}
-
-		log_msg("%d packages".printf(count));
-		log_msg(string.nfill(70,'-'));
-		log_msg(txt);
-
-		return true;
-	}
-
-	public bool list_packages_dist(){
-		
-		var mgr = new PackageManager(distro, dry_run);
-		
-		string txt = "";
-		int count = 0;
-		
-		foreach(var pkg in mgr.packages_sorted){
-			
-			if (pkg.is_default){
-
-				txt += "%-50s".printf(pkg.name);
-				
-				if (mgr.description_available){
-					txt += " -- %s".printf(pkg.description);
-				}
-
-				txt += "\n";
-
-				count++;
-			}
-		}
-
-		if (txt.length > 0){
-			txt = txt[0:txt.length-1];
-		}
-
-		log_msg("%d packages".printf(count));
-		log_msg(string.nfill(70,'-'));
-		log_msg(txt);
-
-		return true;
-	}
-
-	public bool list_packages_extra(){
-		
-		var mgr = new PackageManager(distro, dry_run);
-		
-		string txt = "";
-		int count = 0;
-		
-		foreach(var pkg in mgr.packages_sorted){
-			
-			if (pkg.is_installed && !pkg.is_automatic && !pkg.is_default){
-
-				txt += "%-50s".printf(pkg.name);
-				
-				if (mgr.description_available){
-					txt += " -- %s".printf(pkg.description);
-				}
-
-				txt += "\n";
-
-				count++;
-			}
-		}
-
-		if (txt.length > 0){
-			txt = txt[0:txt.length-1];
-		}
-
-		log_msg("%d packages".printf(count));
-		log_msg(string.nfill(70,'-'));
-		log_msg(txt);
-
-		return true;
-	}
 
 	public bool list_packages_available(){
 		
 		var mgr = new PackageManager(distro, dry_run);
+		mgr.list_available();
+		return true;
+	}
+	
+	public bool list_packages_installed(){
 		
-		string txt = "";
-		int count = 0;
+		var mgr = new PackageManager(distro, dry_run);
+		mgr.list_installed();
+		return true;
+	}
+
+	public bool list_packages_installed_foreign(){
 		
-		foreach(var pkg in mgr.packages_sorted){
-			
-			if (pkg.is_available){
+		var mgr = new PackageManager(distro, dry_run);
+		mgr.list_foreign();
+		return true;
+	}
 
-				txt += "%-50s".printf(pkg.name);
-				
-				if (mgr.description_available){
-					txt += " -- %s".printf(pkg.description);
-				}
+	public bool list_packages_installed_dist(){
+		
+		var mgr = new PackageManager(distro, dry_run);
+		mgr.list_dist();
+		return true;
+	}
 
-				txt += "\n";
-
-				count++;
-			}
-		}
-
-		if (txt.length > 0){
-			txt = txt[0:txt.length-1];
-		}
-
-		log_msg("%d packages".printf(count));
-		log_msg(string.nfill(70,'-'));
-		log_msg(txt);
-
+	public bool list_packages_auto_installed(){
+		
+		var mgr = new PackageManager(distro, dry_run);
+		mgr.list_auto_installed();
+		return true;
+	}
+	
+	public bool list_packages_user_installed(){
+		
+		var mgr = new PackageManager(distro, dry_run);
+		mgr.list_user_installed();
 		return true;
 	}
 
@@ -1011,7 +915,7 @@ public class AptikConsole : GLib.Object {
 		copy_binary();
 		
 		var mgr = new PackageManager(distro, dry_run);
-		return mgr.save_package_list(basepath);
+		return mgr.save_package_list(basepath, exclude_foreign, exclude_icons, exclude_themes, exclude_fonts);
 	}
 
 	public bool restore_packages(){

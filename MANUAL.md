@@ -122,7 +122,7 @@ Options:
   
 ```
 
-### Backup & Restore Everything
+### One-line Backup & Restore
 
 > `aptik --backup-all` and `aptik --restore-all` are one-line commands for taking a backup of your system and restoring it on a new system. You can safely use these 2 commands and skip the rest of this document, if you are not interested in knowing the details of backup and restore steps.
 
@@ -219,15 +219,20 @@ Following actions are executed for backup:
 
 2. List of installed packages are filtered to **remove** the following:
 
-   * Kernel packages - `linux-headers*`, `linux-signed*`, `linux-tools*`
-   * Packages that were auto-installed as dependencies for other packages. 
-      * Debian-based distros - Determined using `aptitude` and will be filtered out
-      * Other distros - Cannot be determined and will not be filtered out
-   * Packages that are part of the Linux distribution base.
-      * Debian-based - Determined by reading `/var/log/installer/initial-status.gz` and will be filtered out. Cannot be determined if this file is missing on the system.
-      * Other distros - Cannot be determined and will not be filtered out
+   *  Kernel packages - `linux-headers*`, `linux-signed*`, `linux-tools*`, `linux-image*`
+   *  Library packages - `lib*` - These are usually dependencies for other software and will be installed automatically if needed.
+   *  Non-native (foreign) packages. For example,  `i386` packages on an `amd64` system. Can be included in list with option `--include-foreign`
+   *  Theme packages - `*-theme` are excluded if option `--exclude-themes` is specified
+   *  Icon theme packages - `*-icon-theme` are excluded if option `--exclude-icons` is specified
+   *  Font packages - `fonts-*` are excluded if option `--exclude-fonts` is specified
+   *  Packages that were auto-installed as dependencies for other packages. 
+      * *Debian-based distros* - Determined using `aptitude` and will be filtered out
+      * *Other distros* - Cannot be determined and will not be filtered out
+   *  Packages that are part of the Linux distribution base.
+      * *Debian-based* - Determined by reading `/var/log/installer/initial-status.gz` and will be filtered out. Cannot be determined if this file is missing on the system.
+      * *Other distros* - Cannot be determined and will not be filtered out
 
-3. List of filtered packages are saved to `<basepath>/packages/selected.list`. This file can be edited to comment-out or remove lines for unwanted packages.
+3. List of filtered packages are saved to `<basepath>/packages/selected.list`. This file can be further edited to comment-out or remove lines for unwanted packages.
 
 #### Restore
 
@@ -299,14 +304,9 @@ Following actions are executed for backup:
 
 1. For each user, the contents of home directory are archived using TAR + GZIP and saved to file  `<basepath>/home/<username>/data.tar.gz`. Full backup is created every time a backup is taken.
 
-2. When creating backups using **duplicity** (option `--duplicity`), data is saved to folder `<basepath>/home/<username>`. 
+2. Backups can be created for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user names without space.
 
-   - Incremental backups are created if an existing backup is found. Full backups are created if there is no existing backup, or if full backup was specified by user (option `--full`).
-   - Backups are encrypted with specified password (option `--password <string>`). A default password `aptik` is used if none is specified.
-
-3. Backups can be created for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user names without space.
-
-4. Some directories are excluded by default to save space and avoid issues after restore.
+3. Some directories are excluded by default to save space and avoid issues after restore.
 
    ```
    ~/.thumbnails
@@ -323,7 +323,7 @@ Following actions are executed for backup:
    ~/.kde/share/cache/http
    ```
 
-5. Hidden files and folders in home directories can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings.
+4. Hidden files and folders in home directories can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings.
 
 #### Restore
 
@@ -333,9 +333,7 @@ Following actions are executed for restore:
 
 1. For each user, the TAR file backup `<basepath>/home/<username>/data.tar.gz` is extracted to the user's home directory. Files are restored to original locations along with original permissions and timestamps.
 2. For each user, the ownership is updated for file and folders in user's home directory. This ensures that all files in home directory are owned by the user.
-3. When restoring a duplicity backup, the steps are similar. Data is restored from backup files created by duplicity in `<basepath>/home/<username>`.
-   {0}. The password should be specified during restore if it was specified during backup (option `--password <string>`). A default password `aptik` is used if none is specified.
-4. Backups can be restored for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user names without space.
+3. Backups can be restored for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user names without space.
 
 ### DConf Settings
 

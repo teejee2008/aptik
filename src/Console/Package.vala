@@ -50,11 +50,12 @@ public class Package : GLib.Object {
 	public int64 deb_size = 0;
 	public string deb_md5hash = "";
 
-	public bool is_selected = false;
+	//public bool is_selected = false;
 	public bool is_available = false;
 	public bool is_installed = false;
-	public bool is_default = false;
-	public bool is_automatic = false;
+	public bool is_dist = false;
+	public bool is_auto = false;
+	public bool is_user = false;
 	public bool is_manual = false;
 	public bool is_deb = false;
 	public bool is_foreign = false;

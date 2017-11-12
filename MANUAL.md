@@ -221,10 +221,10 @@ Following actions are executed for backup:
 
    *  Kernel packages - `linux-headers*`, `linux-signed*`, `linux-tools*`, `linux-image*`
    *  Library packages - `lib*` - These are usually dependencies for other software and will be installed automatically if needed.
-   *  Non-native (foreign) packages. For example,  `i386` packages on an `amd64` system. Can be included in list with option `--include-foreign`
-   *  Theme packages - `*-theme` are excluded if option `--exclude-themes` is specified
-   *  Icon theme packages - `*-icon-theme` are excluded if option `--exclude-icons` is specified
-   *  Font packages - `fonts-*` are excluded if option `--exclude-fonts` is specified
+   *  Non-native (foreign) packages. For example,  `i386` packages on an `amd64` system. Can be included in list with option `--include-foreign` but not recommended to include.
+   *  Theme packages - `*-theme` are excluded if option `--exclude-themes` is specified. You can use this option if you restore themes using command `--restore-themes`, and do not wish to receive updates for the packages.
+   *  Icon theme packages - `*-icon-theme` are excluded if option `--exclude-icons` is specified. You can use this option if you restore icon themes using command `--restore-icons`, and do not wish to receive updates for the packages.
+   *  Font packages - `fonts-*` are excluded if option `--exclude-fonts` is specified. You can use this option if you restore fonts using command `--restore-fonts`, and do not wish to receive updates for the packages.
    *  Packages that were auto-installed as dependencies for other packages. 
       * *Debian-based distros* - Determined using `aptitude` and will be filtered out
       * *Other distros* - Cannot be determined and will not be filtered out

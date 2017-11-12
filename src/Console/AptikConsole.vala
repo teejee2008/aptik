@@ -54,7 +54,7 @@ public class AptikConsole : GLib.Object {
 	public string password = "aptik";
 	public bool full_backup = false;
 	public bool exclude_hidden = false;
-	public bool exclude_foreign = false;
+	public bool include_foreign = false;
 	public bool exclude_icons = false;
 	public bool exclude_themes = false;
 	public bool exclude_fonts = false;
@@ -73,7 +73,7 @@ public class AptikConsole : GLib.Object {
 
 		if (!user_is_admin()) {
 			log_msg(_("Aptik needs admin access to backup and restore packages."));
-			log_msg(_("Please run the application as admin (using 'sudo' or 'pkexec')"));
+			log_msg(_("Run the application as admin (using 'sudo' or 'pkexec')"));
 			exit(0);
 		}
 
@@ -174,10 +174,10 @@ public class AptikConsole : GLib.Object {
 		msg += "\n";
 		
 		msg += "%s (--backup-packages):\n".printf(_("Options"));
-		msg += fmt.printf("--exclude-foreign", _("Exclude non-native packages"));
-		msg += fmt.printf("--exclude-icons", _("Exclude icon-theme packages"));
-		msg += fmt.printf("--exclude-themes", _("Exclude theme packages"));
-		msg += fmt.printf("--exclude-fonts", _("Exclude font packages"));
+		msg += fmt.printf("--include-foreign", _("Include non-native packages (excluded by default)"));
+		msg += fmt.printf("--exclude-icons", _("Exclude icon-theme packages (included by default)"));
+		msg += fmt.printf("--exclude-themes", _("Exclude theme packages (included by default)"));
+		msg += fmt.printf("--exclude-fonts", _("Exclude font packages (included by default)"));
 		msg += "\n";
 
 		msg += "%s: %s, %s,\n%s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
@@ -320,8 +320,8 @@ public class AptikConsole : GLib.Object {
 				exclude_hidden = true;
 				break;
 
-			case "--exclude-foreign":
-				exclude_foreign = true;
+			case "--include-foreign":
+				include_foreign = true;
 				break;
 
 			case "--exclude-icons":
@@ -915,7 +915,7 @@ public class AptikConsole : GLib.Object {
 		copy_binary();
 		
 		var mgr = new PackageManager(distro, dry_run);
-		return mgr.save_package_list(basepath, exclude_foreign, exclude_icons, exclude_themes, exclude_fonts);
+		return mgr.save_package_list(basepath, include_foreign, exclude_icons, exclude_themes, exclude_fonts);
 	}
 
 	public bool restore_packages(){

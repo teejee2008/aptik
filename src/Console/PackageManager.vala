@@ -34,6 +34,7 @@ public class PackageManager : GLib.Object {
 
 	public Gee.HashMap<string,Package> packages;
 
+	public bool dist_installed_known = false;
 	public bool auto_installed_known = false;
 	public bool description_available = false;
 	
@@ -75,26 +76,6 @@ public class PackageManager : GLib.Object {
 			check_packages_debian();
 			break;
 		}
-
-		// check counts -----------------------------
-
-		int installed_count = 0;
-		int available_count = 0;
-		int selected_count = 0;
-		
-		packages_sorted.foreach((pkg)=> {
-			if (pkg.is_installed){ installed_count++; }
-			if (pkg.is_available){ available_count++; }
-			if (pkg.is_selected){ selected_count++; }
-			return true;
-		});
-
-		//if (!list_only){
-		//	log_msg("Available: %'6d".printf(available_count));
-		//	log_msg("Installed: %'6d".printf(installed_count));
-		//	log_msg("Selected : %'6d".printf(selected_count));
-		//	log_msg(string.nfill(70,'-'));
-		//}
 	}
 
 	private void check_packages_fedora(){
@@ -180,12 +161,7 @@ public class PackageManager : GLib.Object {
 					continue;
 				}
 				
-				packages_qualified[name].is_selected = true;
-			}
-		}
-		else{
-			foreach(var pkg in packages.values){
-				pkg.is_selected = pkg.is_installed;
+				packages_qualified[name].is_user = true;
 			}
 		}
 	}
@@ -242,27 +218,22 @@ public class PackageManager : GLib.Object {
 			if (!packages.has_key(name)){
 				packages[name] = new Package(name);
 			}
-			
-			packages[name].is_selected = true; // explictly installed, may be default package also
+
+			var pkg = packages[name];
+			pkg.is_user = true;
 		}
 	}
 
 	private void check_packages_debian(){
 		
-		switch(distro.package_manager){
-		case "aptitude":
+		if (cmd_exists("aptitude")){
 			check_packages_aptitude();
-			break;
-		default:
+		}
+		else{
 			check_packages_apt();
-			break;
 		}
 
 		check_packages_apt_default();
-
-		foreach(var pkg in packages.values){
-			pkg.is_selected = pkg.is_installed && !pkg.is_automatic && !pkg.is_default;
-		}
 	}
 	
 	private void check_packages_apt(){
@@ -403,7 +374,7 @@ public class PackageManager : GLib.Object {
 				pkg.arch = arch;
 				pkg.is_available = true;
 				pkg.is_installed = (state == "installed");
-				pkg.is_automatic = (auto == "A");
+				pkg.is_auto = (auto == "A");
 				pkg.is_foreign = is_foreign;
 				pkg.version_installed = version;
 			}
@@ -484,14 +455,16 @@ public class PackageManager : GLib.Object {
 						var pkg = packages[name];
 						pkg.is_available = true;
 						pkg.is_installed = true;
-						pkg.is_default = true;
+						pkg.is_dist = true;
 						pkg.is_foreign = is_foreign;
 						break;
 				}
 			}
 
-			if ((count > 0) && !list_only){
-				//log_msg("Dist-Base: %'6d".printf(count));
+			dist_installed_known = true;
+
+			if (count > 0){
+				log_debug("Installed-Dist: %'6d".printf(count));
 			}
 		}
 		catch (Error e) {
@@ -574,7 +547,7 @@ public class PackageManager : GLib.Object {
 		
 		foreach(var pkg in packages_sorted){
 			
-			if (pkg.is_default && pkg.is_installed){
+			if (pkg.is_dist && pkg.is_installed){
 
 				txt += "%-50s".printf(pkg.name);
 				
@@ -604,7 +577,7 @@ public class PackageManager : GLib.Object {
 		
 		foreach(var pkg in packages_sorted){
 			
-			if (pkg.is_installed && pkg.is_automatic){
+			if (pkg.is_installed && pkg.is_auto){
 
 				txt += "%-50s".printf(pkg.name);
 				
@@ -634,7 +607,7 @@ public class PackageManager : GLib.Object {
 		
 		foreach(var pkg in packages_sorted){
 			
-			if (pkg.is_installed && !pkg.is_automatic && !pkg.is_default){
+			if (pkg.is_installed && !pkg.is_auto && !pkg.is_dist){
 
 				txt += "%-50s".printf(pkg.name);
 				
@@ -689,7 +662,7 @@ public class PackageManager : GLib.Object {
 	
 	// save --------------------------
 	
-	public bool save_package_list(string basepath, bool exclude_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
+	public bool save_package_list(string basepath, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_PACKAGES));
@@ -703,7 +676,7 @@ public class PackageManager : GLib.Object {
 		ok = save_package_list_installed(backup_path);
 		if (!ok){ status = false; }
 		
-		ok = save_package_list_selected(backup_path, exclude_foreign, exclude_icons, exclude_themes, exclude_fonts);
+		ok = save_package_list_selected(backup_path, include_foreign, exclude_icons, exclude_themes, exclude_fonts);
 		if (!ok){ status = false; }
 
 		switch(distro.dist_type){
@@ -761,34 +734,52 @@ public class PackageManager : GLib.Object {
 		return ok;
 	}
 
-	public bool save_package_list_selected(string backup_path, bool exclude_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts) {
+	public bool save_package_list_selected(string backup_path, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts) {
 
 		string list_file = path_combine(backup_path, "selected.list");
 
-		string text = "\n# Comment-out or remove lines for unwanted items\n\n";
+		string txt = "\n";
+
+		txt += "# %s\n".printf(_("Packages listed in this file will be installed on restore"));
+		txt += "# %s\n\n".printf(_("Comment-out or remove lines for unwanted items"));
 
 		int count = 0;
 		
-		foreach( var pkg in packages_sorted){
+		foreach(var pkg in packages_sorted){
 
 			if (!pkg.is_installed){ continue; }
-			
+
+			if (auto_installed_known && pkg.is_auto){ continue; }
+
+			if (dist_installed_known && pkg.is_dist){ continue; }
+
 			if (pkg.name.has_prefix("linux-headers")){ continue; }
 			if (pkg.name.has_prefix("linux-signed")){ continue; }
 			if (pkg.name.has_prefix("linux-tools")){ continue; }
+			if (pkg.name.has_prefix("linux-image")){ continue; }
 
-			if (exclude_foreign && pkg.is_foreign){ continue; }
+			if (!include_foreign && pkg.is_foreign){ continue; }
 			if (exclude_icons && pkg.name.contains("-icon-theme")){ continue; }
 			if (exclude_themes && pkg.name.contains("-theme") && !pkg.name.contains("-icon-theme")){ continue; }
 			if (exclude_fonts && pkg.name.has_prefix("fonts-")){ continue; }
-			
-			if (pkg.is_selected){
-				text += "%s #%s\n".printf(pkg.name, pkg.description);
-				count++;
+
+			if (pkg.name.has_prefix("lib") || (pkg.name == "ttf-mscorefonts-installer")){
+					
+				txt += "#"; // comment and keep
 			}
+
+			txt += "%s".printf(pkg.name);
+			
+			if (pkg.description.length > 0){
+				txt += " # %s".printf(pkg.description);
+			}
+
+			txt += "\n";
+
+			count++;
 		}
 
-		bool ok = file_write(list_file, text);
+		bool ok = file_write(list_file, txt);
 
 		if (ok){
 			chmod(list_file, "a+rw");

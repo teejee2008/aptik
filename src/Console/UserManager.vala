@@ -358,7 +358,7 @@ public class UserManager : GLib.Object {
 			if (users.has_key(user.name)){ continue; }
 
 			ok = (user.add(dry_run) == 0);
-		
+
 			if (!ok){
 				log_error(Messages.USER_ADD_ERROR + ": %s".printf(user.name));
 				status = false;
@@ -366,6 +366,7 @@ public class UserManager : GLib.Object {
 			else{
 				log_msg(Messages.USER_ADD_OK + ": %s".printf(user.name));
 			}
+			log_msg(string.nfill(70,'-'));
 		}
 
 		return status;

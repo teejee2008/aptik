@@ -6,6 +6,7 @@ bindir=$(prefix)/bin
 sharedir=$(prefix)/share
 localedir=$(sharedir)/locale
 launcherdir=$(sharedir)/applications
+polkitdir=$(sharedir)/polkit-1/actions
 mandir=$(sharedir)/man
 man1dir=$(mandir)/man1
 

@@ -67,7 +67,7 @@ public class User : GLib.Object {
 	
 	public bool is_system{
 		get {
-			return ((uid != 0) && (uid < 1000)) || (uid == 65534) || (name == "PinguyBuilder"); // 65534 - nobody
+			return ((uid != 0) && (uid < 1000)) || (uid > 60000) || (name == "PinguyBuilder"); // UID_MAX=60000 for most systems in /etc/login.defs
 		}
 	}
 

@@ -327,6 +327,7 @@ public class MountEntryManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "mounts");
+		chmod(backup_path, "a+rwx");
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);

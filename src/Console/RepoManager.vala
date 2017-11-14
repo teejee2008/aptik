@@ -310,6 +310,7 @@ public class RepoManager : GLib.Object {
 		string backup_path = path_combine(basepath, "repos");
 		dir_delete(backup_path); // remove existing .list files
 		dir_create(backup_path);
+		chmod(backup_path, "a+rwx");
 
 		switch(distro.dist_type){
 		case "fedora":
@@ -345,9 +346,10 @@ public class RepoManager : GLib.Object {
 				
 				bool ok = file_write(backup_file, repo.text);
 				
-				if (!ok){ status = false; }
+				if (!ok){ status = false; continue; }
 				
-				if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
+				chmod(backup_file, "a+rw");
+				log_msg("%s: %s".printf(_("Saved"), backup_file));
 			}
 		}
 

@@ -277,7 +277,8 @@ public class UserManager : GLib.Object {
 		
 		string backup_path = path_combine(basepath, "users");
 		dir_create(backup_path);
-
+		chmod(backup_path, "a+rwx");
+		
 		bool status = true;
 
 		foreach(var user in users_sorted){
@@ -286,12 +287,14 @@ public class UserManager : GLib.Object {
 	
 			string backup_file = path_combine(backup_path, "%s.passwd".printf(user.name));
 			bool ok = file_write(backup_file, user.get_passwd_line());
+			chmod(backup_file, "a+rw");
 			
 			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
 			else{ status = false; }
 
 			backup_file = path_combine(backup_path, "%s.shadow".printf(user.name));
 			ok = file_write(backup_file, user.get_shadow_line());
+			chmod(backup_file, "a+rw");
 			
 			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
 			else{ status = false; }

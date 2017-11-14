@@ -672,6 +672,7 @@ public class PackageManager : GLib.Object {
 
 		string backup_path = path_combine(basepath, "packages");
 		dir_create(backup_path);
+		chmod(backup_path, "a+rwx");
 
 		ok = save_package_list_installed(backup_path);
 		if (!ok){ status = false; }
@@ -691,7 +692,7 @@ public class PackageManager : GLib.Object {
 			string deb_readme = path_combine(deb_dir, "README");
 			string msg = _("DEB files placed in this directory will be installed on restore");
 			dir_create(deb_dir);
-			chmod(deb_dir, "a+rw");
+			chmod(deb_dir, "a+rwx");
 			file_write(deb_readme, msg);
 			break;
 		}
@@ -710,7 +711,7 @@ public class PackageManager : GLib.Object {
 
 	public bool save_package_list_installed(string backup_path) {
 
-		string list_file = path_combine(backup_path, "installed.list");
+		string backup_file = path_combine(backup_path, "installed.list");
 
 		string text = "\n# DO NOT EDIT - This list is not used for restore\n\n";
 
@@ -724,11 +725,11 @@ public class PackageManager : GLib.Object {
 			count++;
 		}
 
-		bool ok = file_write(list_file, text);
+		bool ok = file_write(backup_file, text);
 
 		if (ok){
-			chmod(list_file, "a+r"); // not writable
-			log_msg("%s: %s (%d packages)".printf(_("Saved"), list_file, count));
+			chmod(backup_file, "a+rw");
+			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file, count));
 		}
 
 		return ok;
@@ -736,7 +737,7 @@ public class PackageManager : GLib.Object {
 
 	public bool save_package_list_selected(string backup_path, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts) {
 
-		string list_file = path_combine(backup_path, "selected.list");
+		string backup_file = path_combine(backup_path, "selected.list");
 
 		string txt = "\n";
 
@@ -780,11 +781,11 @@ public class PackageManager : GLib.Object {
 			txt += "\n";
 		}
 
-		bool ok = file_write(list_file, txt);
+		bool ok = file_write(backup_file, txt);
 
 		if (ok){
-			chmod(list_file, "a+rw");
-			log_msg("%s: %s (%d packages)".printf(_("Saved"), list_file, count));
+			chmod(backup_file, "a+rw");
+			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file, count));
 		}
 
 		return ok;

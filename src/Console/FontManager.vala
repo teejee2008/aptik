@@ -91,11 +91,12 @@ public class FontManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_FONTS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "fonts");
-
 		string system_path = "/usr/share/fonts";
+		
+		string backup_path = path_combine(basepath, "fonts");
 		dir_create(backup_path);
-
+		chmod(backup_path, "a+rwx");
+		
 		// system fonts --------------------------
 
 		backup_fonts_from_path(system_path, backup_path);

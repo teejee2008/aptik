@@ -64,6 +64,7 @@ public class DconfManager : GLib.Object {
 		
 		string backup_path = path_combine(basepath, "dconf");
 		dir_create(backup_path);
+		chmod(backup_path, "a+rwx");
 
 		// backup -----------------------------------
 
@@ -104,6 +105,7 @@ public class DconfManager : GLib.Object {
 			bool ok = file_write(backup_file, std_out);
 			
 			if (ok){
+				chmod(backup_file, "a+rw");
 				log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file));
 			}
 			else {

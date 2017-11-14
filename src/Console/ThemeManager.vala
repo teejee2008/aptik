@@ -238,8 +238,8 @@ public class ThemeManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, type);
-		dir_delete(backup_path); // remove existing .list files
 		dir_create(backup_path);
+		chmod(backup_path, "a+rwx");
 
 		foreach(var theme in themes_sorted) {
 			if (theme.is_selected) {
@@ -573,6 +573,7 @@ public class Theme : GLib.Object{
 			int status = Posix.system(cmd);
 			
 			if (status == 0) {
+				chmod(zip_file, "a+rw");
 				stdout.printf("[ OK ]\n");
 			}
 			else {

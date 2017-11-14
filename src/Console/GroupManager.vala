@@ -238,7 +238,8 @@ public class GroupManager : GLib.Object {
 
 		string backup_path = path_combine(basepath, "groups");
 		dir_create(backup_path);
-
+		chmod(backup_path, "a+rwx");
+		
 		bool status = true;
 
 		foreach(var group in groups_sorted){
@@ -247,12 +248,14 @@ public class GroupManager : GLib.Object {
 	
 			string backup_file = path_combine(backup_path, "%s.group".printf(group.name));
 			bool ok = file_write(backup_file, group.get_group_line());
+			chmod(backup_file, "a+rw");
 
 			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
 			else{ status = false; }
 
 			backup_file = path_combine(backup_path, "%s.gshadow".printf(group.name));
 			ok = file_write(backup_file, group.get_gshadow_line());
+			chmod(backup_file, "a+rw");
 
 			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
 			else{ status = false; }
@@ -285,6 +288,7 @@ public class GroupManager : GLib.Object {
 
 		bool ok = file_write(backup_file, txt);
 		if (ok){
+			chmod(backup_file, "a+rw");
 			log_msg("%s: %s".printf(_("Saved"), backup_file));
 		}
 

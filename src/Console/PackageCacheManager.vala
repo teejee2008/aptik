@@ -52,10 +52,12 @@ public class PackageCacheManager : GLib.Object {
 		
 		string backup_path = path_combine(basepath, "cache");
 		dir_create(backup_path);
-
+		chmod(backup_path, "a+rwx");
+		
 		string backup_path_distro = path_combine(backup_path, distro.dist_type);
 		dir_create(backup_path_distro);
-
+		chmod(backup_path_distro, "a+rwx");
+		
 		string system_cache = "";
 		string filter = "";
 
@@ -102,7 +104,7 @@ public class PackageCacheManager : GLib.Object {
 
 		log_msg("");
 		
-		update_permissions_for_backup_packages(backup_path);
+		update_permissions_for_backup_files(backup_path);
 		
 		log_msg("");
 		log_msg(Messages.BACKUP_OK);
@@ -110,7 +112,7 @@ public class PackageCacheManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_backup_packages(string backup_path) {
+	public bool update_permissions_for_backup_files(string backup_path) {
 
 		// files  -----------------
 		
@@ -127,22 +129,6 @@ public class PackageCacheManager : GLib.Object {
 		}
 
 		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", backup_path));
-
-		// folders -----------------
-		
-		cmd = "find '%s' -type d -exec chmod 777 '{}' ';'".printf(backup_path);
-
-		status = 0;
-	
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
-
-		log_msg("%s: %s: %s".printf(_("Updated permissions (dirs)"), "777", backup_path));
 
 		return (status == 0);
 	}

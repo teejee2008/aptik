@@ -233,7 +233,7 @@ public class GroupManager : GLib.Object {
 	public bool backup_groups(string basepath){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_GROUPS));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_GROUPS));
 		log_msg(string.nfill(70,'-'));
 
 		string backup_path = path_combine(basepath, "groups");

@@ -392,8 +392,8 @@ public class PackageManager : GLib.Object {
 		int count = 0;
 
 		string DEF_PKG_LIST = "/var/log/installer/initial-status.gz";
-		string DEF_PKG_LIST_UNPACKED = "/var/log/installer/initial-status";
-	
+		string DEF_PKG_LIST_UNPACKED = "/tmp/initial-status";
+
 		log_debug("check_packages_apt_default()");
 
 		if (!file_exists(DEF_PKG_LIST)) {
@@ -401,74 +401,71 @@ public class PackageManager : GLib.Object {
 			return;
 		}
 
+		var tmr = timer_start();
+
 		if (!file_exists(DEF_PKG_LIST_UNPACKED)){
-			string txt = "";
-			exec_script_sync("gzip -dc '%s'".printf(DEF_PKG_LIST),out txt,null);
-			file_write(DEF_PKG_LIST_UNPACKED,txt);
+			string std_out, std_err;
+			string cmd = "gzip -dc '%s'".printf(DEF_PKG_LIST);
+			log_debug(cmd);
+			exec_script_sync(cmd, out std_out, out std_err);
+			file_write(DEF_PKG_LIST_UNPACKED, std_out);
+		}
+
+		if (!file_exists(DEF_PKG_LIST_UNPACKED)){
+			return;
 		}
 		
-		try {
-			string line;
-			var file = File.new_for_path(DEF_PKG_LIST_UNPACKED);
-			if (!file.query_exists ()) {
-				log_error(_("Failed to unzip: '%s'").printf(DEF_PKG_LIST_UNPACKED));
-				return;
-			}
+		foreach(string line in file_read(DEF_PKG_LIST_UNPACKED).split("\n")){
 
-			var dis = new DataInputStream (file.read());
-			while ((line = dis.read_line (null)) != null) {
+			if (line.strip().length == 0) { continue; }
+			if (line.index_of(": ") == -1) { continue; }
 
-				if (line.strip().length == 0) { continue; }
-				if (line.index_of(": ") == -1) { continue; }
-
-				//Note: split on ': ' since version string can have colons
+			//Note: split on ': ' since version string can have colons
+			
+			string p_name = line.split(":",2)[0].strip();
+			string p_value = line.split(":",2)[1].strip();
+			
+			switch(p_name.down()){
+				case "package":
 				
-				string p_name = line.split(":",2)[0].strip();
-				string p_value = line.split(":",2)[1].strip();
-				
-				switch(p_name.down()){
-					case "package":
+					string name = p_value;
+					string arch = "";
+					bool is_foreign = false;
+			
+					if (name.contains(":")) {
+						arch = name.split(":",2)[1].strip();
+						name = name.split(":",2)[0].strip();
+					}
+					else{
+						arch = distro.package_arch;
+					}
+
+					if (arch != distro.package_arch){
+						name = "%s:%s".printf(name, arch);
+						is_foreign = true;
+					}
+
+					if (!packages.has_key(name)){
+						packages[name] = new Package(name);
+					}
+
+					count++;
 					
-						string name = p_value;
-						string arch = "";
-						bool is_foreign = false;
-				
-						if (name.contains(":")) {
-							arch = name.split(":",2)[1].strip();
-							name = name.split(":",2)[0].strip();
-						}
-						else{
-							arch = distro.package_arch;
-						}
-
-						if (arch != distro.package_arch){
-							name = "%s:%s".printf(name, arch);
-							is_foreign = true;
-						}
-
-						if (!packages.has_key(name)){
-							packages[name] = new Package(name);
-						}
-
-						count++;
-						
-						var pkg = packages[name];
-						pkg.is_available = true;
-						pkg.is_installed = true;
-						pkg.is_dist = true;
-						pkg.is_foreign = is_foreign;
-						break;
-				}
-			}
-
-			dist_installed_known = true;
-
-			if (count > 0){
-				log_debug("Installed-Dist: %'6d".printf(count));
+					var pkg = packages[name];
+					pkg.is_available = true;
+					pkg.is_installed = true;
+					pkg.is_dist = true;
+					pkg.is_foreign = is_foreign;
+					break;
 			}
 		}
-		catch (Error e) {
-			log_error (e.message);
+
+		log_msg("time_taken: %s".printf(timer_elapsed_string(tmr)));
+
+		dist_installed_known = true;
+
+		if (count > 0){
+			log_debug("Installed-Dist: %'6d".printf(count));
 		}
 	}
 	
@@ -480,11 +477,26 @@ public class PackageManager : GLib.Object {
 
 	// list --------------------------
 
+	public void list_packages(){
+
+		string txt = "";
+		foreach(var pkg in packages_sorted){
+			if (!pkg.is_installed){ continue; }
+			txt += "NAME='%s',DESC='%s'".printf(pkg.name, pkg.description);
+			txt += ",D='%s'".printf(pkg.is_dist ? "1" : "0");
+			txt += ",A='%s'".printf(pkg.is_auto ? "1" : "0");
+			txt += ",U='%s'".printf((pkg.is_user || (!pkg.is_dist && !pkg.is_auto)) ? "1" : "0");
+			txt += ",F='%s'".printf(pkg.is_foreign ? "1" : "0");
+			txt += "\n";
+		}
+		log_msg(txt);
+	}
+	
 	public void list_available(){
 
 		string txt = "";
 		int count = 0;
-		
+
 		foreach(var pkg in packages_sorted){
 			
 			if (pkg.is_available){
@@ -670,9 +682,7 @@ public class PackageManager : GLib.Object {
 		
 		bool ok, status = true;
 
-		string backup_path = path_combine(basepath, "packages");
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+		string backup_path = create_backup_path(basepath);
 
 		ok = save_package_list_installed(backup_path);
 		if (!ok){ status = false; }
@@ -791,6 +801,26 @@ public class PackageManager : GLib.Object {
 		return ok;
 	}
 
+	public bool save_list_file(string backup_file, string text){
+
+		bool ok = file_write(backup_file, text);
+
+		if (ok){
+			chmod(backup_file, "a+rw");
+			//log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file, count));
+		}
+
+		return ok;
+	}
+
+	public string create_backup_path(string basepath){
+		
+		string backup_path = path_combine(basepath, "packages");
+		dir_create(backup_path);
+		chmod(backup_path, "a+rwx");
+		return backup_path;
+	}
+	
 	// restore ---------------------
 
 	public bool restore_packages(string basepath, bool no_prompt){

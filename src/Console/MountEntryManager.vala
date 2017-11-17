@@ -173,7 +173,7 @@ public class MountEntryManager : GLib.Object {
 		
 		foreach(var entry in fstab){
 
-			if (!entry.device.up().contains("UUID=")){
+			if (!entry.device.up().contains("UUID=") && !entry.device.down().has_prefix("/dev/disk/")){
 
 				var dev = Device.find_device_in_list_by_name(devices, entry.device);
 				if ((dev != null) && (dev.uuid.length > 0)){
@@ -184,7 +184,7 @@ public class MountEntryManager : GLib.Object {
 
 		foreach(var entry in crypttab){
 
-			if (!entry.device.up().contains("UUID=")){
+			if (!entry.device.up().contains("UUID=") && !entry.device.down().has_prefix("/dev/disk/")){
 
 				var dev = Device.find_device_in_list_by_name(devices, entry.device);
 				if ((dev != null) && (dev.uuid.length > 0)){

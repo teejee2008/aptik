@@ -225,6 +225,8 @@ public class CronTaskManager : GLib.Object {
 			log_msg("");
 			
 			update_permissions_for_cron_directory(cron_path);
+
+			update_owner_for_cron_directory(cron_path);
 			
 			log_msg(string.nfill(70,'-'));
 		}
@@ -302,6 +304,32 @@ public class CronTaskManager : GLib.Object {
 		log_msg("%s (0%s): %s".printf(_("Updating permissions"), permissions, path));
 		
 		string cmd = "find '%s' -type f -exec chmod %s '{}' ';'".printf(path, permissions);
+		log_debug(cmd);
+
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
+		return (status == 0);
+	}
+
+	public bool update_owner_for_cron_directory(string path){
+
+		string permissions = "755"; // rwx r-x r-x
+
+		if (path.has_suffix("cron.d")){
+			permissions = "644"; // rw- r-- r-- not executable by anyone since these are not valid shell scripts
+		}
+
+		log_msg("%s (0%s): %s".printf(_("Updating permissions"), permissions, path));
+		
+		string cmd = "find '%s' -type f -exec chown root:root '{}' ';'".printf(path);
 		log_debug(cmd);
 
 		int status = 0;

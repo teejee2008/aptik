@@ -48,8 +48,13 @@ public class AptikConsole : GLib.Object {
 	public bool no_prompt = false;
 	public bool dry_run = false;
 	public bool list_only = false;
+	public bool robot = false;
+	
+	// info
+	//public string user_name = "";
+	//public string user_name_effective = "";
 
-	// home
+	// options
 	public string userlist = "";
 	public string password = "aptik";
 	public bool full_backup = false;
@@ -70,12 +75,6 @@ public class AptikConsole : GLib.Object {
 		LOG_TIMESTAMP = false;
 
 		init_tmp(AppShortName);
-
-		if (!user_is_admin()) {
-			log_msg(_("Aptik needs admin access to backup and restore packages."));
-			log_msg(_("Run the application as admin (using 'sudo' or 'pkexec')"));
-			exit(0);
-		}
 
 		check_dependencies();
 
@@ -117,6 +116,15 @@ public class AptikConsole : GLib.Object {
 			exit(1);
 		}
 	}
+
+	public void check_admin_access(){
+
+		if (!user_is_admin()) {
+			log_msg(_("Aptik needs admin access to backup and restore packages."));
+			log_msg(_("Run the application as admin (using 'sudo' or 'pkexec')"));
+			exit(0);
+		}
+	}
 	
 	public AptikConsole(){
 
@@ -126,6 +134,7 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public void print_backup_path(){
+		
 		log_msg("Backup path: %s".printf(basepath));
 		log_msg(string.nfill(70,'-'));
 	}
@@ -134,7 +143,7 @@ public class AptikConsole : GLib.Object {
 
 		string fmt = "  %-30s %s\n";
 
-		string fmt2 = "--- %s -----------------------------------\n\n"; //▰▰▰ ◈
+		string fmt2 = " %s -----------------------------------\n\n"; //▰▰▰ ◈
 		
 		string msg = "\n" + AppName + " v" + AppVersion + " by %s (%s)".printf(AppAuthor, AppAuthorEmail) + "\n\n";
 
@@ -164,11 +173,11 @@ public class AptikConsole : GLib.Object {
 		msg += fmt2.printf(Messages.TASK_PACKAGES);
 
 		msg += "%s:\n".printf(_("Commands"));
-		msg += fmt.printf("--list-installed", _("List installed packages"));
-		msg += fmt.printf("--list-available", _("List available packages"));
-		msg += fmt.printf("--list-foreign ", _("List non-native packages"));
-		msg += fmt.printf("--list-extra", _("List extra packages installed by user"));
-		msg += fmt.printf("--list-{default|dist|base}", _("List default packages for linux distribution"));
+		msg += fmt.printf("--list-installed", _("List all installed packages"));
+		msg += fmt.printf("--list-installed-dist", _("List base packages installed by Linux distribution"));
+		msg += fmt.printf("--list-installed-user", _("List packages installed by user"));
+		msg += fmt.printf("--list-installed-auto", _("List packages auto-installed to satisfy dependencies"));
+		msg += fmt.printf("--list-installed-foreign ", _("List installed non-native packages"));
 		msg += fmt.printf("--backup-packages", _("Save list of installed packages"));
 		msg += fmt.printf("--restore-packages", _("Install missing packages from backup"));
 		msg += "\n";
@@ -233,6 +242,30 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--restore-mounts", _("Restore /etc/fstab and /etc/crypttab entries from backup"));
 		msg += "\n";
 
+		msg += fmt2.printf(Messages.TASK_ICONS);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-icons", _("List installed icon themes"));
+		msg += fmt.printf("--backup-icons", _("Backup installed icon themes"));
+		msg += fmt.printf("--restore-icons", _("Restore missing icon themes from backup"));
+		msg += "\n";
+
+		msg += fmt2.printf(Messages.TASK_THEMES);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-themes", _("List installed themes"));
+		msg += fmt.printf("--backup-themes", _("Backup installed themes"));
+		msg += fmt.printf("--restore-themes", _("Restore missing themes from backup"));
+		msg += "\n";
+
+		msg += fmt2.printf(Messages.TASK_FONTS);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-fonts", _("List installed fonts"));
+		msg += fmt.printf("--backup-fonts", _("Backup installed fonts"));
+		msg += fmt.printf("--restore-fonts", _("Restore missing fonts from backup"));
+		msg += "\n";
+
 		msg += fmt2.printf(Messages.TASK_DCONF);
 
 		msg += "%s:\n".printf(_("Commands"));
@@ -265,6 +298,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--backup-all", _("Backup all items"));
 		msg += fmt.printf("--restore-all", _("Restore all items from backup"));
 		msg += fmt.printf("--remove-all", _("Remove all items from backup"));
+		msg += fmt.printf("--sysinfo", _("Show system information"));
 		msg += "\n";
 		
 		msg += fmt2.printf(("Common Options"));
@@ -296,10 +330,6 @@ public class AptikConsole : GLib.Object {
 			case "--basepath":
 				k += 1;
 				basepath = args[k] + (args[k].has_suffix("/") ? "" : "/");
-				break;
-
-			case "--scripted":
-				no_prompt = true;
 				break;
 
 			case "--password":
@@ -348,18 +378,27 @@ public class AptikConsole : GLib.Object {
 				dry_run = true;
 				break;
 
+			case "--scripted":
+				no_prompt = true;
+				break;
+
+			case "--robot":
+				robot = true;
+				break;
+
 			case "--list-repos":
 			case "--backup-repos":
 			case "--restore-repos":
 			case "--import-missing-keys":
 			
-			case "--list-available":
 			case "--list-installed":
 			case "--list-installed-dist":
-			case "--list-installed-foreign":
 			case "--list-installed-user":
 			case "--list-installed-auto":
-			
+			case "--list-installed-foreign":
+
+			case "--dump-packages":
+			case "--dump-packages-backup":
 			case "--backup-packages":
 			case "--restore-packages":
 
@@ -411,6 +450,7 @@ public class AptikConsole : GLib.Object {
 			case "--backup-all":
 			case "--restore-all":
 			case "--remove-all":
+			case "--sysinfo":
 
 				command = args[k].down();
 				break;
@@ -446,21 +486,24 @@ public class AptikConsole : GLib.Object {
 			return list_repos();
 
 		case "--backup-repos":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return backup_repos();
 			
 		case "--restore-repos":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return restore_repos();
 			
 		case "--import-missing-keys":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return import_missing_keys();
 
 		// package ---------------------------------------
 
-		case "--list-available":
-			return list_packages_available();
+		case "--dump-packages":
+			return dump_packages();
+
+		case "--dump-packages-backup":
+			return dump_packages_backup();
 			
 		case "--list-installed":
 			return list_packages_installed();
@@ -468,38 +511,38 @@ public class AptikConsole : GLib.Object {
 		case "--list-installed-dist":
 			return list_packages_installed_dist();
 
-		case "--list-installed-foreign":
-			return list_packages_installed_foreign();
-
 		case "--list-installed-user":
 			return list_packages_user_installed();
 
 		case "--list-installed-auto":
 			return list_packages_auto_installed();
 
+		case "--list-installed-foreign":
+			return list_packages_installed_foreign();
+
 		case "--backup-packages":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return backup_packages();
 			
 		case "--restore-packages":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return restore_packages();
 							
 		// package cache -------------------------------------
 
 		case "--backup-cache":
 		case "--backup-pkg-cache":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return backup_cache();
 			
 		case "--restore-cache":
 		case "--restore-pkg-cache":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return restore_cache();
 
 		case "--clear-cache":
 		case "--clear-pkg-cache":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return clear_cache();
 
 		// fonts -------------------------------------
@@ -508,11 +551,11 @@ public class AptikConsole : GLib.Object {
 			return list_fonts();
 			
 		case "--backup-fonts":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return backup_fonts();
 			
 		case "--restore-fonts":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return restore_fonts();
 						
 		// themes ---------------------------------------------
@@ -522,11 +565,11 @@ public class AptikConsole : GLib.Object {
 			return list_themes();
 
 		case "--backup-themes":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return backup_themes();
 			
 		case "--restore-themes":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return restore_themes();
 
 		// icons ---------------------------------------------
@@ -536,11 +579,11 @@ public class AptikConsole : GLib.Object {
 			return list_icons();
 
 		case "--backup-icons":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return backup_icons();
 			
 		case "--restore-icons":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return restore_icons();
 
 		// users -------------------------------------------
@@ -618,16 +661,20 @@ public class AptikConsole : GLib.Object {
 		// all ---------------------------------------------
 
 		case "--backup-all":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return backup_all();
 
 		case "--restore-all":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return restore_all();
 
 		case "--remove-all":
-			distro.print_system_info();
+			//distro.print_system_info();
 			return remove_all();
+
+		case "--sysinfo":
+			distro.print_system_info();
+			return true;
 		}
 
 		return true;
@@ -866,7 +913,27 @@ public class AptikConsole : GLib.Object {
 	
 	// packages ------------------------------
 
+	public bool dump_packages(){
+		
+		//check_admin_access();
+		
+		var mgr = new PackageManager(distro, dry_run);
+		mgr.dump_info();
+		return true;
+	}
+
+	public bool dump_packages_backup(){
+		
+		//check_admin_access();
+		
+		var mgr = new PackageManager(distro, dry_run);
+		mgr.dump_info_backup(basepath);
+		return true;
+	}
+	
 	public bool list_packages_available(){
+		
+		//check_admin_access();
 		
 		var mgr = new PackageManager(distro, dry_run);
 		mgr.list_available();
@@ -875,12 +942,16 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_packages_installed(){
 		
+		//check_admin_access();
+		
 		var mgr = new PackageManager(distro, dry_run);
 		mgr.list_installed();
 		return true;
 	}
 
 	public bool list_packages_installed_foreign(){
+		
+		//check_admin_access();
 		
 		var mgr = new PackageManager(distro, dry_run);
 		mgr.list_foreign();
@@ -889,12 +960,16 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_packages_installed_dist(){
 		
+		//check_admin_access();
+		
 		var mgr = new PackageManager(distro, dry_run);
 		mgr.list_dist();
 		return true;
 	}
 
 	public bool list_packages_auto_installed(){
+		
+		//check_admin_access();
 		
 		var mgr = new PackageManager(distro, dry_run);
 		mgr.list_auto_installed();
@@ -903,12 +978,16 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_packages_user_installed(){
 		
+		//check_admin_access();
+		
 		var mgr = new PackageManager(distro, dry_run);
 		mgr.list_user_installed();
 		return true;
 	}
 
 	public bool backup_packages(){
+
+		check_admin_access();
 		
 		dir_create(basepath);
 
@@ -920,6 +999,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool restore_packages(){
 
+		check_admin_access();
+		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.PACKAGES)) { return false; }
 		
@@ -931,6 +1012,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool backup_cache(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -941,6 +1024,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool restore_cache(){
 
+		check_admin_access();
+		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.CACHE)) { return false; }
 		
@@ -957,11 +1042,15 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_repos(){
 
+		check_admin_access();
+		
 		var mgr = new RepoManager(distro, dry_run);
 		return mgr.list_repos();
 	}
 	
 	public bool backup_repos(){
+
+		check_admin_access();
 		
 		dir_create(basepath);
 
@@ -973,6 +1062,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool restore_repos(){
 
+		check_admin_access();
+		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.REPOS)) { return false; }
 		
@@ -989,6 +1080,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_themes(){
 
+		check_admin_access();
+		
 		var mgr = new ThemeManager(distro, dry_run, "themes");
 		mgr.check_installed_themes();
 		mgr.list_themes();
@@ -997,6 +1090,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool backup_themes(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -1007,6 +1102,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_themes(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.THEMES)) { return false; }
@@ -1020,6 +1117,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_icons(){
 
+		check_admin_access();
+		
 		var mgr = new ThemeManager(distro, dry_run, "icons");
 		mgr.check_installed_themes();
 		return true;
@@ -1027,6 +1126,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool backup_icons(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -1037,6 +1138,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_icons(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.ICONS)) { return false; }
@@ -1050,6 +1153,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_fonts(){
 
+		check_admin_access();
+		
 		var mgr = new FontManager(distro, dry_run);
 		mgr.list_fonts();
 		return true;
@@ -1057,6 +1162,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool backup_fonts(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -1066,6 +1173,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_fonts(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.ICONS)) { return false; }
@@ -1078,6 +1187,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool list_users(bool all = false){
 
+		check_admin_access();
+		
 		var mgr = new UserManager(false);
 		mgr.query_users(true);
 		mgr.list_users(all);
@@ -1086,6 +1197,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool backup_users(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -1101,6 +1214,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_users(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.USERS)) { return false; }
@@ -1118,6 +1233,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_groups(bool all = false){
 
+		check_admin_access();
+		
 		var mgr = new GroupManager(false);
 		mgr.query_groups(true);
 		mgr.list_groups(all);
@@ -1126,6 +1243,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool backup_groups(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -1141,6 +1260,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_groups(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.GROUPS)) { return false; }
@@ -1158,6 +1279,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_mount_entries(){
 
+		check_admin_access();
+		
 		var mgr = new MountEntryManager(false);
 		mgr.query_mount_entries();
 		mgr.list_mount_entries();
@@ -1166,6 +1289,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool backup_mount_entries(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -1181,6 +1306,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_mount_entries(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.MOUNTS)) { return false; }
@@ -1198,6 +1325,8 @@ public class AptikConsole : GLib.Object {
 
 	public bool backup_home(){
 
+		check_admin_access();
+		
 		bool status = true;
 
 		var mgr = new UserHomeDataManager(dry_run);
@@ -1208,6 +1337,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_home(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.HOME)) { return false; }
@@ -1239,6 +1370,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_dconf_settings(){
 
+		check_admin_access();
+		
 		var mgr = new DconfManager(false);
 		mgr.list_dconf_settings(userlist);
 		return true;
@@ -1246,6 +1379,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool backup_dconf_settings(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -1260,6 +1395,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_dconf_settings(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.MOUNTS)) { return false; }
@@ -1277,6 +1414,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool list_cron_tasks(){
 
+		check_admin_access();
+		
 		var mgr = new CronTaskManager(false);
 		mgr.list_cron_tasks(userlist);
 		return true;
@@ -1284,6 +1423,8 @@ public class AptikConsole : GLib.Object {
 	
 	public bool backup_cron_tasks(){
 
+		check_admin_access();
+		
 		dir_create(basepath);
 
 		copy_binary();
@@ -1298,6 +1439,8 @@ public class AptikConsole : GLib.Object {
 	}
 
 	public bool restore_cron_tasks(){
+
+		check_admin_access();
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.CRON)) { return false; }

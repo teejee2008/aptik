@@ -166,7 +166,7 @@ public class UserHomeDataManager : GLib.Object {
 				log_msg("Deleted: %s".printf(temp_file));
 			}
 			else{
-				file_move(temp_file, tar_file);
+				file_move(temp_file, tar_file, false);
 				log_msg("Created: %s".printf(tar_file));
 			}
 

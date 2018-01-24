@@ -24,6 +24,7 @@
 using TeeJee.Logging;
 using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
+using TeeJee.System;
 using TeeJee.Misc;
 
 public class DconfManager : GLib.Object {
@@ -165,8 +166,28 @@ public class DconfManager : GLib.Object {
 			log_error(msg);
 			return false;
 		}
+
+		string cmd = "";
+
+		cmd += "su -s /bin/bash -c \"dconf reset -f / \" %s".printf(user.name);
+
+		cmd += " ; ";
 		
-		string cmd = "su -s /bin/bash -c \"dconf load / < '%s'\" %s".printf(escape_single_quote(backup_file), user.name);
+		cmd += "su -s /bin/bash -c \"dconf load / < '%s'\" %s".printf(escape_single_quote(backup_file), user.name);
+
+		//cmd += "pkexec --user %s dconf \"load / < '%s'\"".printf(user.name, escape_single_quote(backup_file));
+		
+		//if (user.name == get_username()){
+		//	cmd = "dconf load / < '%s'".printf(escape_single_quote(backup_file));
+		//}
+
+		//cmd += "dconf reset -f /";
+		//cmd += " ; ";
+		//cmd += "dconf load / < '%s'".printf(escape_single_quote(backup_file));
+		
+		//string sh = save_bash_script_temp(cmd);
+
+		//cmd = "pkexec --user %s env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY '%s'".printf(user.name, escape_single_quote(sh));
 
 		int status = 0;
 		

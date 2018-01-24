@@ -206,8 +206,9 @@ namespace TeeJee.ProcessHelper{
 
 		// write file
 		file_write(sh_path, sh);
+		
 		// set execute permission
-		chmod (sh_path, "u+x");
+		chmod (sh_path, "a+x");
 
 		if (admin_mode){
 			
@@ -226,7 +227,7 @@ namespace TeeJee.ProcessHelper{
 			file_write(sh_path_admin, sh);
 			
 			// set execute permission
-			chmod (sh_path_admin, "u+x");
+			chmod(sh_path_admin, "a+x");
 			
 			return sh_path_admin;
 		}

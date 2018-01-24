@@ -750,11 +750,11 @@ public class Theme : GLib.Object{
 						var dst_tmp = "%s/%s_temp".printf(share_path, theme_name);
 
 						if (dir_exists(src)){
-							file_move(src, dst_tmp);
+							file_move(src, dst_tmp, false);
 						}
 
 						file_delete(dst);
-						file_move(dst_tmp, dst);
+						file_move(dst_tmp, dst, false);
 
 						log_msg("Fixed: %s".printf(src));
 					}

@@ -106,7 +106,7 @@ public class PackageCacheManager : GLib.Object {
 		
 		update_permissions_for_backup_files(backup_path);
 		
-		log_msg("");
+		log_msg(string.nfill(70,'-'));
 		log_msg(Messages.BACKUP_OK);
 
 		return (status == 0);
@@ -241,7 +241,7 @@ public class PackageCacheManager : GLib.Object {
 				cmd += " --noconfirm";
 			}
 			
-			cmd = " -Sc";
+			cmd += " -Sc";
 			break;
 
 		case "debian":

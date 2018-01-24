@@ -88,12 +88,7 @@ public class UserManager : GLib.Object {
 		
 		string txt = "";
 
-		if (passwd_file.has_suffix(".tar.gpg")){
-			txt = file_decrypt_untar_read(passwd_file, password);
-		}
-		else{
-			txt = file_read(passwd_file);
-		}
+		txt = file_read(passwd_file);
 
 		if (txt.length == 0){
 			log_error("%s: %s".printf(_("Failed to read file"),passwd_file));
@@ -113,12 +108,7 @@ public class UserManager : GLib.Object {
 		
 		txt = "";
 		
-		if (shadow_file.has_suffix(".tar.gpg")){
-			txt = file_decrypt_untar_read(shadow_file, password);
-		}
-		else{
-			txt = file_read(shadow_file);
-		}
+		txt = file_read(shadow_file);
 
 		if (txt.length == 0){ return; }
 

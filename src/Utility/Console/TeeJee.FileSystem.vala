@@ -95,7 +95,7 @@ namespace TeeJee.FileSystem{
 		string outpath = file_path;
 		
 		int index = 1;
-		while (file_or_dir_exists(outpath)){
+		while (file_exists(outpath)){
 			string new_name = "%s%s%s".printf(title, " (%d)".printf(index++), extension);
 			outpath = path_combine(location, new_name);
 		}
@@ -118,7 +118,7 @@ namespace TeeJee.FileSystem{
 	
 	// file helpers -----------------------------
 
-	public bool file_or_dir_exists(string item_path){
+	public bool file_exists(string item_path){
 		
 		/* check if item exists on disk*/
 
@@ -126,16 +126,88 @@ namespace TeeJee.FileSystem{
 		return item.query_exists();
 	}
 	
-	public bool file_exists (string file_path){
-		/* Check if file exists */
-		return (FileUtils.test(file_path, GLib.FileTest.EXISTS)
-			&& !FileUtils.test(file_path, GLib.FileTest.IS_DIR));
+	public bool file_is_dir(string file_path){
+
+		try {
+			var file = File.new_for_path (file_path);
+			
+			if (file.query_exists()) {
+
+				var info = file.query_info("%s".printf(FileAttribute.STANDARD_TYPE),0); // follow symlinks
+
+				var file_type = info.get_file_type();
+
+				return (file_type == FileType.DIRECTORY);
+			}
+		}
+		catch (Error e) {
+	        log_error (e.message);
+	    }
+	    
+		return false;
 	}
 
-	public bool file_exists_regular (string file_path){
-		/* Check if file exists */
-		return ( FileUtils.test(file_path, GLib.FileTest.EXISTS)
-		&& FileUtils.test(file_path, GLib.FileTest.IS_REGULAR));
+	public bool file_is_regular(string file_path){
+
+		try {
+			var file = File.new_for_path (file_path);
+			
+			if (file.query_exists()) {
+
+				var info = file.query_info("%s".printf(FileAttribute.STANDARD_TYPE),0); // follow symlinks
+
+				var file_type = info.get_file_type();
+
+				return (file_type == FileType.REGULAR);
+			}
+		}
+		catch (Error e) {
+	        log_error (e.message);
+	    }
+	    
+		return false;
+	}
+
+	public bool file_is_special(string file_path){
+
+		try {
+			var file = File.new_for_path (file_path);
+			
+			if (file.query_exists()) {
+
+				var info = file.query_info("%s".printf(FileAttribute.STANDARD_TYPE), 0); // follow symlinks
+
+				var file_type = info.get_file_type();
+
+				return (file_type != FileType.REGULAR) && (file_type != FileType.DIRECTORY);
+			}
+		}
+		catch (Error e) {
+	        log_error (e.message);
+	    }
+	    
+		return false;
+	}
+
+	public bool file_is_symlink(string file_path){
+
+		try {
+			var file = File.new_for_path (file_path);
+			
+			if (file.query_exists()) {
+
+				var info = file.query_info("%s".printf(FileAttribute.STANDARD_TYPE), FileQueryInfoFlags.NOFOLLOW_SYMLINKS); // don't follow symlinks
+
+				var file_type = info.get_file_type();
+
+				return (file_type == FileType.SYMBOLIC_LINK);
+			}
+		}
+		catch (Error e) {
+	        log_error (e.message);
+	    }
+	    
+		return false;
 	}
 
 	public bool file_delete(string file_path){
@@ -246,12 +318,22 @@ namespace TeeJee.FileSystem{
 		}
 	}
 
-	public bool file_copy (string src_file, string dest_file){
+	public bool file_copy (string src_file, string dest_file, bool follow_symlinks){
+		
 		try{
-			var file_src = File.new_for_path (src_file);
+			var file_src = File.new_for_path(src_file);
+			
 			if (file_src.query_exists()) {
+				
 				var file_dest = File.new_for_path (dest_file);
-				file_src.copy(file_dest,FileCopyFlags.OVERWRITE,null,null);
+
+				var flags = FileCopyFlags.OVERWRITE;
+
+				if (!follow_symlinks){
+					flags = flags | FileCopyFlags.NOFOLLOW_SYMLINKS;
+				}
+				
+				file_src.copy(file_dest, flags, null, null);
 				return true;
 			}
 		}
@@ -263,12 +345,21 @@ namespace TeeJee.FileSystem{
 		return false;
 	}
 
-	public bool file_move (string src_file, string dest_file){
+	public bool file_move (string src_file, string dest_file, bool follow_symlinks){
 		try{
 			var file_src = File.new_for_path (src_file);
+			
 			if (file_src.query_exists()) {
+				
 				var file_dest = File.new_for_path (dest_file);
-				file_src.move(file_dest,FileCopyFlags.OVERWRITE,null,null);
+
+				var flags = FileCopyFlags.OVERWRITE;
+
+				if (!follow_symlinks){
+					flags = flags | FileCopyFlags.NOFOLLOW_SYMLINKS;
+				}
+				
+				file_src.move(file_dest, flags, null, null);
 				return true;
 			}
 			else{
@@ -380,33 +471,12 @@ namespace TeeJee.FileSystem{
 
 	// directory helpers ----------------------
 	
-	public bool dir_exists (string dir_path){
+	public bool dir_exists(string dir_path){
 
-		return ( FileUtils.test(dir_path, GLib.FileTest.EXISTS) && FileUtils.test(dir_path, GLib.FileTest.IS_DIR));
-		
-		/*try{
-			var dir = File.parse_name(dir_path);
-
-			if (dir.query_exists()) {
-
-				var info = dir.query_info("%s".printf(FileAttribute.STANDARD_TYPE), 0); // follows symlinks
-
-				var file_type = info.get_file_type();
-
-				return (file_type == FileType.DIRECTORY);
-			}
-			else{
-				log_debug("!exists: " + dir_path);
-			}
-		}
-		catch (Error e) {
-			log_error (e.message);
-		}
-
-		return false;*/
+		return file_is_dir(dir_path);
 	}
 	
-	public bool dir_create (string dir_path, bool show_message = false){
+	public bool dir_create(string dir_path, bool show_message = false){
 
 		/* Creates a directory along with parents */
 
@@ -427,7 +497,7 @@ namespace TeeJee.FileSystem{
 		}
 	}
 
-	public bool dir_delete (string dir_path, bool show_message = false){
+	public bool dir_delete(string dir_path, bool show_message = false){
 		
 		/* Recursively deletes directory along with contents */
 		
@@ -656,137 +726,6 @@ namespace TeeJee.FileSystem{
 		/* Returns size of files and directories in KB*/
 
 		return (long)(dir_size(path) / 1024.0);
-	}
-
-	// archiving and encryption ----------------
-
-	// dep: tar gzip gpg
-	public bool file_tar_encrypt (string src_file, string dst_file, string password){
-		if (file_exists(src_file)) {
-			if (file_exists(dst_file)){
-				file_delete(dst_file);
-			}
-
-			var src_dir = file_parent(src_file);
-			var src_name = file_basename(src_file);
-
-			var dst_dir = file_parent(dst_file);
-			var dst_name = file_basename(dst_file);
-			var tar_name = dst_name[0 : dst_name.index_of(".gpg")];
-			var tar_file = "%s/%s".printf(dst_dir, tar_name);
-			
-			string cmd = "tar cvf '%s' --overwrite -C '%s' '%s'\n".printf(
-				escape_single_quote(tar_file),
-				escape_single_quote(src_dir),
-				escape_single_quote(src_name));
-				
-			cmd += "gpg --passphrase '%s' -o '%s' --symmetric '%s'\n".printf(
-				password,
-				escape_single_quote(dst_file),
-				escape_single_quote(tar_file));
-				
-			cmd += "rm -f '%s'\n".printf(escape_single_quote(tar_file));
-
-			log_debug(cmd);
-			
-			string stdout, stderr;
-			int status = exec_script_sync(cmd, out stdout, out stderr);
-			if (status == 0){
-				return true;
-			}
-			else{
-				log_msg(stderr);
-			}
-		}
-
-		return false;
-	}
-
-	// dep: tar gzip gpg
-	public string file_decrypt_untar_read (string src_file, string password){
-		
-		if (file_exists(src_file)) {
-			
-			//var src_name = file_basename(src_file);
-			//var tar_name = src_name[0 : src_name.index_of(".gpg")];
-			//var tar_file = "%s/%s".printf(TEMP_DIR, tar_name);
-			//var temp_file = "%s/%s".printf(TEMP_DIR, random_string());
-
-			string cmd = "";
-			
-			cmd += "gpg --quiet --no-verbose --passphrase '%s' -o- --decrypt '%s'".printf(
-				password,
-				escape_single_quote(src_file));
-				
-			cmd += " | tar xf - --to-stdout 2>/dev/null\n";
-			cmd += "exit $?\n";
-			
-			log_debug(cmd);
-			
-			string std_out, std_err;
-			int status = exec_script_sync(cmd, out std_out, out std_err);
-			if (status == 0){
-				return std_out;
-			}
-			else{
-				log_error(std_err);
-				return "";
-			}
-		}
-		else{
-			log_error(_("File is missing") + ": %s".printf(src_file));
-		}
-
-		return "";
-	}
-
-	// dep: tar gzip gpg
-	public bool decrypt_and_untar (string src_file, string dst_file, string password){
-		if (file_exists(src_file)) {
-			if (file_exists(dst_file)){
-				file_delete(dst_file);
-			}
-
-			var src_dir = file_parent(src_file);
-			var src_name = file_basename(src_file);
-			var tar_name = src_name[0 : src_name.index_of(".gpg")];
-			var tar_file = "%s/%s".printf(src_dir, tar_name);
-
-			string cmd = "";
-			
-			// gpg cannot overwrite - remove tar file if it exists
-			cmd += "rm -f '%s'\n".printf(escape_single_quote(tar_file));
-			
-			cmd += "gpg --passphrase '%s' -o '%s' --decrypt '%s'\n".printf(
-				password,
-				escape_single_quote(tar_file),
-				escape_single_quote(src_file));
-				
-			cmd += "status=$?; if [ $status -ne 0 ]; then exit $status; fi\n";
-			
-			cmd += "tar xvf '%s' --overwrite --same-permissions -C '%s'\n".printf(
-				escape_single_quote(tar_file),
-				escape_single_quote(file_parent(dst_file)));
-				
-			cmd += "rm -f '%s'\n".printf(escape_single_quote(tar_file));
-
-			log_debug(cmd);
-			
-			string stdout, stderr;
-			int status = exec_script_sync(cmd, out stdout, out stderr);
-			if (status == 0){
-				return true;
-			}
-			else{
-				log_error(stderr);
-				return false;
-			}
-		}
-		else{
-			log_error(_("File is missing") + ": %s".printf(src_file));
-		}
-
-		return false;
 	}
 
 	// hashing -----------

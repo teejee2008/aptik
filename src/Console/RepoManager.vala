@@ -430,7 +430,8 @@ public class RepoManager : GLib.Object {
 				string backup_name = file_basename(repo.list_file_path).replace(distro.codename, "CODENAME");
 				string backup_file = path_combine(backup_path, backup_name);
 				
-				bool ok = file_copy(repo.list_file_path, backup_file);
+				bool ok = file_copy(repo.list_file_path, backup_file, false);
+				
 				if (!ok){ status = false; continue; }
 				
 				string txt = file_read(backup_file);
@@ -583,7 +584,7 @@ public class RepoManager : GLib.Object {
 		
 		import_missing_keys_debian(false);
 		if (!ok){ status = false; }
-
+		
 		if (status){
 			log_msg(Messages.RESTORE_OK);
 		}
@@ -709,7 +710,8 @@ public class RepoManager : GLib.Object {
 				continue;
 			}
 
-			ok = file_copy(backup_file, list_file);
+			ok = file_copy(backup_file, list_file, false);
+			
 			if (!ok){ status = false; }
 			else{
 				txt = file_read(list_file);
@@ -1017,7 +1019,6 @@ public class RepoManager : GLib.Object {
 
 			if (ok){
 				log_msg(_("Missing apt keys imported successfully"));
-				log_msg(string.nfill(70,'-'));
 			}
 			
 			if (!update_repos_debian(out temp_file)){
@@ -1027,9 +1028,10 @@ public class RepoManager : GLib.Object {
 		else{
 			if (show_message){
 				log_msg(_("No missing apt keys"));
-				log_msg(string.nfill(70,'-'));
 			}
 		}
+
+		log_msg(string.nfill(70,'-'));
 
 		return ok;
 	}

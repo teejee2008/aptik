@@ -418,7 +418,7 @@ public class PackageManager : GLib.Object {
 		foreach(string line in file_read(DEF_PKG_LIST_UNPACKED).split("\n")){
 
 			if (line.strip().length == 0) { continue; }
-			if (line.index_of(": ") == -1) { continue; }
+			if (line.index_of(":") == -1) { continue; }
 
 			//Note: split on ': ' since version string can have colons
 			
@@ -431,7 +431,7 @@ public class PackageManager : GLib.Object {
 					string name = p_value;
 					string arch = "";
 					bool is_foreign = false;
-			
+					
 					if (name.contains(":")) {
 						arch = name.split(":",2)[1].strip();
 						name = name.split(":",2)[0].strip();
@@ -477,18 +477,69 @@ public class PackageManager : GLib.Object {
 
 	// list --------------------------
 
-	public void list_packages(){
+	public void dump_info(){
 
 		string txt = "";
+		
 		foreach(var pkg in packages_sorted){
+			
 			if (!pkg.is_installed){ continue; }
-			txt += "NAME='%s',DESC='%s'".printf(pkg.name, pkg.description);
+			
+			txt += "NAME='%s',ARCH='%s',DESC='%s'".printf(pkg.name, pkg.arch, pkg.description);
+			txt += ",I='%s'".printf(pkg.is_installed ? "1" : "0");
 			txt += ",D='%s'".printf(pkg.is_dist ? "1" : "0");
 			txt += ",A='%s'".printf(pkg.is_auto ? "1" : "0");
 			txt += ",U='%s'".printf((pkg.is_user || (!pkg.is_dist && !pkg.is_auto)) ? "1" : "0");
 			txt += ",F='%s'".printf(pkg.is_foreign ? "1" : "0");
+			txt += ",M='%s'".printf(pkg.is_manual ? "1" : "0");
 			txt += "\n";
 		}
+		
+		log_msg(txt);
+	}
+
+	public void dump_info_backup(string basepath){
+
+		string backup_path = path_combine(basepath, "packages");
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+			log_error(msg);
+			return;
+		}
+
+		string backup_file = path_combine(backup_path, "selected.list");
+
+		if (!file_exists(backup_file)) {
+			string msg = "%s: %s".printf(Messages.FILE_MISSING, backup_file);
+			log_error(msg);
+			return;
+		}
+		
+		string txt = "";
+		
+		foreach(string line in file_read(backup_file).split("\n")) {
+
+			if (line.strip().length == 0) { continue; }
+
+			if (line.strip().has_prefix("#")) { continue; }
+			
+			string name = line.split("#",2)[0].strip();
+			string desc = line.split("#",2)[1].strip();
+			bool is_available = false;
+			bool is_installed = false;
+			
+			if (packages.has_key(name)){
+				is_available = true;
+				is_installed = packages[name].is_installed;
+			}
+
+			txt += "NAME='%s',DESC='%s'".printf(name, desc);
+			txt += ",A='%s'".printf(is_available ? "1" : "0");
+			txt += ",I='%s'".printf(is_installed ? "1" : "0");
+			txt += "\n";
+		}
+		
 		log_msg(txt);
 	}
 	
@@ -723,7 +774,7 @@ public class PackageManager : GLib.Object {
 
 		string backup_file = path_combine(backup_path, "installed.list");
 
-		string text = "\n# DO NOT EDIT - This list is not used for restore\n\n";
+		string txt = "\n# Do not edit - This list is not used for restore\n\n";
 
 		int count = 0;
 		
@@ -731,11 +782,18 @@ public class PackageManager : GLib.Object {
 			
 			if (!pkg.is_installed){ continue; }
 			
-			text += "%s #%s\n".printf(pkg.name, pkg.description);
+			txt += "%s".printf(pkg.name);
+			
+			if (pkg.description.length > 0){
+				txt += " # %s".printf(pkg.description);
+			}
+
+			txt += "\n";
+			
 			count++;
 		}
 
-		bool ok = file_write(backup_file, text);
+		bool ok = file_write(backup_file, txt);
 
 		if (ok){
 			chmod(backup_file, "a+rw");
@@ -829,7 +887,7 @@ public class PackageManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_PACKAGES));
 		log_msg(string.nfill(70,'-'));
 
-		check_packages();
+		//check_packages();
 		
 		string backup_path = path_combine(basepath, "packages");
 		

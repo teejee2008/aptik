@@ -51,3 +51,6 @@ uninstall:
 
 	#binary
 	rm -f "$(DESTDIR)$(bindir)/aptik"
+
+	#polkit policy file
+	rm -f ./share/polkit-1/actions/in.teejeetech.pkexec.aptik.policy "$(DESTDIR)$(polkitdir)"

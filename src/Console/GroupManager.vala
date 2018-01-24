@@ -61,13 +61,8 @@ public class GroupManager : GLib.Object {
 		
 		string txt = "";
 		
-		if (group_file.has_suffix(".tar.gpg")){
-			txt = file_decrypt_untar_read(group_file, password);
-		}
-		else{
-			txt = file_read(group_file);
-		}
-		
+		txt = file_read(group_file);
+
 		if (txt.length == 0){
 			log_error("%s: %s".printf(_("Failed to read file"), group_file));
 			return;
@@ -86,13 +81,8 @@ public class GroupManager : GLib.Object {
 
 		txt = "";
 		
-		if (gshadow_file.has_suffix(".tar.gpg")){
-			txt = file_decrypt_untar_read(gshadow_file, password);
-		}
-		else{
-			txt = file_read(gshadow_file);
-		}
-		
+		txt = file_read(gshadow_file);
+
 		if (txt.length == 0){ return; }
 		
 		foreach(string line in txt.split("\n")){

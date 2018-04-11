@@ -1,4 +1,4 @@
-Source: aptik-ng
+Source: aptik-next
 Section: utils
 Priority: extra
 Maintainer: Tony George <tony.george.kol@gmail.com>
@@ -8,7 +8,7 @@ Homepage: http://teejeetech.blogspot.in/
 #Vcs-Git: 
 #Vcs-Browser:
 
-Package: aptik-ng
+Package: aptik-next
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, apt, aptitude, gdebi, apt-transport-https, pv
 #Recommends:

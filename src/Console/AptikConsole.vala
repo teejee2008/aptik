@@ -30,9 +30,9 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public const string AppName = "Aptik NG";
+public const string AppName = "Aptik Next";
 public const string AppShortName = "aptik";
-public const string AppVersion = "17.10";
+public const string AppVersion = "18.4";
 public const string AppAuthor = "Tony George";
 public const string AppAuthorEmail = "teejeetech@gmail.com";
 

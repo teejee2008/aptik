@@ -358,7 +358,7 @@ public class CronTaskManager : GLib.Object {
 		else{
 			foreach(string username in userlist.split(",")){
 				foreach(var user in mgr.users_sorted){
-					if (user.name == username){
+					if (user.name == username){   
 						users.add(user);
 						break;
 					}

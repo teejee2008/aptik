@@ -167,46 +167,27 @@ public class DconfManager : GLib.Object {
 			return false;
 		}
 
-		string cmd = "";
+		string temp_dir = user.home_path + "/.config/aptik";
+		string temp_file = temp_dir + "/dconf.settings";
 
-		cmd += "su -s /bin/bash -c \"dconf reset -f / \" %s".printf(user.name);
+		dir_create(temp_dir);
+		chown(temp_dir, user.name, user.name);
+		
+		file_copy(backup_file, temp_file, false);
+		chown(temp_file, user.name, user.name);
 
-		cmd += " ; ";
+		var startup = new StartupEntry(user.name, "aptik", "restore-dconf", 10);
 		
-		cmd += "su -s /bin/bash -c \"dconf load / < '%s'\" %s".printf(escape_single_quote(backup_file), user.name);
+		string cmd = "#!/bin/bash\n";
+		cmd += "dconf reset -f /\n";
+		cmd += "dconf load / < '%s'\n".printf(escape_single_quote(temp_file));
+		cmd += "rm -vf '%s'\n".printf(escape_single_quote(startup.STARTUP_DESKTOP_FILE));
+		
+		startup.create(cmd, true);
+		
+		log_msg("%s: (%s) %s".printf(_("Restored"), user.name, _("Created autostart script for next user login")));
 
-		//cmd += "pkexec --user %s dconf \"load / < '%s'\"".printf(user.name, escape_single_quote(backup_file));
-		
-		//if (user.name == get_username()){
-		//	cmd = "dconf load / < '%s'".printf(escape_single_quote(backup_file));
-		//}
-
-		//cmd += "dconf reset -f /";
-		//cmd += " ; ";
-		//cmd += "dconf load / < '%s'".printf(escape_single_quote(backup_file));
-		
-		//string sh = save_bash_script_temp(cmd);
-
-		//cmd = "pkexec --user %s env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY '%s'".printf(user.name, escape_single_quote(sh));
-
-		int status = 0;
-		
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
-		
-		if (status == 0){
-			log_msg("%s: (%s) %s".printf(_("Restored"), user.name, backup_file));
-		}
-		else{
-			log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file));
-		}
-		
-		return (status == 0);
+		return  true;
 	}
 
 	public Gee.ArrayList<User> get_users(string userlist){

@@ -296,7 +296,8 @@ public class MountEntryManager : GLib.Object {
 			
 			string backup_file = path_combine(backup_path, "%s %s.fstab".printf(entry.device.replace("/","╱"), entry.mount_point.replace("/","╱")));
 			bool ok = file_write(backup_file, entry.get_line());
-
+			chmod(backup_file, "a+rw");
+			
 			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
 			else{ status = false; }
 		}
@@ -305,7 +306,8 @@ public class MountEntryManager : GLib.Object {
 			
 			string backup_file = path_combine(backup_path, "%s %s.crypttab".printf(entry.name.replace("/","╱"), entry.device.replace("/","╱")));
 			bool ok = file_write(backup_file, entry.get_line());
-
+			chmod(backup_file, "a+rw");
+			
 			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
 			else{ status = false; }
 		}

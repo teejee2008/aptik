@@ -121,7 +121,8 @@ public class UserHomeDataManager : GLib.Object {
 				file_delete(exclude_list);
 			}
 			file_write(exclude_list, exclude_list_create(user, exclude_hidden, true));
-
+			chmod(exclude_list, "a+rw");
+			
 			// create script ---------------------------
 
 			string tar_file = path_combine(backup_path_user, "data.tar.gz");
@@ -167,6 +168,7 @@ public class UserHomeDataManager : GLib.Object {
 			}
 			else{
 				file_move(temp_file, tar_file, false);
+				chmod(tar_file, "a+rw");
 				log_msg("Created: %s".printf(tar_file));
 			}
 

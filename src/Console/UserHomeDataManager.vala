@@ -40,7 +40,8 @@ public class UserHomeDataManager : GLib.Object {
 
 		string backup_path = path_combine(basepath, "home");
 		dir_create(backup_path);
-
+		chmod(backup_path, "a+rwx");
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_HOME));
 		log_msg(string.nfill(70,'-'));
@@ -113,7 +114,8 @@ public class UserHomeDataManager : GLib.Object {
 			var backup_path_user = path_combine(backup_path, user.name);
 			dir_delete(backup_path_user); // removes duplicity backups if any
 			dir_create(backup_path_user);
-
+			chmod(backup_path_user, "a+rwx");
+			
 			// save exclude list -----------------------
 			
 			var exclude_list = path_combine(backup_path_user, "exclude.list");
@@ -351,14 +353,17 @@ public class UserHomeDataManager : GLib.Object {
 		HomeDataBackupMode mode = HomeDataBackupMode.TAR;
 		
 		var list = dir_list_names(backup_path, true);
+		
 		foreach(string backup_path_user in list){
+			
 			string tar_file = path_combine(backup_path_user, "data.tar.gz");
+			
 			if (file_exists(tar_file)){
 				mode = HomeDataBackupMode.TAR;
 				break;
 			}
 			else {
-				mode = HomeDataBackupMode.DUPLICITY;
+				//mode = HomeDataBackupMode.DUPLICITY;
 				break;
 			}
 		}
@@ -423,7 +428,7 @@ public class UserHomeDataManager : GLib.Object {
 
 			if (!file_exists(tar_file_user)){
 				log_error("%s: %s".printf(Messages.FILE_MISSING, tar_file_user));
-				log_error(_("No backup found for this user"));
+				log_error(_("No backup found"));
 				log_msg(string.nfill(70,'-'));
 				continue;
 			}

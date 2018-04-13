@@ -289,7 +289,8 @@ public class MountEntryManager : GLib.Object {
 		
 		string backup_path = path_combine(basepath, "mounts");
 		dir_create(backup_path);
-
+		chmod(backup_path, "a+rwx");
+		
 		bool status = true;
 
 		foreach(var entry in fstab){

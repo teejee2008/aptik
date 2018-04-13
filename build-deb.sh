@@ -1,5 +1,9 @@
 #!/bin/bash
 
+for prog in pbuilder-dist make dpkg-source ; do
+	if sh -c "which $prog 2> /dev/null"; then true ; else echo "You don\'t have $prog, install it" ; exit ; fi
+done
+
 backup=`pwd`
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 cd $DIR
@@ -40,8 +44,22 @@ echo "--------------------------------------------------------------------------
 
 }
 
-build_deb_for_dist xenial i386
-build_deb_for_dist xenial amd64
+arches=""
+if [ -z $1 ]; then
+	arches="i386 amd64"
+else
+	arches="$1"
+fi
+
+for arch in $arches
+do
+
+build_deb_for_dist xenial $arch
+
+done
+
+#build_deb_for_dist xenial i386
+#build_deb_for_dist xenial amd64
 #build_deb_for_dist stretch armel
 #build_deb_for_dist stretch armhf
 

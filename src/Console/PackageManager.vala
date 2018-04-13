@@ -1082,7 +1082,7 @@ public class PackageManager : GLib.Object {
 		return status;
 	}
 
-	private bool install_packages_apt(string basepath, string list_install, bool no_prompt){
+	private bool install_packages_apt(string basepath, string list_install, bool no_prompt, bool try_resolve = true){
 		
 		if (list_install.length == 0){ return true; }
 
@@ -1097,7 +1097,7 @@ public class PackageManager : GLib.Object {
 		}
 
 		cmd += " install %s".printf(list_install);
-		
+
 		int status = 0;
 		
 		if (dry_run){
@@ -1105,7 +1105,50 @@ public class PackageManager : GLib.Object {
 		}
 		else{
 			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
+			
+			status = Posix.system(cmd + " ; echo $? > status");
+
+			if (file_exists("status")){
+				status = int.parse(file_read("status"));
+			}
+		}
+
+		if ((status != 0) && try_resolve){
+
+			Posix.system(cmd + " > output");
+
+			string txt = file_read("output");
+			
+			log_msg(string.nfill(70,'-'));
+			log_msg("%s\n".printf("Attempting to resolve issue..."));
+
+			string list = list_install;
+			
+			foreach(string line in txt.split("\n")){
+				
+				var match = regex_match("""^ ([a-zA-Z0-9-+._]+) : """, line);
+				
+				if (match != null){
+
+					string pkg = match.fetch(1);
+					
+					if (list.contains(" " + pkg + " ")){
+						list = list.replace(" " + pkg + " ", " ");
+					}
+					else if (list.has_prefix(pkg + " ")){
+						list = list.replace(pkg + " ", "");
+					}
+					else if (list.has_suffix(" " + pkg)){
+						list = list.replace(" " + pkg, "");
+					}
+						
+					log_msg("%s: %s".printf(_("Unselected"), pkg));
+				}
+			}
+
+			if (list.strip().length != list_install.strip().length){
+				return install_packages_apt(basepath, list, no_prompt, false);
+			}
 		}
 
 		return (status == 0);
@@ -1116,6 +1159,7 @@ public class PackageManager : GLib.Object {
 		log_debug("install_packages_deb()");
 
 		string backup_path = path_combine(basepath, "debs");
+		
 		if (!dir_exists(backup_path)){ return true; }
 		
 		// check count ---------------------
@@ -1230,5 +1274,28 @@ public class PackageManager : GLib.Object {
 		});
 
 		return list;
+	}
+
+	public static void install_package(string pkgnames_deb, string pkgnames_arch, string pkgnames_fedora){
+
+		var dist = new LinuxDistro();
+
+		string cmd = "";
+		
+		switch (dist.dist_type){
+		case "fedora":
+			cmd = "dnf -y install %s".printf(pkgnames_fedora);
+			break;
+		case "arch":
+			cmd = "pacman --noconfirm -S %s".printf(pkgnames_arch);
+			break;
+		case "debian":
+			cmd = "apt-get -y install %s".printf(pkgnames_deb);
+			break;
+		}
+
+		if (cmd.length > 0){
+			Posix.system(cmd);
+		}
 	}
 }

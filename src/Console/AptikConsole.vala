@@ -72,9 +72,15 @@ public class AptikConsole : GLib.Object {
 		
 		set_locale();
 
+		//handle_signals();
+
 		LOG_TIMESTAMP = false;
 
 		init_tmp(AppShortName);
+
+		if (!cmd_exists("pv")){
+			PackageManager.install_package("pv","pv","pv");
+		}
 
 		check_dependencies();
 
@@ -683,7 +689,7 @@ public class AptikConsole : GLib.Object {
 	public bool backup_all(){
 
 		bool status = true;
-		
+
 		bool ok = backup_repos();
 		if (!ok) { status = false; }
 		
@@ -1292,7 +1298,8 @@ public class AptikConsole : GLib.Object {
 		check_admin_access();
 		
 		dir_create(basepath);
-
+		chmod(basepath, "a+rwx");
+		
 		copy_binary();
 
 		bool status = true;
@@ -1467,6 +1474,15 @@ public class AptikConsole : GLib.Object {
 			
 		log_debug(cmd);
 		Posix.system(cmd);
+	}
+
+	// input ----------
+
+	public static void handle_signals(){
+		
+		//Unix.signal_add(Posix.Signal.HUP,  () => { log_msg("Received interrupt signal"); exit(0); return false; });
+        //Unix.signal_add(Posix.Signal.INT,  () => { log_msg("Received interrupt signal"); exit(0); return false; });
+        //Unix.signal_add(Posix.Signal.TERM, () => { log_msg("Received interrupt signal"); exit(0); return false; });
 	}
 }
 

@@ -78,12 +78,13 @@ public class AptikConsole : GLib.Object {
 
 		init_tmp(AppShortName);
 
+		string pkg = "pv";
 		if (!cmd_exists("pv")){
-			PackageManager.install_package("pv","pv","pv");
+			PackageManager.install_package(pkg, pkg, pkg);
 		}
 
 		check_dependencies();
-
+		
 		var console =  new AptikConsole();
 		bool is_success = console.parse_arguments(args);
 		return (is_success) ? 0 : 1;
@@ -149,7 +150,7 @@ public class AptikConsole : GLib.Object {
 
 		string fmt = "  %-30s %s\n";
 
-		string fmt2 = " %s -----------------------------------\n\n"; //▰▰▰ ◈
+		string fmt2 = "%s -----------------------------------\n\n"; //▰▰▰ ◈
 		
 		string msg = "\n" + AppName + " v" + AppVersion + " by %s (%s)".printf(AppAuthor, AppAuthorEmail) + "\n\n";
 
@@ -225,7 +226,7 @@ public class AptikConsole : GLib.Object {
 		
 		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
-		msg += fmt.printf("", _("default: all users"));
+		msg += fmt.printf("", _("(default: all users)"));
 		msg += "\n";
 		//msg += fmt.printf("--duplicity", _("Use duplicity for backup instead of TAR"));
 		//msg += fmt.printf("", _("default: TAR"));
@@ -237,7 +238,7 @@ public class AptikConsole : GLib.Object {
 		//msg += fmt.printf("", _("default: incremental if backup exists, else full"));
 		//msg += "\n";
 		msg += fmt.printf("--exclude-hidden", _("Exclude hidden files and directories (app configs)"));
-		msg += fmt.printf("", _("default: include"));
+		msg += fmt.printf("", _("(default: include)"));
 		msg += "\n";
 		
 		msg += fmt2.printf(Messages.TASK_MOUNTS);
@@ -282,7 +283,7 @@ public class AptikConsole : GLib.Object {
 		
 		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
-		msg += fmt.printf("", _("default: all users"));
+		msg += fmt.printf("", _("(default: all users)"));
 		msg += "\n";
 		
 		msg += fmt2.printf(Messages.TASK_CRON);
@@ -295,7 +296,7 @@ public class AptikConsole : GLib.Object {
 		
 		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
-		msg += fmt.printf("", _("default: all users"));
+		msg += fmt.printf("", _("(default: all users)"));
 		msg += "\n";
 		
 		msg += fmt2.printf(_("All Items"));
@@ -497,6 +498,7 @@ public class AptikConsole : GLib.Object {
 			
 		case "--restore-repos":
 			//distro.print_system_info();
+			check_network_connection(); // check once before starting
 			return restore_repos();
 			
 		case "--import-missing-keys":
@@ -532,6 +534,7 @@ public class AptikConsole : GLib.Object {
 			
 		case "--restore-packages":
 			//distro.print_system_info();
+			check_network_connection(); // check once before starting
 			return restore_packages();
 							
 		// package cache -------------------------------------
@@ -734,6 +737,8 @@ public class AptikConsole : GLib.Object {
 		bool status = true;
 
 		// keeps steps independant; allow remaining steps to run if one step fails
+
+		check_network_connection(); // check once before starting
 
 		bool ok = restore_repos();
 		if (!ok) { status = false; }
@@ -1072,7 +1077,7 @@ public class AptikConsole : GLib.Object {
 		
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.REPOS)) { return false; }
-		
+
 		var mgr = new RepoManager(distro, dry_run);
 		return mgr.restore_repos(basepath);
 	}
@@ -1474,6 +1479,17 @@ public class AptikConsole : GLib.Object {
 			
 		log_debug(cmd);
 		Posix.system(cmd);
+	}
+
+	public void check_network_connection(){
+
+		bool connected = check_internet_connectivity();
+
+		if (!connected){
+			log_error(_("Internet connection not active"));
+			log_error(_("Internet is required for restoring repositories and packages"));
+			exit(2);
+		}
 	}
 
 	// input ----------

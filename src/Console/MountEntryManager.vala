@@ -499,6 +499,13 @@ public class MountEntryManager : GLib.Object {
 			entry.print_line();
 		}
 
+		string pkg = "crypsetup";
+		if (!cmd_exists("crypsetup")){
+			log_msg(string.nfill(70,'-'));
+			log_msg("%s\n".printf("Installing cryptsetup..."));
+			PackageManager.install_package(pkg, pkg, pkg);
+		}
+
 		return ok;
 	}
 }

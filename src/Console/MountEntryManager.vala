@@ -288,22 +288,54 @@ public class MountEntryManager : GLib.Object {
 
 		fstab.sort((a,b)=>{ return strcmp(a.mount_point, b.mount_point); });
 		
-		foreach(var entry in fstab){
+		string txt = "# <file system> <mount point> <type> <options> <dump> <pass>\n\n";
+
+		var tmplist = new Gee.ArrayList<Gee.ArrayList<string>>();
+
+		foreach(var ent in fstab){
 			
-			entry.print_line();
+			var lent = new Gee.ArrayList<string>();
+			tmplist.add(lent);
+			
+			lent.add(ent.device);
+			lent.add(ent.mount_point);
+			lent.add(ent.fs_type);
+			lent.add(ent.options);
+			lent.add(ent.dump);
+			lent.add(ent.pass);
 		}
 
+		txt += format_columns(tmplist);
+
+		log_msg(txt);
+
 		log_msg(string.nfill(70,'-'));
+
+		// -------------------------------------------------------
 
 		log_msg("/etc/crypttab :\n");
 
 		crypttab.sort((a,b)=>{ return strcmp(a.name, b.name); });
 
-		foreach(var entry in crypttab){
+		txt = "# <target name> <source device> <key file> <options>\n\n";
+
+		tmplist = new Gee.ArrayList<Gee.ArrayList<string>>();
+
+		foreach(var ent in crypttab){
 			
-			entry.print_line();
+			var lent = new Gee.ArrayList<string>();
+			tmplist.add(lent);
+
+			lent.add(ent.name);
+			lent.add(ent.device);
+			lent.add(ent.password);
+			lent.add(ent.options);
 		}
 
+		txt += format_columns(tmplist);
+
+		log_msg(txt);
+		
 		log_msg(string.nfill(70,'-'));
 	}
 
@@ -366,17 +398,17 @@ public class MountEntryManager : GLib.Object {
 
 		bool status = true, ok;
 
-		query_mount_entries();
+		this.query_mount_entries();
 
 		var mgr = new MountEntryManager(dry_run);
 		mgr.read_mount_entries_from_folder(backup_path);
 
-		ok = restore_mount_entries_fstab(mgr.fstab);
+		ok = this.restore_mount_entries_fstab(mgr.fstab);
 		if (!ok){ status = false; }
 
 		log_msg(string.nfill(70,'-'));
 		
-		ok = restore_mount_entries_crypttab(mgr.crypttab);
+		ok = this.restore_mount_entries_crypttab(mgr.crypttab);
 		if (!ok){ status = false; }
 		
 		return status;
@@ -395,14 +427,22 @@ public class MountEntryManager : GLib.Object {
 			list.add(entry); // keep existing entry
 
 			FsTabEntry? dup = null;
+			
 			foreach(var item in fstab_bkup){
 				if (item.mount_point == entry.mount_point){
 					dup = item;
 					break;
 				}
 			}
+			
 			if (dup != null){
+				
 				fstab_bkup.remove(dup);
+
+				// keep mount options if file system type matches
+				if (entry.fs_type == dup.fs_type){
+					entry.options = dup.options;
+				}
 			}
 		}
 
@@ -419,6 +459,10 @@ public class MountEntryManager : GLib.Object {
 			}
 
 			if (entry.mount_point == "/home"){
+				continue; // do not add if not already existing
+			}
+
+			if (entry.mount_point == "/"){
 				continue; // do not add if not already existing
 			}
 

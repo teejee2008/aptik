@@ -63,6 +63,21 @@ public class AptikConsole : GLib.Object {
 	public bool exclude_icons = false;
 	public bool exclude_themes = false;
 	public bool exclude_fonts = false;
+
+	public bool skip_repos = false;
+	public bool skip_cache = false;
+	public bool skip_packages = false;
+	public bool skip_fonts = false;
+	public bool skip_themes = false;
+	public bool skip_icons = false;
+	public bool skip_users = false;
+	public bool skip_groups = false;
+	public bool skip_home = false;
+	public bool skip_mounts = false;
+	public bool skip_dconf = false;
+	public bool skip_cron = false;
+
+	public bool redist = false;
 	
 	public HomeDataBackupMode home_mode = HomeDataBackupMode.TAR;
 
@@ -190,10 +205,10 @@ public class AptikConsole : GLib.Object {
 		msg += "\n";
 		
 		msg += "%s (--backup-packages):\n".printf(_("Options"));
-		msg += fmt.printf("--include-foreign", _("Include non-native packages (excluded by default)"));
-		msg += fmt.printf("--exclude-icons", _("Exclude icon-theme packages (included by default)"));
-		msg += fmt.printf("--exclude-themes", _("Exclude theme packages (included by default)"));
-		msg += fmt.printf("--exclude-fonts", _("Exclude font packages (included by default)"));
+		msg += fmt.printf("--include-pkg-foreign", _("Include non-native packages (excluded by default)"));
+		msg += fmt.printf("--exclude-pkg-icons", _("Exclude icon-theme packages (included by default)"));
+		msg += fmt.printf("--exclude-pkg-themes", _("Exclude theme packages (included by default)"));
+		msg += fmt.printf("--exclude-pkg-fonts", _("Exclude font packages (included by default)"));
 		msg += "\n";
 
 		msg += "%s: %s, %s,\n%s\n\n".printf(_("Supports"), "apt (Debian & Derivatives)", "pacman (Arch & Derivatives)", "dnf/yum (Fedora & Derivatives)");
@@ -307,6 +322,26 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--remove-all", _("Remove all items from backup"));
 		msg += fmt.printf("--sysinfo", _("Show system information"));
 		msg += "\n";
+
+		msg += "%s:\n".printf(_("Options"));
+		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
+		msg += fmt.printf("", _("(default: all users)"));
+		msg += fmt.printf("--skip-repos", _("Skip item: repos"));
+		msg += fmt.printf("--skip-cache", _("Skip item: cache"));
+		msg += fmt.printf("--skip-packages", _("Skip item: packages"));
+		msg += fmt.printf("--skip-fonts", _("Skip item: fonts"));
+		msg += fmt.printf("--skip-themes", _("Skip item: themes"));
+		msg += fmt.printf("--skip-icons", _("Skip item: icons"));
+		msg += fmt.printf("--skip-users", _("Skip item: users"));
+		msg += fmt.printf("--skip-groups", _("Skip item: groups"));
+		msg += fmt.printf("--skip-home", _("Skip item: home"));
+		msg += fmt.printf("--skip-mounts", _("Skip item: mounts"));
+		msg += fmt.printf("--skip-dconf", _("Skip item: dconf"));
+		msg += fmt.printf("--skip-cron", _("Skip item: cron"));
+		msg += "\n";
+
+		msg += "%s\n".printf(_("Note: Options for individual items listed in previous sections can also be used"));
+		msg += "\n";
 		
 		msg += fmt2.printf(("Common Options"));
 		
@@ -357,22 +392,70 @@ public class AptikConsole : GLib.Object {
 				exclude_hidden = true;
 				break;
 
-			case "--include-foreign":
+			case "--include-pkg-foreign":
 				include_foreign = true;
 				break;
 
-			case "--exclude-icons":
+			case "--exclude-pkg-icons":
 				exclude_icons = true;
 				break;
 
-			case "--exclude-themes":
+			case "--exclude-pkg-themes":
 				exclude_themes = true;
 				break;
 
-			case "--exclude-fonts":
+			case "--exclude-pkg-fonts":
 				exclude_fonts = true;
 				break;
-				
+
+			case "--skip-repos":
+				skip_repos = true;
+				break;
+
+			case "--skip-cache":
+				skip_cache = true;
+				break;
+
+			case "--skip-packages":
+				skip_packages = true;
+				break;
+
+			case "--skip-fonts":
+				skip_fonts = true;
+				break;
+
+			case "--skip-themes":
+				skip_themes = true;
+				break;
+
+			case "--skip-icons":
+				skip_icons = true;
+				break;
+
+			case "--skip-users":
+				skip_users = true;
+				break;
+
+			case "--skip-groups":
+				skip_groups = true;
+				break;
+
+			case "--skip-mounts":
+				skip_mounts = true;
+				break;
+
+			case "--skip-home":
+				skip_home = true;
+				break;
+
+			case "--skip-dconf":
+				skip_dconf = true;
+				break;
+
+			case "--skip-cron":
+				skip_cron = true;
+				break;
+
 			case "--duplicity":
 				home_mode = HomeDataBackupMode.DUPLICITY;
 				break;
@@ -391,6 +474,10 @@ public class AptikConsole : GLib.Object {
 
 			case "--robot":
 				robot = true;
+				break;
+
+			case "--redist":
+				redist = true;
 				break;
 
 			case "--list-repos":
@@ -693,41 +780,67 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 
-		bool ok = backup_repos();
-		if (!ok) { status = false; }
+		bool ok = true;
 		
-		ok = backup_cache();
-		if (!ok) { status = false; }
+		if (!skip_repos){
+			ok = backup_repos();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_packages();
-		if (!ok) { status = false; }
+		if (!skip_cache){
+			ok = backup_cache();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_users();
-		if (!ok) { status = false; }
+		if (!skip_packages){
+			ok = backup_packages();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_groups();
-		if (!ok) { status = false; }
+		if (!skip_users){
+			ok = backup_users();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_home();
-		if (!ok) { status = false; }
+		if (!skip_groups){
+			ok = backup_groups();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_mount_entries();
-		if (!ok) { status = false; }
+		if (!skip_home){
+			ok = backup_home();
+			if (!ok) { status = false; }
+		}
+		
+		if (!skip_mounts){
+			ok = backup_mount_entries();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_icons();
-		if (!ok) { status = false; }
+		if (!skip_icons){
+			ok = backup_icons();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_themes();
-		if (!ok) { status = false; }
+		if (!skip_themes){
+			ok = backup_themes();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_fonts();
-		if (!ok) { status = false; }
+		if (!skip_fonts){
+			ok = backup_fonts();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_dconf_settings();
-		if (!ok) { status = false; }
+		if (!skip_dconf){
+			ok = backup_dconf_settings();
+			if (!ok) { status = false; }
+		}
 
-		ok = backup_cron_tasks();
-		if (!ok) { status = false; }
+		if (!skip_cron){
+			ok = backup_cron_tasks();
+			if (!ok) { status = false; }
+		}
 
 		return status;
 	}
@@ -736,45 +849,71 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 
+		bool ok = true;
+
 		// keeps steps independant; allow remaining steps to run if one step fails
 
 		check_network_connection(); // check once before starting
-
-		bool ok = restore_repos();
-		if (!ok) { status = false; }
 		
-		ok = restore_cache();
-		if (!ok) { status = false; }
+		if (!skip_repos){
+			ok = restore_repos();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_packages();
-		if (!ok) { status = false; }
+		if (!skip_cache){
+			ok = restore_cache();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_users();
-		if (!ok) { status = false; }
+		if (!skip_packages){
+			ok = restore_packages();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_groups();
-		if (!ok) { status = false; }
+		if (!skip_users){
+			ok = restore_users();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_home();
-		if (!ok) { status = false; }
+		if (!skip_groups){
+			ok = restore_groups();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_mount_entries();
-		if (!ok) { status = false; }
+		if (!skip_home){
+			ok = restore_home();
+			if (!ok) { status = false; }
+		}
+		
+		if (!skip_mounts){
+			ok = restore_mount_entries();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_icons();
-		if (!ok) { status = false; }
+		if (!skip_icons){
+			ok = restore_icons();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_themes();
-		if (!ok) { status = false; }
+		if (!skip_themes){
+			ok = restore_themes();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_fonts();
-		if (!ok) { status = false; }
+		if (!skip_fonts){
+			ok = restore_fonts();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_dconf_settings();
-		if (!ok) { status = false; }
+		if (!skip_dconf){
+			ok = restore_dconf_settings();
+			if (!ok) { status = false; }
+		}
 
-		ok = restore_cron_tasks();
-		if (!ok) { status = false; }
+		if (!skip_cron){
+			ok = restore_cron_tasks();
+			if (!ok) { status = false; }
+		}
 
 		return status;
 	}

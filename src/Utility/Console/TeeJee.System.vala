@@ -283,20 +283,23 @@ namespace TeeJee.System{
 	// internet helpers ----------------------
 	
 	public bool check_internet_connectivity(){
-		bool connected = false;
-		connected = check_internet_connectivity_test1();
 
-		if (connected){
-			return connected;
-		}
-		
-		if (!connected){
-			connected = check_internet_connectivity_test2();
-		}
-
-	    return connected;
+	    return check_internet_connectivity_wget_google();
 	}
 
+	public bool check_internet_connectivity_wget_google(){
+		
+		int exit_code = -1;
+		string std_err;
+		string std_out;
+
+		string cmd = "wget -q --tries=10 --timeout=10 --spider http://google.com\n";
+		cmd += "; exit $?";
+		exit_code = exec_script_sync(cmd, out std_out, out std_err, false);
+
+	    return (exit_code == 0);
+	}
+	
 	public bool check_internet_connectivity_test1(){
 		int exit_code = -1;
 		string std_err;

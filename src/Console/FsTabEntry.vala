@@ -43,5 +43,14 @@ public class FsTabEntry : GLib.Object {
 	public void print_line(){
 		log_msg("%-45s %-40s %-10s %-45s %2s %2s".printf(device,mount_point,fs_type,options,dump,pass));
 	}
+
+	public string subvolume_name(){
+		if (options.contains("subvol=")){
+			return options.split("subvol=")[1].split(",")[0].strip();
+		}
+		else{
+			return "";
+		}
+	}
 }
 

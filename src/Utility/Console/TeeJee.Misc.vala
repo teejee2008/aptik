@@ -346,4 +346,75 @@ namespace TeeJee.Misc {
 			return list;
 		}
 	}
+
+	public string format_columns(Gee.ArrayList<Gee.ArrayList<string>> items){
+
+		string s = "";
+
+		var sizes = new Gee.ArrayList<int>();
+
+		foreach(var col in items[0]){
+			sizes.add(0);
+		}
+
+		foreach(var row_item in items){
+
+			int index = 0;
+			
+			foreach(var col_item in row_item){
+
+				if (col_item.length > sizes[index]){
+					sizes[index] = col_item.length;
+				}
+				
+				index++;
+			}
+		}
+
+		foreach(var row_item in items){
+
+			int index = 0;
+			string line = "";
+			
+			foreach(var col_item in row_item){
+
+				string fmt = "%-" + sizes[index].to_string() + "s\t";
+				
+				line += fmt.printf(col_item);
+				
+				index++;
+			}
+
+			s += "%s\n".printf(line.strip());
+		}
+
+		/*
+		
+		// test
+		 
+		var m = new MountEntryManager(false);
+		m.read_fstab_file();
+		
+		var list = new Gee.ArrayList<Gee.ArrayList<string>>();
+
+		foreach(var ent in m.fstab){
+
+			var lent = new Gee.ArrayList<string>();
+
+			lent.add(ent.device);
+			lent.add(ent.mount_point);
+			lent.add(ent.fs_type);
+			lent.add(ent.options);
+			lent.add(ent.dump);
+			lent.add(ent.pass);
+			
+			list.add(lent);
+		}
+
+		string s = format_columns(list);
+		log_msg(s);
+		*/
+
+		return s;
+	}
 }

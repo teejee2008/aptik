@@ -200,14 +200,28 @@ public class MountEntryManager : GLib.Object {
 
 		bool found_root = false;
 		
-		foreach(var entry in list){
+		var tmplist = new Gee.ArrayList<Gee.ArrayList<string>>();
+
+		foreach(var ent in list){
 			
-			txt += "%s\n".printf(entry.get_line());
+			var lent = new Gee.ArrayList<string>();
+			tmplist.add(lent);
 			
-			if (entry.mount_point == "/"){
+			lent.add(ent.device);
+			lent.add(ent.mount_point);
+			lent.add(ent.fs_type);
+			lent.add(ent.options);
+			lent.add(ent.dump);
+			lent.add(ent.pass);
+
+			if (ent.mount_point == "/"){
 				found_root = true;
 			}
 		}
+
+		txt += format_columns(tmplist);
+
+		// ------------------------------------------------------
 
 		if (found_root){
 
@@ -235,10 +249,22 @@ public class MountEntryManager : GLib.Object {
 		
 		string txt = "# <target name> <source device> <key file> <options>\n\n";
 
-		foreach(var entry in list){
+		var tmplist = new Gee.ArrayList<Gee.ArrayList<string>>();
+
+		foreach(var ent in list){
 			
-			txt += "%s\n".printf(entry.get_line());
+			var lent = new Gee.ArrayList<string>();
+			tmplist.add(lent);
+
+			lent.add(ent.name);
+			lent.add(ent.device);
+			lent.add(ent.password);
+			lent.add(ent.options);
 		}
+
+		txt += format_columns(tmplist);
+
+		// ------------------------------------------------------
 		
 		var t = Time.local (time_t ());
 

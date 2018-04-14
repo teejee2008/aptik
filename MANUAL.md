@@ -304,7 +304,7 @@ Following actions are executed for backup:
 
 1. For each user, the contents of home directory are archived using TAR + GZIP and saved to file  `<basepath>/home/<username>/data.tar.gz`. Full backup is created every time a backup is taken.
 
-2. Backups can be created for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user names without space.
+2. Backups can be created for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user logins without space.
 
 3. Some directories are excluded by default to save space and avoid issues after restore.
 
@@ -323,7 +323,7 @@ Following actions are executed for backup:
    ~/.kde/share/cache/http
    ```
 
-4. Hidden files and folders in home directories can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings.
+4. Hidden files and folders in home directories can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings. Its recommended to keep these files and folders since they contain configuration changes that users have made to different applications.
 
 #### Restore
 
@@ -337,7 +337,9 @@ Following actions are executed for restore:
 
 ### DConf Settings
 
-dconf database stores application settings for users. Aptik can backup and restore any changes that were made to the default settings. The binary database file for dconf `~/.config/dconf/user` will be excluded while taking backup of user's home directories.
+dconf database stores application settings for users. Aptik can backup and restore any changes that were made to default settings. The changes are applied over default settings on the new system.
+
+Note: The dconf database is present as a single file `~/.config/dconf/user` in each users' home directory. This file will be excluded when taking backup of user's home directories.
 
 #### Backup
 
@@ -351,9 +353,23 @@ Following actions are executed for backup:
 
 Usage: `aptik --restore-dconf`
 
+Dconf settings can be restored only when users are logged-in. The restore operation will copy backup files to each user's home directory and create an autostart entry to restore settings on first user login.
+
 Following actions are executed for restore:
 
-1. For each user, dconf settings are imported from backup file `<basepath>/dconf/<username>/dconf.settings`
+1. Backup file `<basepath>/dconf/<username>/dconf.settings` will be copied to the user's home directory -  `$HOME/.config/aptik/dconf.settings`
+
+2. A script is created which will restore the settings from backup file when executed:
+
+    `$HOME/.config/aptik/restore-dconf.sh`
+
+3. An autostart entry is created at path `$HOME/.config/autostart/aptik_restore-dconf.desktop` which will launch the script after user login.
+
+4. The script will restore the dconf settings and delete the autostart entry when it executes on the first user login.
+
+
+
+Note: We are migrating only those settings that were changed by user on previous system. It will be applied over the default settings on new system.
 
 ### Scheduled Tasks (Cron Jobs)
 
@@ -395,10 +411,11 @@ Usage: `aptik --restore-mounts`
 Following actions are executed for restore:
 
 1. Backups are created for  `/etc/fstab` and `/etc/crypttab` by moving existing files to  `/etc/fstab.bkup.<timestamp>` and `/etc/crypttab.bkup.<timestamp>`
-2. *Existing entries* in `/etc/fstab` and `/etc/crypttab` will remain *unchanged*.
-3. *New entries* in backup folder are *added* to `/etc/fstab` and `/etc/crypttab` .  New entries are determined by comparing mount point path.
-4. New entries for system mount points - `/`,  `/boot`, `/boot/efi` and  `/home` - will **not** be added to `/etc/fstab` and `/etc/crypttab` . Existing entries (if any) will remain unchanged.
-5. All entries are sorted on mount point field before the fstab file is written to disk. This ensures that base mount paths are populated before mounting subdirectories.
-6. New entries added to `/etc/crypttab` will have `nofail` appended to options if not already present. This allows the system to boot successfully even if device is missing at boot time.
-7. It's recommended to review changes before rebooting the system. Run `sudo aptik --list-mounts` to view updated entries after restore completes.
+2. fstab file has following fields - `<file_system> <mount_point> <fstype> <options> <dump> <pass>`. Fields `<file_system> <mount_point> <fstype> <dump> <pass>` will remain unchanged for existing entries in `/etc/fstab`.
+3. If a backup entry exists for same `<mount_point>` and same `<fstype>` field, then field `<options>` will be replaced from backup entry.
+4. *New entries* in backup folder are *added* to `/etc/fstab` and `/etc/crypttab` .  New entries are determined by comparing field `<mount_point>`
+5. New entries for system mount points - `/`,  `/boot`, `/boot/efi` and  `/home` - will **not** be added to `/etc/fstab` since these are system specific, and not applicable to the new system where restore is being executed. Existing entries if any will remain unchanged.
+6. All entries are sorted on mount point field before the fstab file is written to disk. This ensures that base mount paths are populated before mounting subdirectories.
+7. New entries added to `/etc/crypttab` will have `nofail` appended to `<options>` if not already present. This allows the system to boot successfully even if device is missing at boot time.
+8. It's recommended to **review changes** before rebooting the system. Run `sudo aptik --list-mounts` to view updated entries after restore completes. Replace the backup files in case of any issues - `/etc/fstab.bkup.<timestamp>` and `/etc/crypttab.bkup.<timestamp>`.
 

@@ -2,7 +2,7 @@
 /*
  * TeeJee.ProcessHelper.vala
  *
- * Copyright 2017 Tony George <teejeetech@gmail.com>
+ * Copyright 2012-18 Tony George <teejeetech@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,6 +82,9 @@ namespace TeeJee.ProcessHelper{
 		 * Commands are written to a temporary bash script and executed.
 		 * std_out, std_err can be null. Output will be written to terminal if null.
 		 * */
+
+		std_out = "";
+		std_err = "";
 
 		string sh_file = save_bash_script_temp(script, null, true, supress_errors, run_as_admin);
 
@@ -206,9 +209,8 @@ namespace TeeJee.ProcessHelper{
 
 		// write file
 		file_write(sh_path, sh);
-		
 		// set execute permission
-		chmod (sh_path, "a+x");
+		chmod (sh_path, "u+x");
 
 		if (admin_mode){
 			
@@ -227,7 +229,7 @@ namespace TeeJee.ProcessHelper{
 			file_write(sh_path_admin, sh);
 			
 			// set execute permission
-			chmod(sh_path_admin, "a+x");
+			chmod (sh_path_admin, "u+x");
 			
 			return sh_path_admin;
 		}
@@ -432,17 +434,114 @@ namespace TeeJee.ProcessHelper{
 		string[] arr;
 
 		foreach (string line in std_out.split ("\n")){
+			
 			arr = line.strip().split (" ");
 			if (arr.length < 1) { continue; }
 
 			pid = 0;
-			pid = int.parse (arr[0]);
+			pid = int.parse(arr[0]);
 
 			if (pid != 0){
 				procList += pid;
+
+				var children = get_process_children(pid);
+				foreach(var child_pid in children){
+					procList += child_pid;
+				}
 			}
 		}
+		
 		return procList;
+	}
+
+	public class Proc{
+		
+		public int pid = -1;
+		public int ppid = -1;
+		public string user = "";
+		public double cpu = 0.0;
+		public double mem = 0.0;
+		public int64 rss = 0;
+		public string cmdline = "";
+
+		public Proc(){ }
+
+		public static Proc[] list_processes(){
+
+			string cmd = "ps -ewo pid,ppid,user,%cpu,%mem,rss,cmd";
+
+			//log_debug(cmd);
+			
+			string std_out, std_err;
+			exec_sync(cmd, out std_out, out std_err);
+
+			Proc[] procList = {};
+
+			/*
+			USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+			teejee   22053  0.0  0.0 180184  5668 pts/19   Ss   20:47   0:00 /usr/bin/fish
+			*/
+
+			//log_debug(std_out);
+
+			foreach(string line in std_out.split("\n")){
+				
+				var match = regex_match("""([0-9]+)[ \t]+([0-9]+)[ \t]+([^ \t]+)[ \t]+([^ \t]+)[ \t]+([^ \t]+)[ \t]+([^ \t]+)[ \t]+(.+)""", line);
+				
+				if (match != null){
+
+					//log_debug("match.fetch_all().length: %d".printf(match.fetch_all().length));
+					
+					if (match.fetch_all().length != 8){ continue; }
+
+					var proc = new Proc();
+					proc.pid = int.parse(match.fetch(1));
+					proc.ppid = int.parse(match.fetch(2));
+					proc.user = match.fetch(3);
+					proc.cpu = double.parse(match.fetch(4));
+					proc.mem = double.parse(match.fetch(5));
+					proc.rss = int64.parse(match.fetch(6));
+					proc.cmdline = match.fetch(7);
+
+					if (proc.pid > 0){						
+						procList += proc;
+					}
+				}
+				else{
+					//log_debug("match is null");
+				}
+			}
+
+			//log_debug("procList.size: %d".printf(procList.length));
+			
+			return procList;
+		}
+
+		public static Proc[] enumerate_descendants(Pid parent_pid, Proc[]? process_list){
+			
+			Proc[]? procs = process_list;
+
+			if (procs == null){
+				procs = list_processes();
+			}
+
+			Proc[] descendants = {};
+
+			foreach(var proc in procs){
+				
+				if (proc.ppid == parent_pid){
+					
+					descendants += proc;
+
+					var procs2 = enumerate_descendants(proc.pid, procs);
+					foreach(var child in procs2){
+						descendants += proc;
+					}
+				}
+			}
+	
+			return descendants;
+		}
 	}
 
 	// manage process ---------------------------------
@@ -453,14 +552,20 @@ namespace TeeJee.ProcessHelper{
 		 * Sends signal SIGTERM to the process to allow it to quit gracefully.
 		 * */
 
-		int[] child_pids = get_process_children (process_pid);
-		Posix.kill (process_pid, Posix.SIGTERM);
+		if (process_pid < 1){ return; }
 
+		int[] child_pids = get_process_children(process_pid);
+		Posix.kill(process_pid, Posix.SIGTERM);
+		log_debug("SIGTERM: pid=%d".printf(process_pid));
+		
 		if (killChildren){
 			Pid childPid;
 			foreach (long pid in child_pids){
 				childPid = (Pid) pid;
-				Posix.kill (childPid, Posix.SIGTERM);
+				if (childPid > 1){
+					Posix.kill(childPid, Posix.SIGTERM);
+					log_debug("SIGTERM: pid=%d".printf(childPid));
+				}
 			}
 		}
 	}
@@ -471,15 +576,21 @@ namespace TeeJee.ProcessHelper{
 		 * Sends signal SIGKILL to the process to kill it forcefully.
 		 * It is recommended to use the function process_quit() instead.
 		 * */
+
+		if (process_pid < 1){ return; }
 		
 		int[] child_pids = get_process_children (process_pid);
 		Posix.kill (process_pid, Posix.SIGKILL);
-
+		log_debug("SIGKILL: pid=%d".printf(process_pid));
+		
 		if (killChildren){
 			Pid childPid;
 			foreach (long pid in child_pids){
 				childPid = (Pid) pid;
-				Posix.kill (childPid, Posix.SIGKILL);
+				if (childPid > 1){
+					Posix.kill (childPid, Posix.SIGKILL);
+					log_debug("SIGKILL: pid=%d".printf(childPid));
+				}
 			}
 		}
 	}

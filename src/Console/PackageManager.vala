@@ -47,6 +47,8 @@ public class PackageManager : GLib.Object {
 	public bool list_only = false;
 	public string basepath = "";
 
+	public Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	
 	public PackageManager(LinuxDistro _distro, bool _dry_run){
 
 		distro = _distro;
@@ -723,6 +725,47 @@ public class PackageManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 		log_msg(txt);
 	}
+
+	public string init_backup_path(){
+		
+		string backup_path = path_combine(basepath, "packages");
+		
+		if (dir_exists(backup_path)){
+
+			var files = dir_list_names(backup_path, true);
+
+			foreach(var file in files){
+				
+				if (file_basename(file) != "exclude.list"){
+					
+					file_delete(file);
+				}
+			}
+		}
+		else{
+			dir_create(backup_path);
+			chmod(backup_path, "a+rwx");
+		}
+
+		return backup_path;
+	}
+
+	public void read_exclude_file(){
+
+		string backup_path = path_combine(basepath, "packages");
+		
+		string exclude_list_file = path_combine(backup_path, "exclude.list");
+
+		exclude_list.clear();
+		
+		if (file_exists(exclude_list_file)){
+			
+			foreach(string line in file_read(exclude_list_file).split("\n")){
+				
+				exclude_list.add(line.strip());
+			}
+		}
+	}
 	
 	// save --------------------------
 	
@@ -736,7 +779,9 @@ public class PackageManager : GLib.Object {
 		
 		bool ok, status = true;
 
-		string backup_path = create_backup_path(basepath);
+		string backup_path = init_backup_path();
+
+		read_exclude_file();
 
 		ok = save_package_list_installed(backup_path);
 		if (!ok){ status = false; }
@@ -821,6 +866,8 @@ public class PackageManager : GLib.Object {
 
 			if (!pkg.is_installed){ continue; }
 
+			if (exclude_list.contains(pkg.name)){ continue; }
+
 			if (auto_installed_known && pkg.is_auto){ continue; }
 
 			if (dist_installed_known && pkg.is_dist){ continue; }
@@ -874,14 +921,6 @@ public class PackageManager : GLib.Object {
 		return ok;
 	}
 
-	public string create_backup_path(string basepath){
-		
-		string backup_path = path_combine(basepath, "packages");
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
-		return backup_path;
-	}
-	
 	// restore ---------------------
 
 	public bool restore_packages(string _basepath, bool no_prompt){
@@ -901,6 +940,8 @@ public class PackageManager : GLib.Object {
 			log_error(msg);
 			return false;
 		}
+
+		read_exclude_file();
 		
 		string backup_file = path_combine(backup_path, "selected.list");
 
@@ -952,6 +993,8 @@ public class PackageManager : GLib.Object {
 				name = line.split("#",2)[0].strip();
 				desc = line.split("#",2)[1].strip();
 			}
+
+			if (exclude_list.contains(name)){ continue; }
 			
 			if (packages.has_key(name)){
 				if (!packages[name].is_installed){

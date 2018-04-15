@@ -37,6 +37,7 @@ public class RepoManager : GLib.Object {
 	public LinuxDistro distro;
 	public bool dry_run = false;
 	public string basepath = "";
+	public Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
 
 	public RepoManager(LinuxDistro _distro, bool _dry_run){
 
@@ -314,6 +315,12 @@ public class RepoManager : GLib.Object {
 			string name = file_basename(file_path);
 			string desc = "";
 
+			if (name == "CODENAME"){ continue; }
+
+			if (name == "apt.keys"){ continue; }
+
+			if (name == "exclude.list"){ continue; }
+
 			if (name == "launchpad-ppas.list"){
 
 				foreach(var line in ftext.split("\n")){
@@ -334,6 +341,9 @@ public class RepoManager : GLib.Object {
 				}
 			}
 			else {
+
+				name = name.replace(".list","");
+				
 				foreach(var line in ftext.split("\n")){
 					if (line.strip().has_prefix("# aptik-desc:")){
 						desc = line.split("# aptik-desc:")[1].strip();
@@ -390,6 +400,47 @@ public class RepoManager : GLib.Object {
 		return true;
 	}
 
+	public string init_backup_path(){
+		
+		string backup_path = path_combine(basepath, "repos");
+		
+		if (dir_exists(backup_path)){
+
+			var files = dir_list_names(backup_path, true);
+
+			foreach(var file in files){
+				
+				if (file_basename(file) != "exclude.list"){
+					
+					file_delete(file);
+				}
+			}
+		}
+		else{
+			dir_create(backup_path);
+			chmod(backup_path, "a+rwx");
+		}
+
+		return backup_path;
+	}
+
+	public void read_exclude_file(){
+
+		string backup_path = path_combine(basepath, "repos");
+		
+		string exclude_list_file = path_combine(backup_path, "exclude.list");
+
+		exclude_list.clear();
+		
+		if (file_exists(exclude_list_file)){
+
+			foreach(string line in file_read(exclude_list_file).split("\n")){
+				
+				exclude_list.add(line.strip());
+			}
+		}
+	}
+	
 	// save ---------------------------------------
 
 	public bool save_repos(string _basepath){
@@ -400,11 +451,10 @@ public class RepoManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_path = path_combine(basepath, "repos");
-		dir_delete(backup_path); // remove existing .list files
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+		string backup_path = init_backup_path();
 
+		read_exclude_file();
+		
 		switch(distro.dist_type){
 		case "fedora":
 			return save_repos_fedora(backup_path);
@@ -413,6 +463,9 @@ public class RepoManager : GLib.Object {
 		case "debian":
 			return save_repos_debian(backup_path);
 		}
+
+		string backup_file = path_combine(backup_path, "CODENAME");
+		file_write(backup_file, distro.codename);
 
 		log_msg(_("Nothing to save"));
 
@@ -434,6 +487,8 @@ public class RepoManager : GLib.Object {
 		foreach(var repo in repos_sorted){
 	
 			if (repo.is_installed && (repo.name.length > 0)){
+
+				if (exclude_list.contains(repo.name)){ continue; }
 				
 				string backup_file = path_combine(backup_path, "%s.repo".printf(repo.name));
 				
@@ -489,6 +544,8 @@ public class RepoManager : GLib.Object {
 		string text = "\n# Comment-out or remove lines for unwanted items\n\n";
 
 		foreach(var repo in repos_sorted){
+
+			if (exclude_list.contains(repo.name)){ continue; }
 	
 			if (repo.is_installed && (repo.type == "lp")){
 				
@@ -517,10 +574,12 @@ public class RepoManager : GLib.Object {
 		bool status = true;
 		
 		foreach(var repo in repos_sorted){
+
+			if (exclude_list.contains(repo.name)){ continue; }
 			
 			if (repo.is_installed && (repo.type == "") && (repo.list_file_path.length > 0)){
 
-				string backup_name = file_basename(repo.list_file_path).replace(distro.codename, "CODENAME");
+				string backup_name = file_basename(repo.list_file_path);
 				string backup_file = path_combine(backup_path, backup_name);
 				
 				bool ok = file_copy(repo.list_file_path, backup_file, false);
@@ -528,7 +587,6 @@ public class RepoManager : GLib.Object {
 				if (!ok){ status = false; continue; }
 				
 				string txt = file_read(backup_file);
-				txt = txt.replace(distro.codename, "CODENAME");
 
 				txt += "\n# aptik-desc: %s\n".printf(repo.description);
 				
@@ -539,10 +597,6 @@ public class RepoManager : GLib.Object {
 				log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/")));
 			}
 		}
-
-		string backup_file = path_combine(backup_path, "CODENAME");
-		bool ok = file_write(backup_file, distro.codename);
-		if (!ok){ status = false; }
 
 		return status;
 	}
@@ -566,6 +620,8 @@ public class RepoManager : GLib.Object {
 			log_error(msg);
 			return false;
 		}
+
+		read_exclude_file();
 
 		switch(distro.dist_type){
 		case "fedora":
@@ -612,9 +668,13 @@ public class RepoManager : GLib.Object {
 
 			if (file_name == "installed.list"){ continue; } // ignore debian file
 
+			if (file_name == "exclude.list"){ continue; } // ignore exclude file
+
 			if (!file_name.has_suffix(".repo")){ continue; }
 
 			string name = file_name.replace(".repo","");
+
+			if (exclude_list.contains(name)){ continue; }
 
 			if (name == "options"){ continue; }
 			
@@ -729,8 +789,11 @@ public class RepoManager : GLib.Object {
 			if (line.strip().has_prefix("#")) { continue; }
 
 			string name = line.split("#",2)[0].strip();
+
+			if (exclude_list.contains(name)){ continue; }
 			
 			if (name.length == 0){ continue; }
+			
 			if (repos.has_key(name)){ continue; }
 
 			added_list.add(name);
@@ -770,7 +833,7 @@ public class RepoManager : GLib.Object {
 		foreach(string backup_file in list){
 
 			string name = file_basename(backup_file);
-			
+
 			if (name == "sources.list"){ continue; }
 
 			if (name == "launchpad-ppas.list"){ continue; }
@@ -779,12 +842,14 @@ public class RepoManager : GLib.Object {
 
 			name = name.replace(".list","");
 
+			if (exclude_list.contains(name)){ continue; }
+
 			string txt = file_read(backup_file);
 
-			if (name.contains("CODENAME") || txt.contains("CODENAME")){
+			if (name.contains(codename) || txt.contains(codename)){
 				if ((distro.codename.length == 0) || (codename != distro.codename)){
-					log_msg("%s: %s\n".printf(_("Repo"), name.replace("CODENAME", codename))); 
-					log_error("%s: %s".printf(_("Skipping File"), backup_file.replace("CODENAME", codename)));
+					log_msg("%s: %s\n".printf(_("Repo"), name)); 
+					log_error("%s: %s".printf(_("Skipping File"), backup_file));
 					log_error(_("This repo is meant for another OS release and cannot be added to this system"));
 					log_error("Release-Repo: %s, Release-Current: %s".printf(codename, distro.codename));
 					log_msg(string.nfill(70,'-'));
@@ -792,13 +857,11 @@ public class RepoManager : GLib.Object {
 				}
 			}
 
-			name = name.replace("CODENAME", distro.codename);
-			
 			if (repos.has_key(name)){ continue; }
 
-			log_msg("%s: %s\n".printf(_("Repo"), name.replace("CODENAME", distro.codename))); 
+			log_msg("%s: %s\n".printf(_("Repo"), name)); 
 
-			string list_name = file_basename(backup_file).replace("CODENAME", distro.codename);
+			string list_name = file_basename(backup_file);
 			string list_file = path_combine("/etc/apt/sources.list.d", list_name);
 
 			if (dry_run){
@@ -813,7 +876,6 @@ public class RepoManager : GLib.Object {
 			if (!ok){ status = false; }
 			else{
 				txt = file_read(list_file);
-				txt = txt.replace("CODENAME", distro.codename);
 				ok = file_write(list_file, txt);
 				if (!ok){ status = false; }
 				else{

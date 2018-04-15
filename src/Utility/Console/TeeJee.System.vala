@@ -293,8 +293,8 @@ namespace TeeJee.System{
 		string std_err;
 		string std_out;
 
-		string cmd = "wget -q --tries=10 --timeout=10 --spider http://google.com\n";
-		cmd += "; exit $?";
+		string cmd = "wget -q --tries=10 --timeout=10 --spider http://google.com";
+		cmd += " ; exit $?";
 		exit_code = exec_script_sync(cmd, out std_out, out std_err, false);
 
 	    return (exit_code == 0);

@@ -36,6 +36,7 @@ public class RepoManager : GLib.Object {
 
 	public LinuxDistro distro;
 	public bool dry_run = false;
+	public string basepath = "";
 
 	public RepoManager(LinuxDistro _distro, bool _dry_run){
 
@@ -275,6 +276,96 @@ public class RepoManager : GLib.Object {
 
 	// list ---------------------------------------
 
+	public void dump_info(){
+
+		string txt = "";
+		
+		foreach(var repo in repos_sorted){
+			
+			if (!repo.is_installed){ continue; }
+			
+			txt += "NAME='%s',DESC='%s'".printf(repo.name, repo.description);
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
+	public void dump_info_backup(string basepath){
+
+		string backup_path = path_combine(basepath, "repos");
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+			log_error(msg);
+			return;
+		}
+
+		string txt = "";
+
+		var list = dir_list_names(backup_path, true);
+		
+		foreach(string file_path in list) {
+
+			string ftext = file_read(file_path);
+			
+			if (ftext.strip().length == 0) { continue; }
+
+			string name = file_basename(file_path);
+			string desc = "";
+
+			if (name == "launchpad-ppas.list"){
+
+				foreach(var line in ftext.split("\n")){
+
+					if (line.strip().length == 0){ continue; }
+
+					if (line.strip().has_prefix("#")){ continue; }
+					
+					if (line.contains("#")){
+						name = line.split("#")[0].strip();
+						desc = line.split("#")[1].strip();
+					}
+					else{
+						name = line.strip();
+					}
+
+					txt += get_dump_line(name, desc);
+				}
+			}
+			else {
+				foreach(var line in ftext.split("\n")){
+					if (line.strip().has_prefix("# aptik-desc:")){
+						desc = line.split("# aptik-desc:")[1].strip();
+					}
+				}
+			}
+
+			txt += get_dump_line(name, desc);
+		}
+		
+		log_msg(txt);
+	}
+
+	private string get_dump_line(string name, string desc){
+
+		string txt = "";
+		
+		bool is_available = false;
+		bool is_installed = false;
+		
+		if (repos.has_key(name)){
+			is_available = true;
+			is_installed = repos[name].is_installed;
+		}
+
+		txt += "NAME='%s',DESC='%s'".printf(name, desc);
+		txt += ",I='%s'".printf(is_installed ? "1" : "0");
+		txt += "\n";
+
+		return txt;
+	}
+	
 	public bool list_repos(){
 
 		repos_sorted.foreach((repo) => {
@@ -301,8 +392,10 @@ public class RepoManager : GLib.Object {
 
 	// save ---------------------------------------
 
-	public bool save_repos(string basepath){
+	public bool save_repos(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
@@ -413,7 +506,7 @@ public class RepoManager : GLib.Object {
 
 		if (ok){
 			chmod(backup_file, "a+rw");
-			log_msg("%s: %s".printf(_("Saved"), backup_file));
+			log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/")));
 		}
 
 		return ok;
@@ -436,11 +529,14 @@ public class RepoManager : GLib.Object {
 				
 				string txt = file_read(backup_file);
 				txt = txt.replace(distro.codename, "CODENAME");
+
+				txt += "\n# aptik-desc: %s\n".printf(repo.description);
+				
 				ok = file_write(backup_file, txt);
 				if (!ok){ status = false; continue; }
 
 				chmod(backup_file, "a+rw");
-				log_msg("%s: %s".printf(_("Saved"), backup_file));
+				log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/")));
 			}
 		}
 
@@ -453,8 +549,10 @@ public class RepoManager : GLib.Object {
 
 	// restore ---------------------------
 
-	public bool restore_repos(string basepath){
+	public bool restore_repos(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));

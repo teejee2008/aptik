@@ -480,6 +480,8 @@ public class AptikConsole : GLib.Object {
 				redist = true;
 				break;
 
+			case "--dump-repos":
+			case "--dump-repos-backup":
 			case "--list-repos":
 			case "--backup-repos":
 			case "--restore-repos":
@@ -575,21 +577,30 @@ public class AptikConsole : GLib.Object {
 		switch (command) {
 
 		// repos --------------------------------------------
-		
+
+		case "--dump-repos":
+			return dump_repos();
+
+		case "--dump-repos-backup":
+			return dump_repos_backup();
+			
 		case "--list-repos":
 			return list_repos();
 
 		case "--backup-repos":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_repos();
 			
 		case "--restore-repos":
 			//distro.print_system_info();
 			check_network_connection(); // check once before starting
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_repos();
 			
 		case "--import-missing-keys":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return import_missing_keys();
 
 		// package ---------------------------------------
@@ -617,11 +628,13 @@ public class AptikConsole : GLib.Object {
 
 		case "--backup-packages":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_packages();
 			
 		case "--restore-packages":
 			//distro.print_system_info();
 			check_network_connection(); // check once before starting
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_packages();
 							
 		// package cache -------------------------------------
@@ -629,16 +642,19 @@ public class AptikConsole : GLib.Object {
 		case "--backup-cache":
 		case "--backup-pkg-cache":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_cache();
 			
 		case "--restore-cache":
 		case "--restore-pkg-cache":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_cache();
 
 		case "--clear-cache":
 		case "--clear-pkg-cache":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return clear_cache();
 
 		// fonts -------------------------------------
@@ -648,10 +664,12 @@ public class AptikConsole : GLib.Object {
 			
 		case "--backup-fonts":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_fonts();
 			
 		case "--restore-fonts":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_fonts();
 						
 		// themes ---------------------------------------------
@@ -662,10 +680,12 @@ public class AptikConsole : GLib.Object {
 
 		case "--backup-themes":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_themes();
 			
 		case "--restore-themes":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_themes();
 
 		// icons ---------------------------------------------
@@ -676,10 +696,12 @@ public class AptikConsole : GLib.Object {
 
 		case "--backup-icons":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_icons();
 			
 		case "--restore-icons":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_icons();
 
 		// users -------------------------------------------
@@ -691,9 +713,11 @@ public class AptikConsole : GLib.Object {
 			return list_users(true);
 
 		case "--backup-users":
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_users();
 
 		case "--restore-users":
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_users();
 
 		// groups -------------------------------------------
@@ -705,9 +729,11 @@ public class AptikConsole : GLib.Object {
 			return list_groups(true);
 
 		case "--backup-groups":
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_groups();
 
 		case "--restore-groups":
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_groups();
 
 		// home -------------------------------------
@@ -716,9 +742,11 @@ public class AptikConsole : GLib.Object {
 			return backup_home();
 
 		case "--restore-home":
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_home();
 
 		case "--fix-ownership":
+			log_msg("basepath='%s'".printf(basepath));
 			return fix_home_ownership();
 
 		// mounts -------------------------------------------
@@ -727,9 +755,11 @@ public class AptikConsole : GLib.Object {
 			return list_mount_entries();
 
 		case "--backup-mounts":
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_mount_entries();
 
 		case "--restore-mounts":
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_mount_entries();
 
 		// dconf settings -------------------------------------------
@@ -738,9 +768,11 @@ public class AptikConsole : GLib.Object {
 			return list_dconf_settings();
 
 		case "--backup-dconf":
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_dconf_settings();
 
 		case "--restore-dconf":
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_dconf_settings();
 
 		// cron tasks -------------------------------------------
@@ -749,23 +781,28 @@ public class AptikConsole : GLib.Object {
 			return list_cron_tasks();
 
 		case "--backup-cron":
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_cron_tasks();
 
 		case "--restore-cron":
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_cron_tasks();
 
 		// all ---------------------------------------------
 
 		case "--backup-all":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return backup_all();
 
 		case "--restore-all":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return restore_all();
 
 		case "--remove-all":
 			//distro.print_system_info();
+			log_msg("basepath='%s'".printf(basepath));
 			return remove_all();
 
 		case "--sysinfo":
@@ -1190,6 +1227,24 @@ public class AptikConsole : GLib.Object {
 
 	// repos --------------------------
 
+	public bool dump_repos(){
+		
+		//check_admin_access();
+		
+		var mgr = new RepoManager(distro, dry_run);
+		mgr.dump_info();
+		return true;
+	}
+
+	public bool dump_repos_backup(){
+		
+		//check_admin_access();
+		
+		var mgr = new RepoManager(distro, dry_run);
+		mgr.dump_info_backup(basepath);
+		return true;
+	}
+	
 	public bool list_repos(){
 
 		check_admin_access();

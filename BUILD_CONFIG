@@ -1,6 +1,6 @@
 
-app_fullname="Aptik Next"
+app_fullname="Aptik"
 app_name="aptik"
-pkg_name="aptik-next"
+pkg_name="aptik"
 pkg_version=$(dpkg-parsechangelog --show-field Version)
 git_origin=""

@@ -1,9 +1,11 @@
-## Aptik NG - User Manual
+## Aptik - User Manual
 
 ```
+Aptik v18.4 by Tony George (teejeetech@gmail.com)
+
 Usage: aptik <command> [options]
 
-▰▰▰ Software Repositories ▰▰▰
+Software Repositories -----------------------------------
 
 Commands:
   --list-repos                   List software repositories
@@ -14,7 +16,7 @@ Commands:
 Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives),
 dnf/yum (Fedora & Derivatives)
 
-▰▰▰ Downloaded Packages ▰▰▰
+Downloaded Packages -----------------------------------
 
 Commands:
   --backup-cache                 Copy downloaded packages from system cache
@@ -23,21 +25,27 @@ Commands:
 
 Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives)
 
-▰▰▰ Installed Software ▰▰▰
+Installed Software -----------------------------------
 
 Commands:
-  --list-installed               List installed packages
-  --list-available               List available packages
-  --list-foreign                 List non-native packages
-  --list-extra                   List extra packages installed by user
-  --list-{default|dist|base}     List default packages for linux distribution
+  --list-installed               List all installed packages
+  --list-installed-dist          List base packages installed by Linux distribution
+  --list-installed-user          List packages installed by user
+  --list-installed-auto          List packages auto-installed to satisfy dependencies
+  --list-installed-foreign       List installed non-native packages
   --backup-packages              Save list of installed packages
   --restore-packages             Install missing packages from backup
+
+Options (--backup-packages):
+  --include-pkg-foreign          Include non-native packages (excluded by default)
+  --exclude-pkg-icons            Exclude icon-theme packages (included by default)
+  --exclude-pkg-themes           Exclude theme packages (included by default)
+  --exclude-pkg-fonts            Exclude font packages (included by default)
 
 Supports: apt (Debian & Derivatives), pacman (Arch & Derivatives),
 dnf/yum (Fedora & Derivatives)
 
-▰▰▰ User Accounts ▰▰▰
+User Accounts -----------------------------------
 
 Commands:
   --list-users                   List users
@@ -45,7 +53,7 @@ Commands:
   --backup-users                 Backup users
   --restore-users                Restore users from backup
 
-▰▰▰ Groups ▰▰▰
+User Groups -----------------------------------
 
 Commands:
   --list-groups                  List groups
@@ -53,7 +61,7 @@ Commands:
   --backup-groups                Backup groups
   --restore-groups               Restore groups from backup
 
-▰▰▰ Home Directory Data ▰▰▰
+Home Directory Data -----------------------------------
 
 Commands:
   --backup-home                  Backup data in users' home directories
@@ -62,28 +70,40 @@ Commands:
 
 Options:
   --users <usr1,usr2,..>         Users to backup and restore
-                                 default: all users
-
-  --duplicity                    Use duplicity for backup instead of TAR
-                                 default: TAR
-
-  --password <string>            Password for encryption/decryption with duplicity
-                                 default: 'aptik'
-
-  --full                         Do full backup with duplicity
-                                 default: incremental if backup exists, else full
+                                 (default: all users)
 
   --exclude-hidden               Exclude hidden files and directories (app configs)
-                                 default: include
+                                 (default: include)
 
-▰▰▰ Mount Entries ▰▰▰
+Mount Entries -----------------------------------
 
 Commands:
   --list-mounts                  List /etc/fstab and /etc/crypttab entries
   --backup-mounts                Backup /etc/fstab and /etc/crypttab entries
   --restore-mounts               Restore /etc/fstab and /etc/crypttab entries from backup
 
-▰▰▰ Dconf Settings ▰▰▰
+Icons -----------------------------------
+
+Commands:
+  --list-icons                   List installed icon themes
+  --backup-icons                 Backup installed icon themes
+  --restore-icons                Restore missing icon themes from backup
+
+Themes -----------------------------------
+
+Commands:
+  --list-themes                  List installed themes
+  --backup-themes                Backup installed themes
+  --restore-themes               Restore missing themes from backup
+
+Fonts -----------------------------------
+
+Commands:
+  --list-fonts                   List installed fonts
+  --backup-fonts                 Backup installed fonts
+  --restore-fonts                Restore missing fonts from backup
+
+Dconf Settings -----------------------------------
 
 Commands:
   --list-dconf                   List dconf settings changed by user
@@ -92,9 +112,9 @@ Commands:
 
 Options:
   --users <usr1,usr2,..>         Users to backup and restore
-                                 default: all users
+                                 (default: all users)
 
-▰▰▰ Scheduled Tasks ▰▰▰
+Scheduled Tasks -----------------------------------
 
 Commands:
   --list-cron                    List cron tasks
@@ -103,23 +123,40 @@ Commands:
 
 Options:
   --users <usr1,usr2,..>         Users to backup and restore
-                                 default: all users
+                                 (default: all users)
 
-▰▰▰ All Items ▰▰▰
+All Items -----------------------------------
 
 Commands:
   --backup-all                   Backup all items
   --restore-all                  Restore all items from backup
   --remove-all                   Remove all items from backup
-
-▰▰▰ Common ▰▰▰
+  --sysinfo                      Show system information
 
 Options:
+  --users <usr1,usr2,..>         Users to backup and restore
+                                 (default: all users)
+  --skip-repos                   Skip item: repos
+  --skip-cache                   Skip item: cache
+  --skip-packages                Skip item: packages
+  --skip-fonts                   Skip item: fonts
+  --skip-themes                  Skip item: themes
+  --skip-icons                   Skip item: icons
+  --skip-users                   Skip item: users
+  --skip-groups                  Skip item: groups
+  --skip-home                    Skip item: home
+  --skip-mounts                  Skip item: mounts
+  --skip-dconf                   Skip item: dconf
+  --skip-cron                    Skip item: cron
+
+Note: Options for individual items listed in previous sections can also be used
+
+Common Options -----------------------------------
+
   --basepath <dir>               Backup directory (default: current directory)
   --scripted                     Run in non-interactive mode
   --dry-run                      Simulate actions for --restore commands
   --help                         Show all options
-  
 ```
 
 ### One-line Backup & Restore

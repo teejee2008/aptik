@@ -1,12 +1,4 @@
-## Aptik Next
-
-> Aptik Next is the next major version of the [Aptik System Migration Utility](https://github.com/teejee2008/aptik). It is now more powerful than ever, and supports Debian, Ubuntu, Fedora, Arch, and derivatives. I'll be referring to it as Aptik in this README as it will replace the existing Aptik tool once development is completed.
-
-> Backups created with previous versions fo Aptik are not compatible with this tool
-
-> Encryption has been removed for backup files so that users can edit the files manually
-
-> **Status - In Development (Not ready for release)**
+## Aptik
 
 Aptik is a tool for **migrating settings and data** from one Linux installation to another. It can be used while re-installing the operating system, and when moving to next release of a Linux distribution.
 

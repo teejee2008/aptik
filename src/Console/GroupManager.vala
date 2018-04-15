@@ -31,7 +31,8 @@ public class GroupManager : GLib.Object {
 	public Gee.HashMap<string,Group> groups;
 
 	public bool dry_run = false;
-
+	public string basepath = "";
+	
 	public GroupManager(bool _dry_run){
 
 		dry_run = _dry_run;
@@ -220,8 +221,10 @@ public class GroupManager : GLib.Object {
 		}
 	}
 
-	public bool backup_groups(string basepath){
+	public bool backup_groups(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_GROUPS));
 		log_msg(string.nfill(70,'-'));
@@ -240,14 +243,14 @@ public class GroupManager : GLib.Object {
 			bool ok = file_write(backup_file, group.get_group_line());
 			chmod(backup_file, "a+rw");
 
-			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"))); }
 			else{ status = false; }
 
 			backup_file = path_combine(backup_path, "%s.gshadow".printf(group.name));
 			ok = file_write(backup_file, group.get_gshadow_line());
 			chmod(backup_file, "a+rw");
 
-			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"))); }
 			else{ status = false; }
 		}
 
@@ -279,14 +282,16 @@ public class GroupManager : GLib.Object {
 		bool ok = file_write(backup_file, txt);
 		if (ok){
 			chmod(backup_file, "a+rw");
-			log_msg("%s: %s".printf(_("Saved"), backup_file));
+			log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/")));
 		}
 
 		return ok;
 	}
 	
-	public bool restore_groups(string basepath){
+	public bool restore_groups(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_GROUPS));
 		log_msg(string.nfill(70,'-'));

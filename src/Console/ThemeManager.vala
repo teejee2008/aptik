@@ -39,7 +39,8 @@ public class ThemeManager : GLib.Object {
 
 	public LinuxDistro distro;
 	public bool dry_run = false;
-
+	public string basepath = "";
+	
 	public ThemeManager(LinuxDistro _distro, bool _dry_run, string _type){
 	
 		distro = _distro;
@@ -231,8 +232,10 @@ public class ThemeManager : GLib.Object {
 
 	// save ---------------------------------------
 
-	public bool save_themes(string basepath){
+	public bool save_themes(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
@@ -272,8 +275,10 @@ public class ThemeManager : GLib.Object {
 		file_write(index_file, txt);
 	}
 
-	public bool restore_themes(string basepath){
+	public bool restore_themes(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));

@@ -45,6 +45,7 @@ public class PackageManager : GLib.Object {
 	public LinuxDistro distro;
 	public bool dry_run = false;
 	public bool list_only = false;
+	public string basepath = "";
 
 	public PackageManager(LinuxDistro _distro, bool _dry_run){
 
@@ -460,7 +461,7 @@ public class PackageManager : GLib.Object {
 			}
 		}
 
-		log_msg("time_taken: %s".printf(timer_elapsed_string(tmr)));
+		//log_msg("time_taken: %s".printf(timer_elapsed_string(tmr)));
 
 		dist_installed_known = true;
 
@@ -725,8 +726,10 @@ public class PackageManager : GLib.Object {
 	
 	// save --------------------------
 	
-	public bool save_package_list(string basepath, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
+	public bool save_package_list(string _basepath, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_PACKAGES));
 		log_msg(string.nfill(70,'-'));
@@ -797,7 +800,7 @@ public class PackageManager : GLib.Object {
 
 		if (ok){
 			chmod(backup_file, "a+rw");
-			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file, count));
+			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"), count));
 		}
 
 		return ok;
@@ -853,7 +856,7 @@ public class PackageManager : GLib.Object {
 
 		if (ok){
 			chmod(backup_file, "a+rw");
-			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file, count));
+			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"), count));
 		}
 
 		return ok;
@@ -881,8 +884,10 @@ public class PackageManager : GLib.Object {
 	
 	// restore ---------------------
 
-	public bool restore_packages(string basepath, bool no_prompt){
+	public bool restore_packages(string _basepath, bool no_prompt){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_PACKAGES));
 		log_msg(string.nfill(70,'-'));

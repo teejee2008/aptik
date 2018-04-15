@@ -30,6 +30,7 @@ public class UserManager : GLib.Object {
 	public Gee.HashMap<string,User> users;
 
 	public bool dry_run = false;
+	public string basepath = "";
 	
 	public UserManager(bool _dry_run = false){
 
@@ -259,8 +260,10 @@ public class UserManager : GLib.Object {
 		}
 	}
 
-	public bool backup_users(string basepath){
+	public bool backup_users(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
@@ -279,14 +282,14 @@ public class UserManager : GLib.Object {
 			bool ok = file_write(backup_file, user.get_passwd_line());
 			chmod(backup_file, "a+rw");
 			
-			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"))); }
 			else{ status = false; }
 
 			backup_file = path_combine(backup_path, "%s.shadow".printf(user.name));
 			ok = file_write(backup_file, user.get_shadow_line());
 			chmod(backup_file, "a+rw");
 			
-			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file)); }
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"))); }
 			else{ status = false; }
 		}
 
@@ -302,8 +305,10 @@ public class UserManager : GLib.Object {
 		return status;
 	}
 
-	public bool restore_users(string basepath){
+	public bool restore_users(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));

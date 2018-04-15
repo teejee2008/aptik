@@ -28,6 +28,7 @@ using TeeJee.ProcessHelper;
 public class UserHomeDataManager : GLib.Object {
 	
 	public bool dry_run = false;
+	public string basepath = "";
 	
 	public UserHomeDataManager(bool _dry_run = false){
 
@@ -36,8 +37,10 @@ public class UserHomeDataManager : GLib.Object {
 
 	// backup and restore ----------------------
 	
-	public bool backup_home(string basepath, string userlist, HomeDataBackupMode mode, string password, bool full_backup, bool exclude_hidden){
+	public bool backup_home(string _basepath, string userlist, HomeDataBackupMode mode, string password, bool full_backup, bool exclude_hidden){
 
+		basepath = _basepath;
+		
 		string backup_path = path_combine(basepath, "home");
 		dir_create(backup_path);
 		chmod(backup_path, "a+rwx");
@@ -166,12 +169,12 @@ public class UserHomeDataManager : GLib.Object {
 			if (retval != 0){
 				status = false;
 				file_delete(temp_file);
-				log_msg("Deleted: %s".printf(temp_file));
+				log_msg("Deleted: %s".printf(temp_file.replace(basepath, "$basepath/")));
 			}
 			else{
 				file_move(temp_file, tar_file, false);
 				chmod(tar_file, "a+rw");
-				log_msg("Created: %s".printf(tar_file));
+				log_msg("Created: %s".printf(tar_file.replace(basepath, "$basepath/")));
 			}
 
 			log_msg(string.nfill(70,'-'));
@@ -311,8 +314,10 @@ public class UserHomeDataManager : GLib.Object {
 		return txt;
 	}
 
-	public bool restore_home(string basepath, string userlist, string password){
+	public bool restore_home(string _basepath, string userlist, string password){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_HOME));
 		log_msg(string.nfill(70,'-'));

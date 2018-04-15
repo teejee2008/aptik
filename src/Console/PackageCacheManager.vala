@@ -34,6 +34,7 @@ public class PackageCacheManager : GLib.Object {
 	
 	public LinuxDistro distro;
 	public bool dry_run = false;
+	public string basepath = "";
 	
 	public PackageCacheManager(LinuxDistro _distro, bool _dry_run){
 
@@ -44,8 +45,10 @@ public class PackageCacheManager : GLib.Object {
 
 	// save -------------------------------------------
 
-	public bool backup_cache(string basepath){
+	public bool backup_cache(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_CACHE));
 		log_msg(string.nfill(70,'-'));
@@ -128,15 +131,17 @@ public class PackageCacheManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
-		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", backup_path));
+		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", backup_path.replace(basepath, "$basepath/")));
 
 		return (status == 0);
 	}
 	
 	// restore ---------------------------------------
 	
-	public bool restore_cache(string basepath){
+	public bool restore_cache(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_CACHE));
 		log_msg(string.nfill(70,'-'));

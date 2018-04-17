@@ -29,6 +29,7 @@ public class UserHomeDataManager : GLib.Object {
 	
 	public bool dry_run = false;
 	public string basepath = "";
+	public bool use_xz = false;
 	
 	public UserHomeDataManager(bool _dry_run = false){
 
@@ -37,9 +38,11 @@ public class UserHomeDataManager : GLib.Object {
 
 	// backup and restore ----------------------
 	
-	public bool backup_home(string _basepath, string userlist, HomeDataBackupMode mode, string password, bool full_backup, bool exclude_hidden){
+	public bool backup_home(string _basepath, string userlist, HomeDataBackupMode mode, string password, bool full_backup, bool exclude_hidden, bool _use_xz){
 
 		basepath = _basepath;
+
+		use_xz = _use_xz;
 		
 		string backup_path = path_combine(basepath, "home");
 		dir_create(backup_path);
@@ -128,11 +131,26 @@ public class UserHomeDataManager : GLib.Object {
 			file_write(exclude_list, exclude_list_create(user, exclude_hidden, true));
 			chmod(exclude_list, "a+rw");
 			
+			// prepare -----------------------------------------
+
+			string tar_file = path_combine(backup_path_user, "data.tar." + (use_xz ? "xz" : "gz"));
+
+			string tar_file_gz = path_combine(backup_path_user, "data.tar.gz");
+
+			string tar_file_xz = path_combine(backup_path_user, "data.tar.xz");
+
+			if (file_exists(tar_file_gz)){
+				file_delete(tar_file_gz);
+			}
+
+			if (file_exists(tar_file_xz)){
+				file_delete(tar_file_xz);
+			}
+
+			string compressor = use_xz ? "xz" : "gzip";
+
 			// create script -----------------------------------------
-
-			string tar_file = path_combine(backup_path_user, "data.tar.gz");
-			file_delete(tar_file);
-
+			
 			string temp_file = tar_file + ".temp";
 			
 			var cmd = "";
@@ -149,11 +167,11 @@ public class UserHomeDataManager : GLib.Object {
 
 			cmd += " | pv -s $(du -sb '%s' | awk '{print $1}')".printf(escape_single_quote(user.home_path));
 
-			cmd += " | gzip > '%s'".printf(escape_single_quote(temp_file));
+			cmd += " | %s > '%s'".printf(compressor, escape_single_quote(temp_file));
 
 			// execute ---------------------------------
 
-			log_msg("%s (TAR+GZ): '%s'\n".printf(_("Archiving"), user.home_path));
+			log_msg("%s: '%s'\n".printf(_("Archiving"), user.home_path));
 			
 			if (dry_run){
 				log_msg("$ %s".printf(cmd));
@@ -426,10 +444,22 @@ public class UserHomeDataManager : GLib.Object {
 				continue;
 			}
 
-			string tar_file_user = path_combine(backup_path_user, "data.tar.gz");
+			// prepare ------------------------------------------
+			
+			string tar_file_gz = path_combine(backup_path_user, "data.tar.gz");
 
-			if (!file_exists(tar_file_user)){
-				log_error("%s: %s".printf(Messages.FILE_MISSING, tar_file_user));
+			string tar_file_xz = path_combine(backup_path_user, "data.tar.xz");
+
+			string tar_file = "";
+			
+			if (file_exists(tar_file_xz)){
+				tar_file = tar_file_xz;
+			}
+			else if (file_exists(tar_file_gz)){
+				tar_file = tar_file_gz;
+			}
+			else {
+				log_error("%s: %s".printf(Messages.FILE_MISSING, tar_file_gz));
 				log_error(_("No backup found"));
 				log_msg(string.nfill(70,'-'));
 				continue;
@@ -447,9 +477,9 @@ public class UserHomeDataManager : GLib.Object {
 
 			var cmd = "";
 
-			cmd += "pv '%s' | ".printf(escape_single_quote(tar_file_user));
+			cmd += "pv '%s' | ".printf(escape_single_quote(tar_file));
 			
-			cmd += "tar xzf -";
+			cmd += "tar xf -";
 			
 			cmd += " -C '%s'".printf(escape_single_quote(file_parent(user.home_path)));
 
@@ -650,14 +680,28 @@ public class UserHomeDataManager : GLib.Object {
 			dir_create(backup_path);
 		}
 
-		// create script ---------------------------
+		// prepare -----------------------------------------
+		
+		//if (file_exists(tar_file)){
+		//	file_delete(tar_file);
+		//}
 
-		if (file_exists(tar_file)){
-			file_delete(tar_file);
+		var gz_file = tar_file.replace(".tar.xz",".tar.gz");
+		if (file_exists(gz_file)){
+			file_delete(gz_file);
 		}
+
+		var xz_file = tar_file.replace(".tar.gz",".tar.xz");
+		if (file_exists(xz_file)){
+			file_delete(xz_file);
+		}
+
+		string compressor = tar_file.has_suffix(".xz") ? "xz" : "gzip";
 		
 		string temp_file = tar_file + ".temp";
-			
+
+		// create script --------------------------------------------
+		
 		string cmd = "";
 		
 		//cmd = "tar czvf '%s' '%s'".printf(tar_file, src_path);
@@ -666,7 +710,7 @@ public class UserHomeDataManager : GLib.Object {
 		
 		cmd += " | pv -s $(du -sb '%s' | awk '{print $1}')".printf(escape_single_quote(src_path));
 		
-		cmd += " | gzip > '%s'".printf(escape_single_quote(temp_file));
+		cmd += " | %s > '%s'".printf(compressor, escape_single_quote(temp_file));
 
 		log_debug(cmd);
 
@@ -716,7 +760,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		cmd += "pv '%s'".printf(escape_single_quote(tar_file));
 			
-		cmd += " | tar xzf -";
+		cmd += " | tar xf -";
 		
 		cmd += " -C '%s'".printf(escape_single_quote(dst_path));
 
@@ -761,7 +805,7 @@ public class UserHomeDataManager : GLib.Object {
 		}
 
 		// silent -- no -v
-		string cmd = "tar -tzf '%s'".printf(tar_file);
+		string cmd = "tar tf '%s'".printf(tar_file);
 		
 		log_debug("$ %s".printf(cmd));
 

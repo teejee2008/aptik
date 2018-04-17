@@ -49,6 +49,7 @@ public class AptikConsole : GLib.Object {
 	public bool dry_run = false;
 	public bool list_only = false;
 	public bool robot = false;
+	public bool use_xz = false;
 	
 	// info
 	//public string user_name = "";
@@ -410,6 +411,10 @@ public class AptikConsole : GLib.Object {
 				full_backup = true;
 				break;
 
+			case "--xz":
+				use_xz = true;
+				break;
+	
 			case "--exclude-hidden":
 				exclude_hidden = true;
 				break;
@@ -1594,7 +1599,7 @@ public class AptikConsole : GLib.Object {
 		bool status = true;
 
 		var mgr = new UserHomeDataManager(dry_run);
-		bool ok = mgr.backup_home(basepath, userlist, home_mode, password, full_backup, exclude_hidden);
+		bool ok = mgr.backup_home(basepath, userlist, home_mode, password, full_backup, exclude_hidden, use_xz);
 		if (!ok){ status = false; }
 		
 		return status; 
@@ -1785,7 +1790,7 @@ public class AptikConsole : GLib.Object {
 
 		if (file_exists(src_path)){
 		
-			string tar_file_name = src_path.replace("/","_") + ".tar.gz";
+			string tar_file_name = src_path.replace("/","_") + ".tar." + (use_xz ? "xz" : "gz");
 
 			UserHomeDataManager.zip_archive(src_path, data_path, tar_file_name);
 		}

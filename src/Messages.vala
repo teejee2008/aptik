@@ -71,5 +71,7 @@ public class Messages : GLib.Object {
 	public const string TASK_GROUPS = _("User Groups");
 	public const string TASK_DCONF = _("Dconf Settings");
 	public const string TASK_CRON = _("Scheduled Tasks");
+	public const string TASK_FILES = _("Files and Directories");
+	public const string TASK_SCRIPTS = _("Post-Restore Scripts");
 }
 

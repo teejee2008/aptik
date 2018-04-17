@@ -128,7 +128,7 @@ public class UserHomeDataManager : GLib.Object {
 			file_write(exclude_list, exclude_list_create(user, exclude_hidden, true));
 			chmod(exclude_list, "a+rw");
 			
-			// create script ---------------------------
+			// create script -----------------------------------------
 
 			string tar_file = path_combine(backup_path_user, "data.tar.gz");
 			file_delete(tar_file);
@@ -137,14 +137,7 @@ public class UserHomeDataManager : GLib.Object {
 			
 			var cmd = "";
 
-			//tar cf - /folder-with-big-files -P | pv -s $(du -sb /folder-with-big-files | awk '{print $1}') | gzip
-
-			cmd += "tar -cf";
-
-			//cmd += " '%s'".printf(escape_single_quote(tar_file));
-			cmd += " -"; // stdout
-
-			//cmd += " --totals"; //--checkpoint=.1000";
+			cmd += "tar cf -";
 
 			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
 
@@ -152,7 +145,11 @@ public class UserHomeDataManager : GLib.Object {
 			
 			cmd += " '%s'".printf(escape_single_quote(file_basename(user.home_path)));
 
-			cmd += " | pv -s $(du -sb '%s' | awk '{print $1}') | gzip > '%s'".printf(escape_single_quote(user.home_path), escape_single_quote(temp_file));
+			//cmd += " 2>/dev/null";
+
+			cmd += " | pv -s $(du -sb '%s' | awk '{print $1}')".printf(escape_single_quote(user.home_path));
+
+			cmd += " | gzip > '%s'".printf(escape_single_quote(temp_file));
 
 			// execute ---------------------------------
 
@@ -452,14 +449,11 @@ public class UserHomeDataManager : GLib.Object {
 
 			cmd += "pv '%s' | ".printf(escape_single_quote(tar_file_user));
 			
-			cmd += "tar -xzf";
-			
-			//cmd += " '%s'".printf(escape_single_quote(tar_file_user));
-			cmd += " -";
-			
-			//cmd += " --totals"; // --checkpoint=.1000";
+			cmd += "tar xzf -";
 			
 			cmd += " -C '%s'".printf(escape_single_quote(file_parent(user.home_path)));
+
+			//cmd += " >/dev/null 2>&1";
 
 			// execute ---------------------------------
 
@@ -643,6 +637,144 @@ public class UserHomeDataManager : GLib.Object {
 		log_msg("%s: %s (%s,%s)".printf(_("Updated owner for home directory contents"), user.home_path, user.name, usergroup));
 
 		return ok;
+	}
+
+	// TAR helpers ----------------
+
+	public static bool zip_archive(string src_path, string backup_path, string file_name) {
+		
+		//string file_name = name + ".tar.gz";
+		string tar_file = path_combine(backup_path, file_name);
+
+		if (!dir_exists(backup_path)){
+			dir_create(backup_path);
+		}
+
+		// create script ---------------------------
+
+		if (file_exists(tar_file)){
+			file_delete(tar_file);
+		}
+		
+		string temp_file = tar_file + ".temp";
+			
+		string cmd = "";
+		
+		//cmd = "tar czvf '%s' '%s'".printf(tar_file, src_path);
+
+		cmd += "tar cf - '%s'".printf(escape_single_quote(src_path));
+		
+		cmd += " | pv -s $(du -sb '%s' | awk '{print $1}')".printf(escape_single_quote(src_path));
+		
+		cmd += " | gzip > '%s'".printf(escape_single_quote(temp_file));
+
+		log_debug(cmd);
+
+		//log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Archiving"), src_path));
+		log_msg("");
+		
+		int status = Posix.system(cmd);
+
+		if (status != 0){
+			file_delete(temp_file);
+			log_msg("%s: %s".printf(_("Deleted"), tar_file));
+		}
+		else{
+			file_move(temp_file, tar_file, false);
+			chmod(tar_file, "a+rw");
+			log_msg("%s: %s".printf(_("Created"), tar_file));
+		}
+
+		if (status == 0){
+			log_msg(Messages.BACKUP_OK);
+		}
+		else{
+			log_error(Messages.BACKUP_ERROR);
+		}
+		
+		log_msg(string.nfill(70,'-'));
+
+		return (status == 0);
+	}
+	
+	public static bool unzip_archive(string tar_file, string dst_path, bool dry_run) {
+
+		//check file
+		if (!file_exists(tar_file)) {
+			log_error(_("File not found") + ": '%s'".printf(tar_file));
+			return false;
+		}
+
+		if (!dir_exists(dst_path)){
+			dir_create(dst_path);
+		}
+
+		string cmd = "";
+
+		//cmd += "tar xzvf '%s' --directory='%s'".printf(tar_file, dst_path);
+
+		cmd += "pv '%s'".printf(escape_single_quote(tar_file));
+			
+		cmd += " | tar xzf -";
+		
+		cmd += " -C '%s'".printf(escape_single_quote(dst_path));
+
+		//cmd += " >/dev/null 2>&1";
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+		}
+
+		//log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Extracting"), tar_file));
+		log_msg("");
+		
+		int status = 0;
+		
+		if (!dry_run){
+			
+			status = Posix.system(cmd);
+		}
+
+		if (status == 0){
+			log_msg(Messages.RESTORE_OK);
+		}
+		else{
+			log_error(Messages.RESTORE_ERROR);
+		}
+		
+		log_msg(string.nfill(70,'-'));
+		
+		return (status == 0);
+	}
+
+	public static bool list_archive(string tar_file) {
+
+		//check file
+		if (!file_exists(tar_file)) {
+			log_error(_("File not found") + ": '%s'".printf(tar_file));
+			return false;
+		}
+
+		// silent -- no -v
+		string cmd = "tar -tzf '%s'".printf(tar_file);
+		
+		log_debug("$ %s".printf(cmd));
+
+		log_msg("%s: %s".printf(_("Listing"), tar_file));
+		log_msg("");
+
+		int status = 0;
+		
+		status = Posix.system(cmd);
+
+		log_msg(string.nfill(70,'-'));
+		
+		return (status == 0);
 	}
 }
 

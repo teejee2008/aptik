@@ -569,7 +569,7 @@ public class Theme : GLib.Object{
 			}
 
 			// silent -- no -v
-			string cmd = "tar czf '%s' -C '%s' '%s' 1> /dev/null".printf(zip_file, file_parent(theme_path), name);
+			string cmd = "tar czf '%s' -C '%s' '%s' >/dev/null 2>&1".printf(zip_file, file_parent(theme_path), name);
 			log_debug(cmd);
 
 			stdout.printf("%-80s".printf(_("Archiving") + " '%s'".printf(theme_path)));
@@ -584,8 +584,8 @@ public class Theme : GLib.Object{
 			else {
 				stdout.printf("[ status=%d ]\n".printf(status));
 			}
+			
 			return (status == 0);
-
 		}
 		catch (Error e) {
 			log_error (e.message);
@@ -604,7 +604,7 @@ public class Theme : GLib.Object{
 		dir_create(theme_path);
 
 		// silent -- no -v
-		string cmd = "tar xzf '%s' --directory='%s' 1> /dev/null".printf(archive_path, file_parent(theme_path));
+		string cmd = "tar xzf '%s' --directory='%s' >/dev/null 2>&1".printf(archive_path, file_parent(theme_path));
 
 		if (dry_run){
 			log_msg("$ %s".printf(cmd));

@@ -58,6 +58,7 @@ public class AptikConsole : GLib.Object {
 	public string userlist = "";
 	public string password = "aptik";
 	public bool full_backup = false;
+	public string add_path = "";
 	public bool exclude_hidden = false;
 	public bool include_foreign = false;
 	public bool exclude_icons = false;
@@ -315,6 +316,18 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--users <usr1,usr2,..>", _("Users to backup and restore"));
 		msg += fmt.printf("", _("(default: all users)"));
 		msg += "\n";
+
+		msg += fmt2.printf(Messages.TASK_FILES);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-files", _("List files from backup"));
+		msg += fmt.printf("--backup-files", _("Backup files and directories (specify with --add)"));
+		msg += fmt.printf("--restore-files", _("Restore files and directories from backup"));
+		msg += "\n";
+		
+		msg += "%s:\n".printf(_("Options"));
+		msg += fmt.printf("--add <path>", _("Add file or directory to backups"));
+		msg += "\n";
 		
 		msg += fmt2.printf(_("All Items"));
 
@@ -381,6 +394,11 @@ public class AptikConsole : GLib.Object {
 			case "--password":
 				k++;
 				password = args[k];
+				break;
+
+			case "--add":
+				k++;
+				add_path = args[k];
 				break;
 				
 			case "--users":
@@ -554,6 +572,10 @@ public class AptikConsole : GLib.Object {
 			case "--list-cron":
 			case "--backup-cron":
 			case "--restore-cron":
+
+			case "--list-files":
+			case "--backup-files":
+			case "--restore-files":
 
 			case "--backup-all":
 			case "--restore-all":
@@ -800,6 +822,20 @@ public class AptikConsole : GLib.Object {
 			log_msg("basepath='%s'".printf(basepath));
 			return restore_cron_tasks();
 
+		// file tasks -------------------------------------------
+
+		case "--list-files":
+			log_msg("basepath='%s'".printf(basepath));
+			return list_files();
+
+		case "--backup-files":
+			log_msg("basepath='%s'".printf(basepath));
+			return backup_files();
+
+		case "--restore-files":
+			log_msg("basepath='%s'".printf(basepath));
+			return restore_files();
+			
 		// all ---------------------------------------------
 
 		case "--backup-all":
@@ -1684,10 +1720,87 @@ public class AptikConsole : GLib.Object {
 
 	// files ----------------
 
+	public bool list_files(){
+
+		//check_admin_access();
+		
+		var files_path = path_combine(basepath, "files");
+
+		var data_path = path_combine(files_path,"data");
+
+		if (dir_exists(data_path)){
+
+			var files = dir_list_names(data_path, true);
+			
+			if (files.size > 0){
+
+				log_msg(string.nfill(70,'-'));
+				
+				foreach(var file in files){
+					UserHomeDataManager.list_archive(file);
+				}
+			}
+			else{
+				log_msg(_("no files found for copy"));
+				log_msg(string.nfill(70,'-'));
+			}
+		}
+		else{
+			log_msg("%s: %s".printf(_("directory not found"), data_path));
+			log_msg(string.nfill(70,'-'));
+		}
+
+		return true;
+	}
+	
+	public bool backup_files(){
+
+		check_admin_access();
+		
+		dir_create(basepath);
+
+		copy_binary();
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_FILES));
+		log_msg(string.nfill(70,'-'));
+
+		bool status = true;
+
+		var files_path = path_combine(basepath, "files");
+
+		if (!dir_exists(files_path)){
+			dir_create(files_path);
+			chmod(files_path, "a+rwx");
+		}
+
+		var data_path = path_combine(files_path, "data");
+
+		if (!dir_exists(data_path)){
+			dir_create(data_path);
+			chmod(data_path, "a+rwx");
+		}
+
+		var src_path = add_path;
+
+		if (file_exists(src_path)){
+		
+			string tar_file_name = src_path.replace("/","_") + ".tar.gz";
+
+			UserHomeDataManager.zip_archive(src_path, data_path, tar_file_name);
+		}
+		else{
+			log_msg("%s: %s".printf(_("directory not found"), data_path));
+			log_msg(string.nfill(70,'-'));
+		}
+		
+		return status; 
+	}
+	
 	public bool restore_files(){
 
 		log_msg(string.nfill(70,'-'));
-		log_msg("%s:".printf(_("Copy Files and Directories")));
+		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_FILES));
 		log_msg(string.nfill(70,'-'));
 		
 		var files_path = path_combine(basepath, "files");
@@ -1699,8 +1812,10 @@ public class AptikConsole : GLib.Object {
 			var files = dir_list_names(data_path, true);
 			
 			if (files.size > 0){
-				Posix.system("rsync -avh '%s/' /".printf(data_path));
-				log_msg(string.nfill(70,'-'));
+
+				foreach(var file in files){
+					UserHomeDataManager.unzip_archive(file, "/", dry_run);
+				}
 			}
 			else{
 				log_msg(_("no files found for copy"));
@@ -1775,28 +1890,33 @@ public class AptikConsole : GLib.Object {
 		var scripts_path = path_combine(basepath,"scripts");
 		if (!dir_exists(scripts_path)){
 			dir_create(scripts_path);
+			chmod(scripts_path, "a+rwx");
 		}
 
 		var readme = path_combine(scripts_path,"README");
 		if (!file_exists(readme)){
 			string txt = _("Scripts placed in this folder will be executed on restore. Name scripts in the order in which they should be executed.");
 			file_write(readme, txt);
+			chmod(readme, "a+rw");
 		}
 
 		var files_path = path_combine(basepath,"files");
 		if (!dir_exists(files_path)){
 			dir_create(files_path);
+			chmod(files_path, "a+rwx");
 		}
 
 		readme = path_combine(files_path,"README");
 		if (!file_exists(readme)){
-			string txt = _("Files and directories placed in 'data' folder will be copied to file system root on restore.");
+			string txt = _("TAR files placed in 'data' folder will be extracted to file system root after restore.");
 			file_write(readme, txt);
+			chmod(readme, "a+rw");
 		}
 
 		var data_path = path_combine(files_path,"data");
 		if (!dir_exists(data_path)){
 			dir_create(data_path);
+			chmod(data_path, "a+rwx");
 		}
 	}
 	

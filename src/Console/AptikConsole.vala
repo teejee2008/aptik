@@ -76,6 +76,8 @@ public class AptikConsole : GLib.Object {
 	public bool skip_mounts = false;
 	public bool skip_dconf = false;
 	public bool skip_cron = false;
+	public bool skip_files = false;
+	public bool skip_scripts = false;
 
 	public bool redist = false;
 	
@@ -338,6 +340,8 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--skip-mounts", _("Skip item: mounts"));
 		msg += fmt.printf("--skip-dconf", _("Skip item: dconf"));
 		msg += fmt.printf("--skip-cron", _("Skip item: cron"));
+		msg += fmt.printf("--skip-files", _("Skip copying files in $basepath/files"));
+		msg += fmt.printf("--skip-scripts", _("Skip execution of post-restore scripts in $basepath/scripts"));
 		msg += "\n";
 
 		msg += "%s\n".printf(_("Note: Options for individual items listed in previous sections can also be used"));
@@ -454,6 +458,14 @@ public class AptikConsole : GLib.Object {
 
 			case "--skip-cron":
 				skip_cron = true;
+				break;
+
+			case "--skip-files":
+				skip_files = true;
+				break;
+
+			case "--skip-scripts":
+				skip_scripts = true;
 				break;
 
 			case "--duplicity":
@@ -949,6 +961,16 @@ public class AptikConsole : GLib.Object {
 
 		if (!skip_cron){
 			ok = restore_cron_tasks();
+			if (!ok) { status = false; }
+		}
+
+		if (!skip_files){
+			ok = restore_files();
+			if (!ok) { status = false; }
+		}
+		
+		if (!skip_scripts){
+			ok = execute_scripts();
 			if (!ok) { status = false; }
 		}
 
@@ -1660,6 +1682,77 @@ public class AptikConsole : GLib.Object {
 		return status;
 	}
 
+	// files ----------------
+
+	public bool restore_files(){
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s:".printf(_("Copy Files and Directories")));
+		log_msg(string.nfill(70,'-'));
+		
+		var files_path = path_combine(basepath, "files");
+
+		var data_path = path_combine(files_path,"data");
+
+		if (dir_exists(data_path)){
+
+			var files = dir_list_names(data_path, true);
+			
+			if (files.size > 0){
+				Posix.system("rsync -avh '%s/' /".printf(data_path));
+				log_msg(string.nfill(70,'-'));
+			}
+			else{
+				log_msg(_("no files found for copy"));
+				log_msg(string.nfill(70,'-'));
+			}
+		}
+		else{
+			log_msg("%s: %s".printf(_("directory not found"), data_path));
+			log_msg(string.nfill(70,'-'));
+		}
+
+		return true;
+	}
+	
+	// scripts --------------
+
+	public bool execute_scripts(){
+
+		var scripts_path = path_combine(basepath,"scripts");
+
+		log_msg(string.nfill(70,'-'));
+		log_msg("%s:".printf(_("Execute Post-Restore Scripts")));
+		log_msg(string.nfill(70,'-'));
+				
+		if (dir_exists(scripts_path)){
+
+			var files = dir_list_names(scripts_path, true);
+			files.sort();
+
+			if (files.size > 0){
+
+				foreach(string file in files){
+					chmod(file, "a+x");
+					log_msg("%s: %s\n".printf(_("Executed"), file));
+					Posix.system(file);
+					log_msg(string.nfill(70,'-'));
+				}
+			}
+			else{
+				log_msg(_("no scripts found"));
+				log_msg(string.nfill(70,'-'));
+			}
+			
+		}
+		else{
+			log_msg(_("scripts directory not found"));
+			log_msg(string.nfill(70,'-'));
+		}
+
+		return true;
+	}
+	
 	// common ---------------
 	
 	public void copy_binary(){
@@ -1673,8 +1766,40 @@ public class AptikConsole : GLib.Object {
 			
 		log_debug(cmd);
 		Posix.system(cmd);
+
+		create_files_and_scripts();
 	}
 
+	public void create_files_and_scripts(){
+
+		var scripts_path = path_combine(basepath,"scripts");
+		if (!dir_exists(scripts_path)){
+			dir_create(scripts_path);
+		}
+
+		var readme = path_combine(scripts_path,"README");
+		if (!file_exists(readme)){
+			string txt = _("Scripts placed in this folder will be executed on restore. Name scripts in the order in which they should be executed.");
+			file_write(readme, txt);
+		}
+
+		var files_path = path_combine(basepath,"files");
+		if (!dir_exists(files_path)){
+			dir_create(files_path);
+		}
+
+		readme = path_combine(files_path,"README");
+		if (!file_exists(readme)){
+			string txt = _("Files and directories placed in 'data' folder will be copied to file system root on restore.");
+			file_write(readme, txt);
+		}
+
+		var data_path = path_combine(files_path,"data");
+		if (!dir_exists(data_path)){
+			dir_create(data_path);
+		}
+	}
+	
 	public void check_network_connection(){
 
 		bool connected = check_internet_connectivity();

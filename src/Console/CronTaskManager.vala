@@ -29,7 +29,8 @@ using TeeJee.Misc;
 public class CronTaskManager : GLib.Object {
 
 	public bool dry_run = false;
-
+	public string basepath = "";
+	
 	public CronTaskManager(bool _dry_run = false){
 
 		dry_run = _dry_run;
@@ -73,8 +74,10 @@ public class CronTaskManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 	}
 
-	public bool backup_cron_tasks(string basepath, string userlist){
+	public bool backup_cron_tasks(string _basepath, string userlist){
 
+		basepath = _basepath;
+		
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
@@ -150,10 +153,10 @@ public class CronTaskManager : GLib.Object {
 		}
 		
 		if (status == 0){
-			log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file));
+			log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file.replace(basepath, "$basepath/")));
 		}
 		else{
-			log_error("%s (%s) %s".printf(_("Error"), user.name, backup_file));
+			log_error("%s (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath/")));
 		}
 
 		return (status == 0);
@@ -175,13 +178,15 @@ public class CronTaskManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
-		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "666", backup_path));
+		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "666", backup_path.replace(basepath, "$basepath/")));
 
 		return (status == 0);
 	}
 
-	public bool restore_cron_tasks(string basepath, string userlist){
+	public bool restore_cron_tasks(string _basepath, string userlist){
 
+		basepath = _basepath;
+		
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
@@ -264,10 +269,10 @@ public class CronTaskManager : GLib.Object {
 		}
 
 		if (status == 0){
-			log_msg("%s: (%s) %s".printf(_("Restored"), user.name, backup_file));
+			log_msg("%s: (%s) %s".printf(_("Restored"), user.name, backup_file.replace(basepath, "$basepath/")));
 		}
 		else{
-			log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file));
+			log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath/")));
 		}
 		
 		return (status == 0);

@@ -30,7 +30,8 @@ using TeeJee.Misc;
 public class DconfManager : GLib.Object {
 
 	public bool dry_run = false;
-
+	public string basepath = "";
+	
 	public DconfManager(bool _dry_run = false){
 
 		dry_run = _dry_run;
@@ -55,8 +56,10 @@ public class DconfManager : GLib.Object {
 		}
 	}
 
-	public bool backup_dconf_settings(string basepath, string userlist){
+	public bool backup_dconf_settings(string _basepath, string userlist){
 
+		basepath = _basepath;
+		
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
@@ -107,11 +110,11 @@ public class DconfManager : GLib.Object {
 			
 			if (ok){
 				chmod(backup_file, "a+rw");
-				log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file));
+				log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file.replace(basepath, "$basepath/")));
 			}
 			else {
 				status = false;
-				log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file));
+				log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath/")));
 			}
 		}
 		else{
@@ -121,8 +124,10 @@ public class DconfManager : GLib.Object {
 		return status;
 	}
 
-	public bool restore_dconf_settings(string basepath, string userlist){
+	public bool restore_dconf_settings(string _basepath, string userlist){
 
+		basepath = _basepath;
+		
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));

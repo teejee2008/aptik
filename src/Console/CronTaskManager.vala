@@ -28,19 +28,23 @@ using TeeJee.Misc;
 
 public class CronTaskManager : GLib.Object {
 
-	public bool dry_run = false;
-	public string basepath = "";
+	private bool dry_run = false;
+	private bool redist = false;
+	private string basepath = "";
+	private User current_user;
 	
-	public CronTaskManager(bool _dry_run = false){
+	public CronTaskManager(bool _dry_run, bool _redist, User _current_user){
 
 		dry_run = _dry_run;
+		redist = _redist;
+		current_user = _current_user;
 	}
 	
 	// backup and restore ----------------------
 	
 	public void list_cron_tasks(string userlist){
 
-		foreach(var user in get_users(userlist)){
+		foreach(var user in get_users(userlist, false)){
 
 			if (user.is_system){ continue; }
 
@@ -90,7 +94,7 @@ public class CronTaskManager : GLib.Object {
 
 		// backup -----------------------------------
 
-		foreach(var user in get_users(userlist)){
+		foreach(var user in get_users(userlist, true)){
 
 			if (user.is_system){ continue; }
 
@@ -137,7 +141,10 @@ public class CronTaskManager : GLib.Object {
 
 	public bool backup_cron_tasks_for_user(string backup_path, User user){
 
-		string backup_file = path_combine(backup_path, "%s.crontab".printf(user.name));
+		string fname = redist ? "user" : user.name;
+		
+		string backup_file = path_combine(backup_path, "%s.crontab".printf(fname));
+		
 		file_delete(backup_file);
 		
 		string cmd = "crontab -u %s -l > '%s'".printf(user.name, backup_file);
@@ -203,7 +210,7 @@ public class CronTaskManager : GLib.Object {
 		
 		// backup -----------------------------------
 
-		foreach(var user in get_users(userlist)){
+		foreach(var user in get_users(userlist, false)){
 
 			if (user.is_system){ continue; }
 
@@ -250,7 +257,9 @@ public class CronTaskManager : GLib.Object {
 
 	public bool restore_cron_tasks_for_user(string backup_path, User user){
 
-		string backup_file = path_combine(backup_path, "%s.crontab".printf(user.name));
+		string fname = redist ? "user" : user.name;
+		
+		string backup_file = path_combine(backup_path, "%s.crontab".printf(fname));
 
 		if (!file_exists(backup_file)) {
 			return true; // not an error
@@ -350,14 +359,17 @@ public class CronTaskManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public Gee.ArrayList<User> get_users(string userlist){
+	public Gee.ArrayList<User> get_users(string userlist, bool is_backup){
 
 		var mgr = new UserManager();
 		mgr.query_users(false);
-
+		
 		var users = new Gee.ArrayList<User>();
 		
-		if (userlist.length == 0){
+		if (redist && is_backup){
+			users.add(current_user);
+		}
+		else if (userlist.length == 0){
 			users = mgr.users_sorted;
 		}
 		else{

@@ -51,6 +51,8 @@ public class AptikConsole : GLib.Object {
 	public bool robot = false;
 	public bool use_xz = true;
 	public bool redist = false;
+
+	public User current_user;
 	
 	// info
 	//public string user_name = "";
@@ -154,6 +156,10 @@ public class AptikConsole : GLib.Object {
 		distro = new LinuxDistro();
 
 		basepath = Environment.get_current_dir();
+
+		var mgr = new UserManager();
+		mgr.query_users(false);
+		current_user = mgr.get_current_user();
 	}
 
 	public void print_backup_path(){
@@ -1591,9 +1597,7 @@ public class AptikConsole : GLib.Object {
 		
 		bool status = true;
 
-		
-
-		var mgr = new UserHomeDataManager(dry_run, redist);
+		var mgr = new UserHomeDataManager(dry_run, redist, current_user);
 		bool ok = mgr.backup_home(basepath, userlist, exclude_hidden, use_xz);
 		if (!ok){ status = false; }
 		
@@ -1609,7 +1613,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 		
-		var mgr = new UserHomeDataManager(dry_run, redist);
+		var mgr = new UserHomeDataManager(dry_run, redist, current_user);
 		bool ok = mgr.restore_home(basepath, userlist);
 		if (!ok){ status = false; }
 		
@@ -1623,7 +1627,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 		
-		var mgr = new UserHomeDataManager(dry_run, redist);
+		var mgr = new UserHomeDataManager(dry_run, redist, current_user);
 		bool ok = mgr.fix_home_ownership(userlist);
 		if (!ok){ status = false; }
 		
@@ -1636,7 +1640,7 @@ public class AptikConsole : GLib.Object {
 
 		check_admin_access();
 		
-		var mgr = new DconfManager(false);
+		var mgr = new DconfManager(false, false, current_user);
 		mgr.list_dconf_settings(userlist);
 		return true;
 	}
@@ -1651,7 +1655,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 
-		var mgr = new DconfManager(dry_run);
+		var mgr = new DconfManager(dry_run, redist, current_user);
 		bool ok = mgr.backup_dconf_settings(basepath, userlist);
 		if (!ok){ status = false; }
 		
@@ -1667,7 +1671,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 		
-		var mgr = new DconfManager(dry_run);
+		var mgr = new DconfManager(dry_run, redist, current_user);
 		bool ok = mgr.restore_dconf_settings(basepath, userlist);
 		if (!ok){ status = false; }
 		
@@ -1680,7 +1684,7 @@ public class AptikConsole : GLib.Object {
 
 		check_admin_access();
 		
-		var mgr = new CronTaskManager(false);
+		var mgr = new CronTaskManager(false, false, current_user);
 		mgr.list_cron_tasks(userlist);
 		return true;
 	}
@@ -1695,7 +1699,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 
-		var mgr = new CronTaskManager(dry_run);
+		var mgr = new CronTaskManager(dry_run, redist, current_user);
 		bool ok = mgr.backup_cron_tasks(basepath, userlist);
 		if (!ok){ status = false; }
 		
@@ -1711,7 +1715,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 		
-		var mgr = new CronTaskManager(dry_run);
+		var mgr = new CronTaskManager(dry_run, redist, current_user);
 		bool ok = mgr.restore_cron_tasks(basepath, userlist);
 		if (!ok){ status = false; }
 		
@@ -1875,14 +1879,26 @@ public class AptikConsole : GLib.Object {
 		string src = get_cmd_path(AppShortName);
 		string dst = path_combine(basepath, AppShortName);
 
-		string cmd = "cp -f '%s' '%s'".printf(
-			escape_single_quote(src),
-			escape_single_quote(dst));
+		string cmd = "cp -f '%s' '%s'".printf(escape_single_quote(src), escape_single_quote(dst));
 			
 		log_debug(cmd);
 		Posix.system(cmd);
 
+		copy_restore_script();
+
 		create_files_and_scripts();
+	}
+
+	public void copy_restore_script(){
+
+		string s = "#!/bin/bash" + "\n";
+		s += """basepath="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" """ + "\n";
+		s += "chmod a+x \"$basepath/aptik\"" + "\n";
+		s += "\"$basepath/aptik\" --restore-all --basepath \"$basepath\"" + (redist ? " --redist" : "") + "\n";
+
+		string sh_file = path_combine(basepath, "restore-all.sh");
+		file_write(sh_file, s);
+		chmod(sh_file, "a+x");
 	}
 
 	public void create_files_and_scripts(){

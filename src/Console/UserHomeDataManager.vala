@@ -28,15 +28,17 @@ using TeeJee.System;
 
 public class UserHomeDataManager : GLib.Object {
 	
-	public bool dry_run = false;
-	public string basepath = "";
-	public bool use_xz = false;
-	public bool redist = false;
+	private bool dry_run = false;
+	private string basepath = "";
+	private bool use_xz = false;
+	private bool redist = false;
+	private User current_user;
 	
-	public UserHomeDataManager(bool _dry_run, bool _redist){
+	public UserHomeDataManager(bool _dry_run, bool _redist, User _current_user){
 
 		dry_run = _dry_run;
 		redist = _redist;
+		current_user = _current_user;
 	}
 
 	// backup and restore ----------------------
@@ -60,30 +62,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		bool status = true;
 
-		// build user list -----------------------
-		
-		var mgr = new UserManager();
-		mgr.query_users(false);
-		var current_user = mgr.get_current_user();
-		
-		var users = new Gee.ArrayList<User>();
-
-		if (redist){
-			users.add(current_user);
-		}
-		else if (userlist.length == 0){
-			users = mgr.users_sorted;
-		}
-		else{
-			foreach(string username in userlist.split(",")){
-				foreach(var user in mgr.users_sorted){
-					if (user.name == username){
-						users.add(user);
-						break;
-					}
-				}
-			}
-		}
+		var users = get_users(userlist, true);
 
 		// backup --------------------------------------
 		
@@ -355,27 +334,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		bool status = true;
 
-		// build user list -----------------------
-		
-		var mgr = new UserManager();
-		mgr.query_users(false);
-		var current_user = mgr.get_current_user();
-		
-		var users = new Gee.ArrayList<User>();
-		
-		if (userlist.length == 0){
-			users = mgr.users_sorted;
-		}
-		else{
-			foreach(string username in userlist.split(",")){
-				foreach(var user in mgr.users_sorted){
-					if (user.name == username){
-						users.add(user);
-						break;
-					}
-				}
-			}
-		}
+		var users = get_users(userlist, false);
 
 		// restore ----------------------------------------
 
@@ -653,6 +612,33 @@ public class UserHomeDataManager : GLib.Object {
 		return ok;
 	}
 
+	public Gee.ArrayList<User> get_users(string userlist, bool is_backup){
+
+		var mgr = new UserManager();
+		mgr.query_users(false);
+
+		var users = new Gee.ArrayList<User>();
+		
+		if (redist && is_backup){
+			users.add(current_user);
+		}
+		else if (userlist.length == 0){
+			users = mgr.users_sorted;
+		}
+		else{
+			foreach(string username in userlist.split(",")){
+				foreach(var user in mgr.users_sorted){
+					if (user.name == username){
+						users.add(user);
+						break;
+					}
+				}
+			}
+		}
+
+		return users;
+	}
+	
 	// TAR helpers ----------------
 
 	public static bool zip_archive(string src_path, string backup_path, string file_name) {

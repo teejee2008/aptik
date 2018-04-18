@@ -24,6 +24,7 @@
 using TeeJee.Logging;
 using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
+using TeeJee.System;
 
 public class UserManager : GLib.Object {
 	
@@ -49,6 +50,23 @@ public class UserManager : GLib.Object {
 		else{
 			read_users_from_file("/etc/passwd","","");
 		}
+	}
+
+	public User? get_current_user(){
+
+		if (users.size == 0){
+			query_users(false);
+		}
+
+		string current_username = get_username();
+
+		foreach(var user in users.values) {
+			if (user.name == current_username){
+				return user;
+			}
+		}
+
+		return null;
 	}
 
 	public Gee.ArrayList<User> users_sorted {

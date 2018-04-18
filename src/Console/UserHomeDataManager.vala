@@ -24,27 +24,33 @@
 using TeeJee.Logging;
 using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
+using TeeJee.System;
 
 public class UserHomeDataManager : GLib.Object {
 	
 	public bool dry_run = false;
 	public string basepath = "";
 	public bool use_xz = false;
+	public bool redist = false;
 	
-	public UserHomeDataManager(bool _dry_run = false){
+	public UserHomeDataManager(bool _dry_run, bool _redist){
 
 		dry_run = _dry_run;
+		redist = _redist;
 	}
 
 	// backup and restore ----------------------
 	
-	public bool backup_home(string _basepath, string userlist, HomeDataBackupMode mode, string password, bool full_backup, bool exclude_hidden, bool _use_xz){
+	public bool backup_home(string _basepath, string userlist, bool exclude_hidden, bool _use_xz){
 
 		basepath = _basepath;
 
 		use_xz = _use_xz;
 		
 		string backup_path = path_combine(basepath, "home");
+
+		if (redist){ dir_delete(backup_path); } // delete existing backups
+		
 		dir_create(backup_path);
 		chmod(backup_path, "a+rwx");
 		
@@ -58,10 +64,14 @@ public class UserHomeDataManager : GLib.Object {
 		
 		var mgr = new UserManager();
 		mgr.query_users(false);
-
-		var users = new Gee.ArrayList<User>();
+		var current_user = mgr.get_current_user();
 		
-		if (userlist.length == 0){
+		var users = new Gee.ArrayList<User>();
+
+		if (redist){
+			users.add(current_user);
+		}
+		else if (userlist.length == 0){
 			users = mgr.users_sorted;
 		}
 		else{
@@ -77,16 +87,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		// backup --------------------------------------
 		
-		bool ok = true;
-
-		switch(mode){
-		case HomeDataBackupMode.DUPLICITY:
-			ok = backup_home_duplicity(backup_path, users, password, full_backup, exclude_hidden);
-			break;
-		default:
-			ok = backup_home_tar(backup_path, users, exclude_hidden);
-			break;
-		}
+		bool ok = backup_home_tar(backup_path, users, current_user, exclude_hidden);
 
 		if (!ok){ status = false; }
 		
@@ -100,7 +101,7 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users, bool exclude_hidden){
+	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users, User current_user, bool exclude_hidden){
 
 		bool status = true;
 		int retval = 0;
@@ -117,11 +118,18 @@ public class UserHomeDataManager : GLib.Object {
 				continue;
 			}
 			
-			var backup_path_user = path_combine(backup_path, user.name);
-			dir_delete(backup_path_user); // removes duplicity backups if any
-			dir_create(backup_path_user);
-			chmod(backup_path_user, "a+rwx");
-			
+			string backup_path_user = "";
+
+			if (redist){
+				backup_path_user = backup_path;
+			}
+			else{
+				path_combine(backup_path, user.name);
+				dir_delete(backup_path_user); // remove existing backups if any
+				dir_create(backup_path_user);
+				chmod(backup_path_user, "a+rwx");
+			}
+
 			// save exclude list -----------------------
 			
 			var exclude_list = path_combine(backup_path_user, "exclude.list");
@@ -329,7 +337,7 @@ public class UserHomeDataManager : GLib.Object {
 		return txt;
 	}
 
-	public bool restore_home(string _basepath, string userlist, string password){
+	public bool restore_home(string _basepath, string userlist){
 
 		basepath = _basepath;
 		
@@ -351,7 +359,8 @@ public class UserHomeDataManager : GLib.Object {
 		
 		var mgr = new UserManager();
 		mgr.query_users(false);
-
+		var current_user = mgr.get_current_user();
+		
 		var users = new Gee.ArrayList<User>();
 		
 		if (userlist.length == 0){
@@ -368,42 +377,10 @@ public class UserHomeDataManager : GLib.Object {
 			}
 		}
 
-		// detect mode ------------------------------------
-
-		HomeDataBackupMode mode = HomeDataBackupMode.TAR;
-		
-		var list = dir_list_names(backup_path, true);
-		
-		foreach(string backup_path_user in list){
-			
-			string tar_file = path_combine(backup_path_user, "data.tar.gz");
-			
-			if (file_exists(tar_file)){
-				mode = HomeDataBackupMode.TAR;
-				break;
-			}
-			else {
-				//mode = HomeDataBackupMode.DUPLICITY;
-				break;
-			}
-		}
-
-		log_msg("%s: %s".printf(_("Backup mode detected"), mode.to_string().replace("HOME_DATA_BACKUP_MODE_", "")));
-		log_msg(string.nfill(70,'-'));
-		
 		// restore ----------------------------------------
 
-		bool ok = true;
+		bool ok = restore_home_tar(backup_path, users, current_user);
 
-		switch(mode){
-		case HomeDataBackupMode.DUPLICITY:
-			ok = restore_home_duplicity(backup_path, users, password);
-			break;
-		default:
-			ok = restore_home_tar(backup_path, users);
-			break;
-		}
-		
 		if (!ok){ status = false; }
 		
 		if (status){
@@ -416,12 +393,14 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public bool restore_home_tar(string backup_path, Gee.ArrayList<User> users){
+	public bool restore_home_tar(string backup_path, Gee.ArrayList<User> users, User current_user){
 
 		bool status = true;
 
 		var grpmgr = new GroupManager(dry_run);
 		grpmgr.query_groups(false);
+
+		string backup_path_user = "";
 		
 		foreach(var user in users){
 
@@ -435,7 +414,12 @@ public class UserHomeDataManager : GLib.Object {
 				continue;
 			}
 
-			var backup_path_user = path_combine(backup_path, user.name);
+			if (redist){
+				backup_path_user = backup_path;
+			}
+			else{
+				backup_path_user = path_combine(backup_path, user.name);
+			}
 			
 			if (!dir_exists(backup_path_user)){
 				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));

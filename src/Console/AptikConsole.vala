@@ -49,7 +49,8 @@ public class AptikConsole : GLib.Object {
 	public bool dry_run = false;
 	public bool list_only = false;
 	public bool robot = false;
-	public bool use_xz = false;
+	public bool use_xz = true;
+	public bool redist = false;
 	
 	// info
 	//public string user_name = "";
@@ -80,10 +81,6 @@ public class AptikConsole : GLib.Object {
 	public bool skip_cron = false;
 	public bool skip_files = false;
 	public bool skip_scripts = false;
-
-	public bool redist = false;
-	
-	public HomeDataBackupMode home_mode = HomeDataBackupMode.TAR;
 
 	public uint64 config_size_limit = 0;
 	
@@ -414,7 +411,7 @@ public class AptikConsole : GLib.Object {
 			case "--xz":
 				use_xz = true;
 				break;
-	
+
 			case "--exclude-hidden":
 				exclude_hidden = true;
 				break;
@@ -491,10 +488,6 @@ public class AptikConsole : GLib.Object {
 				skip_scripts = true;
 				break;
 
-			case "--duplicity":
-				home_mode = HomeDataBackupMode.DUPLICITY;
-				break;
-				
 			case "--debug":
 				LOG_DEBUG = true;
 				break;
@@ -1598,8 +1591,10 @@ public class AptikConsole : GLib.Object {
 		
 		bool status = true;
 
-		var mgr = new UserHomeDataManager(dry_run);
-		bool ok = mgr.backup_home(basepath, userlist, home_mode, password, full_backup, exclude_hidden, use_xz);
+		
+
+		var mgr = new UserHomeDataManager(dry_run, redist);
+		bool ok = mgr.backup_home(basepath, userlist, exclude_hidden, use_xz);
 		if (!ok){ status = false; }
 		
 		return status; 
@@ -1614,8 +1609,8 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 		
-		var mgr = new UserHomeDataManager(dry_run);
-		bool ok = mgr.restore_home(basepath, userlist, password);
+		var mgr = new UserHomeDataManager(dry_run, redist);
+		bool ok = mgr.restore_home(basepath, userlist);
 		if (!ok){ status = false; }
 		
 		return status;
@@ -1628,7 +1623,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 		
-		var mgr = new UserHomeDataManager(dry_run);
+		var mgr = new UserHomeDataManager(dry_run, redist);
 		bool ok = mgr.fix_home_ownership(userlist);
 		if (!ok){ status = false; }
 		

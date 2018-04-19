@@ -1159,7 +1159,93 @@ public class AptikConsole : GLib.Object {
 
 		return ok;
 	}
+
+	// repos --------------------------
+
+	public bool dump_repos(){
+		
+		//check_admin_access();
+		
+		var mgr = new RepoManager(distro, dry_run);
+		mgr.dump_info();
+		return true;
+	}
+
+	public bool dump_repos_backup(){
+		
+		//check_admin_access();
+		
+		var mgr = new RepoManager(distro, dry_run);
+		mgr.dump_info_backup(basepath);
+		return true;
+	}
 	
+	public bool list_repos(){
+
+		check_admin_access();
+		
+		var mgr = new RepoManager(distro, dry_run);
+		return mgr.list_repos();
+	}
+	
+	public bool backup_repos(){
+
+		check_admin_access();
+		
+		dir_create(basepath);
+
+		copy_binary();
+		
+		var mgr = new RepoManager(distro, dry_run);
+		return mgr.save_repos(basepath);
+	}
+
+	public bool restore_repos(){
+
+		check_admin_access();
+		
+		check_basepath();
+		if (!check_backup_dir_exists(BackupType.REPOS)) { return false; }
+
+		var mgr = new RepoManager(distro, dry_run);
+		return mgr.restore_repos(basepath);
+	}
+
+	public bool import_missing_keys(){
+		var mgr = new RepoManager(distro, dry_run);
+		return mgr.import_missing_keys(true);
+	}
+
+	// cache  ---------------------
+	
+	public bool backup_cache(){
+
+		check_admin_access();
+		
+		dir_create(basepath);
+
+		copy_binary();
+		
+		var mgr = new PackageCacheManager(distro, dry_run);
+		return mgr.backup_cache(basepath, false);
+	}
+
+	public bool restore_cache(){
+
+		check_admin_access();
+		
+		check_basepath();
+		if (!check_backup_dir_exists(BackupType.CACHE)) { return false; }
+		
+		var mgr = new PackageCacheManager(distro, dry_run);
+		return mgr.restore_cache(basepath);
+	}
+
+	public bool clear_cache(){
+		var mgr = new PackageCacheManager(distro, dry_run);
+		return mgr.clear_cache(no_prompt);
+	}
+
 	// packages ------------------------------
 
 	public bool dump_packages(){
@@ -1254,93 +1340,14 @@ public class AptikConsole : GLib.Object {
 		if (!check_backup_dir_exists(BackupType.PACKAGES)) { return false; }
 		
 		var mgr = new PackageManager(distro, dry_run);
-		return mgr.restore_packages(basepath, no_prompt);
-	}
+		bool ok = mgr.restore_packages(basepath, no_prompt);
 
-	// cache  ---------------------
-	
-	public bool backup_cache(){
+		if (ok && !dry_run){
+			var mgr2 = new PackageCacheManager(distro, dry_run);
+			return mgr2.backup_cache(basepath, true);
+		}
 
-		check_admin_access();
-		
-		dir_create(basepath);
-
-		copy_binary();
-		
-		var mgr = new PackageCacheManager(distro, dry_run);
-		return mgr.backup_cache(basepath);
-	}
-
-	public bool restore_cache(){
-
-		check_admin_access();
-		
-		check_basepath();
-		if (!check_backup_dir_exists(BackupType.CACHE)) { return false; }
-		
-		var mgr = new PackageCacheManager(distro, dry_run);
-		return mgr.restore_cache(basepath);
-	}
-
-	public bool clear_cache(){
-		var mgr = new PackageCacheManager(distro, dry_run);
-		return mgr.clear_cache(no_prompt);
-	}
-
-	// repos --------------------------
-
-	public bool dump_repos(){
-		
-		//check_admin_access();
-		
-		var mgr = new RepoManager(distro, dry_run);
-		mgr.dump_info();
-		return true;
-	}
-
-	public bool dump_repos_backup(){
-		
-		//check_admin_access();
-		
-		var mgr = new RepoManager(distro, dry_run);
-		mgr.dump_info_backup(basepath);
-		return true;
-	}
-	
-	public bool list_repos(){
-
-		check_admin_access();
-		
-		var mgr = new RepoManager(distro, dry_run);
-		return mgr.list_repos();
-	}
-	
-	public bool backup_repos(){
-
-		check_admin_access();
-		
-		dir_create(basepath);
-
-		copy_binary();
-		
-		var mgr = new RepoManager(distro, dry_run);
-		return mgr.save_repos(basepath);
-	}
-
-	public bool restore_repos(){
-
-		check_admin_access();
-		
-		check_basepath();
-		if (!check_backup_dir_exists(BackupType.REPOS)) { return false; }
-
-		var mgr = new RepoManager(distro, dry_run);
-		return mgr.restore_repos(basepath);
-	}
-
-	public bool import_missing_keys(){
-		var mgr = new RepoManager(distro, dry_run);
-		return mgr.import_missing_keys(true);
+		return ok;
 	}
 
 	// themes -----------------------------
@@ -1852,9 +1859,12 @@ public class AptikConsole : GLib.Object {
 			if (files.size > 0){
 
 				foreach(string file in files){
+
+					if (file.has_suffix("~")){ continue; }
+					
 					chmod(file, "a+x");
 					log_msg("%s: %s\n".printf(_("Executed"), file));
-					Posix.system(file);
+					Posix.system("sh '%s'".printf(escape_single_quote(file)));
 					log_msg(string.nfill(70,'-'));
 				}
 			}

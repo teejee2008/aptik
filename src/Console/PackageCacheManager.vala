@@ -45,13 +45,20 @@ public class PackageCacheManager : GLib.Object {
 
 	// save -------------------------------------------
 
-	public bool backup_cache(string _basepath){
+	public bool backup_cache(string _basepath, bool copyback){
 
 		basepath = _basepath;
-		
-		log_msg(string.nfill(70,'-'));
-		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_CACHE));
-		log_msg(string.nfill(70,'-'));
+
+		if (copyback){
+			log_msg(string.nfill(70,'-'));
+			log_msg(_("Copying new packages to backup path"));
+			log_msg("");
+		}
+		else{
+			log_msg(string.nfill(70,'-'));
+			log_msg("%s: %s".printf(_("Backup"), Messages.TASK_CACHE));
+			log_msg(string.nfill(70,'-'));
+		}
 		
 		string backup_path = path_combine(basepath, "cache");
 		dir_create(backup_path);

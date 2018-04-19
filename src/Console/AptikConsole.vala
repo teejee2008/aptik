@@ -1342,7 +1342,7 @@ public class AptikConsole : GLib.Object {
 		var mgr = new PackageManager(distro, dry_run);
 		bool ok = mgr.restore_packages(basepath, no_prompt);
 
-		if (ok && !dry_run){
+		if (ok && !dry_run && !redist){
 			var mgr2 = new PackageCacheManager(distro, dry_run);
 			return mgr2.backup_cache(basepath, true);
 		}

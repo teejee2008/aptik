@@ -1243,7 +1243,7 @@ public class AptikConsole : GLib.Object {
 
 	public bool clear_cache(){
 		var mgr = new PackageCacheManager(distro, dry_run);
-		return mgr.clear_cache(no_prompt);
+		return mgr.clear_system_cache(no_prompt);
 	}
 
 	// packages ------------------------------
@@ -1342,9 +1342,15 @@ public class AptikConsole : GLib.Object {
 		var mgr = new PackageManager(distro, dry_run);
 		bool ok = mgr.restore_packages(basepath, no_prompt);
 
-		if (ok && !dry_run && !redist){
+		if (ok && !dry_run){
+			
 			var mgr2 = new PackageCacheManager(distro, dry_run);
-			return mgr2.backup_cache(basepath, true);
+
+			if (!redist){
+				ok = mgr2.backup_cache(basepath, true);
+			}
+			
+			ok = ok && mgr2.clear_system_cache(true);
 		}
 
 		return ok;

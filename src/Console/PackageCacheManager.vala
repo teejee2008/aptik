@@ -236,7 +236,7 @@ public class PackageCacheManager : GLib.Object {
 
 	// clear -----------------------------------------
 	
-	public bool clear_cache(bool no_prompt){
+	public bool clear_system_cache(bool no_prompt){
 
 		string cmd = "";
 		

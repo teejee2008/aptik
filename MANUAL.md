@@ -276,12 +276,13 @@ Following actions are executed for backup:
 Usage: `aptik --restore-packages`
 
 Following actions are executed for restore:
-   1. List of packages are read from `<basepath>/packages/selected.list`. Packages that are not installed, but available in repositories, will be installed using the package manager.
+      1. List of packages are read from `<basepath>/packages/selected.list`. Packages that are not installed, but available in repositories, will be installed using the package manager.
       * Debian-based distros - Installed using `aptitude`, `apt-fast`, `apt-get` or `apt` in order of preference
       * Fedora-based distros - Installed using `dnf` or `yum` in order of preference
       * Arch-based distros - Installed using `pacman`
-
-   2. Debian-based distros - Any deb files in backup folder `<basepath>/debs` will be installed using `apt` or `gdebi` in order of preference.
+      2. Debian-based distros - Any deb files in backup folder `<basepath>/debs` will be installed using `apt` or `gdebi` in order of preference.
+      3. Newly downloaded packages will be copied back to the backup location `<basepath>/cache`. This is useful if you use the same backups to restore to another machine. The next run will have all required packages in cache, and package download will not be required.
+      4. Package manager cache is cleaned after restoring packages. This saves disk space and removes packages which are no longer required.
 
 
 ### User Accounts

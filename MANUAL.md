@@ -281,8 +281,8 @@ Following actions are executed for restore:
       * Fedora-based distros - Installed using `dnf` or `yum` in order of preference
       * Arch-based distros - Installed using `pacman`
       2. Debian-based distros - Any deb files in backup folder `<basepath>/debs` will be installed using `apt` or `gdebi` in order of preference.
-      3. Newly downloaded packages will be copied back to the backup location `<basepath>/cache`. This is useful if you use the same backups to restore to another machine. The next run will have all required packages in cache, and package download will not be required.
-      4. Package manager cache is cleaned after restoring packages. This saves disk space and removes packages which are no longer required.
+      3. Newly downloaded packages will be copied back to the backup location `<basepath>/cache`. This is useful if you use same backups to restore to another machine. The next restore will have all required packages in cache, and download will not be required while reinstalling packages.
+      4. Package manager cache is cleaned after restoring packages. This removes downloaded packages which are no longer required, and saves disk space on the system.
 
 
 ### User Accounts

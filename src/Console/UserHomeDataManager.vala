@@ -43,12 +43,12 @@ public class UserHomeDataManager : GLib.Object {
 
 	// backup and restore ----------------------
 	
-	public bool backup_home(string _basepath, string userlist, bool exclude_hidden, bool _use_xz){
+	public bool backup_home(string _basepath, string userlist, bool exclude_hidden, bool _use_xz, string exclude_from_file){
 
 		basepath = _basepath;
 
 		use_xz = _use_xz;
-		
+
 		string backup_path = path_combine(basepath, "home");
 
 		if (redist){ dir_delete(backup_path); } // delete existing backups
@@ -66,7 +66,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		// backup --------------------------------------
 		
-		bool ok = backup_home_tar(backup_path, users, current_user, exclude_hidden);
+		bool ok = backup_home_tar(backup_path, users, current_user, exclude_hidden, exclude_from_file);
 
 		if (!ok){ status = false; }
 		
@@ -80,7 +80,7 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users, User current_user, bool exclude_hidden){
+	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users, User current_user, bool exclude_hidden, string exclude_from_file){
 
 		bool status = true;
 		int retval = 0;
@@ -103,7 +103,7 @@ public class UserHomeDataManager : GLib.Object {
 				backup_path_user = backup_path;
 			}
 			else{
-				path_combine(backup_path, user.name);
+				backup_path_user = path_combine(backup_path, user.name);
 				dir_delete(backup_path_user); // remove existing backups if any
 				dir_create(backup_path_user);
 				chmod(backup_path_user, "a+rwx");
@@ -115,7 +115,7 @@ public class UserHomeDataManager : GLib.Object {
 			if (file_exists(exclude_list)){
 				file_delete(exclude_list);
 			}
-			file_write(exclude_list, exclude_list_create(user, exclude_hidden, true));
+			file_write(exclude_list, exclude_list_create(user, exclude_hidden, exclude_from_file, true));
 			chmod(exclude_list, "a+rw");
 			
 			// prepare -----------------------------------------
@@ -217,7 +217,7 @@ public class UserHomeDataManager : GLib.Object {
 			if (file_exists(exclude_list)){
 				file_delete(exclude_list);
 			}
-			file_write(exclude_list, exclude_list_create(user, exclude_hidden, false));
+			file_write(exclude_list, exclude_list_create(user, exclude_hidden, "", false));
  
 			// check for existing backup -----------------------
 			
@@ -275,7 +275,7 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public string exclude_list_create(User user, bool exclude_hidden, bool tar_format){
+	public string exclude_list_create(User user, bool exclude_hidden, string exclude_from_file, bool tar_format){
 		
 		string txt = "";
 
@@ -298,7 +298,30 @@ public class UserHomeDataManager : GLib.Object {
 			list.add(path_combine(user.home_path, ".*"));
 		}
 
-		int index = file_parent(user.home_path).length + 1; // +1 for / after parent path
+		foreach(var item in list){
+			log_msg("%s: %s".printf(_("exclude"), item));
+		}
+
+		if ((exclude_from_file.length > 0) && file_exists(exclude_from_file)){
+
+			foreach(string line in file_read(exclude_from_file).split("\n")){
+				
+				if (line.strip().length > 0){
+					
+					list.add(path_combine(user.home_path, line)); // don't strip
+
+					log_msg("%s: %s".printf(_("exclude"), path_combine(user.home_path, line)));
+				}
+			}
+		}
+
+		log_msg("");
+
+		string home_parent = file_parent(user.home_path);
+		int index = home_parent.length;
+		if (home_parent != "/"){
+			index += 1;  // remove / after parent path
+		}
 		
 		foreach(var item in list){
 			if (tar_format){

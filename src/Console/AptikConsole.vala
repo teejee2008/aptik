@@ -68,7 +68,8 @@ public class AptikConsole : GLib.Object {
 	public bool exclude_icons = false;
 	public bool exclude_themes = false;
 	public bool exclude_fonts = false;
-
+	public string exclude_from_file = "";
+	
 	public bool skip_repos = false;
 	public bool skip_cache = false;
 	public bool skip_packages = false;
@@ -261,6 +262,7 @@ public class AptikConsole : GLib.Object {
 		//msg += "\n";
 		msg += fmt.printf("--exclude-hidden", _("Exclude hidden files and directories (app configs)"));
 		msg += fmt.printf("", _("(default: include)"));
+		msg += fmt.printf("--exclude-from <file>", _("Exclude files which match patterns in specified file"));
 		msg += "\n";
 		
 		msg += fmt2.printf(Messages.TASK_MOUNTS);
@@ -408,6 +410,11 @@ public class AptikConsole : GLib.Object {
 			case "--users":
 				k++;
 				userlist = args[k];
+				break;
+
+			case "--exclude-from":
+				k++;
+				exclude_from_file = args[k];
 				break;
 
 			case "--full":
@@ -1611,7 +1618,7 @@ public class AptikConsole : GLib.Object {
 		bool status = true;
 
 		var mgr = new UserHomeDataManager(dry_run, redist, current_user);
-		bool ok = mgr.backup_home(basepath, userlist, exclude_hidden, use_xz);
+		bool ok = mgr.backup_home(basepath, userlist, exclude_hidden, use_xz, exclude_from_file);
 		if (!ok){ status = false; }
 		
 		return status; 

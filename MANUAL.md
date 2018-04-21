@@ -340,7 +340,7 @@ Usage: `aptik --backup-home`
 
 Following actions are executed for backup:
 
-1. For each user, the contents of home directory are archived using TAR + GZIP and saved to file  `<basepath>/home/<username>/data.tar.gz`. Full backup is created every time a backup is taken.
+1. For each user, the contents of home directory are archived using TAR + GZIP/XZ and saved to file  `<basepath>/home/<username>/data.tar.gz`. Full backup is created every time.
 
 2. Backups can be created for specific users with option `--users <user1,user2...>`. Specify a comma-separated list of user logins without space.
 
@@ -360,8 +360,16 @@ Following actions are executed for backup:
    ~/.kde/share/apps/kio_http/cache
    ~/.kde/share/cache/http
    ```
+4. You can specify a text file with names of additional files and directories to be excluded from backup. For example, `aptik --backup-home --exclude-from 'exclude.txt'`
 
-4. Hidden files and folders in home directories can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings. Its recommended to keep these files and folders since they contain configuration changes that users have made to different applications.
+	Sample 'exclude.txt':
+   ```
+.steam
+.java
+   ```
+Paths should be relative to user's home directory. It will be applied to every user's home directory. Do not specify full paths, or paths specific to a user.
+
+4. Hidden files and folders (with names starting with a dot) can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings. Its recommended to keep these files and folders since they contain configuration changes that users have made to different applications.
 
 #### Restore
 

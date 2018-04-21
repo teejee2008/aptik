@@ -142,19 +142,30 @@ public class UserHomeDataManager : GLib.Object {
 			
 			var cmd = "";
 
+			cmd += "cd '%s' ; ".printf(escape_single_quote(user.home_path));
+
 			cmd += "tar cf -";
 
 			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
 
-			cmd += " -C '%s'".printf(escape_single_quote(file_parent(user.home_path)));
+			cmd += " -C '%s'".printf(escape_single_quote(user.home_path));
+
+			if (exclude_hidden){
+				cmd += " *";
+			}
+			else{
+				cmd += " .";
+			}
 			
-			cmd += " '%s'".printf(escape_single_quote(file_basename(user.home_path)));
+			//.printf(escape_single_quote(file_basename(user.home_path)));
 
 			//cmd += " 2>/dev/null";
 
 			cmd += " | pv -s $(du -sb '%s' | awk '{print $1}')".printf(escape_single_quote(user.home_path));
 
 			cmd += " | %s > '%s'".printf(compressor, escape_single_quote(temp_file));
+
+			cmd += " ; cd - ; "; // 'cd -' will restore last directory
 
 			// execute ---------------------------------
 
@@ -281,26 +292,22 @@ public class UserHomeDataManager : GLib.Object {
 
 		var list = new Gee.ArrayList<string>();
 		
-		list.add(path_combine(user.home_path, ".thumbnails"));
-		list.add(path_combine(user.home_path, ".cache"));
-		list.add(path_combine(user.home_path, ".dbus"));
-		list.add(path_combine(user.home_path, ".gvfs"));
-		list.add(path_combine(user.home_path, ".config/dconf/user"));
-		list.add(path_combine(user.home_path, ".local/share/Trash"));
-		list.add(path_combine(user.home_path, ".local/share/trash"));
-		list.add(path_combine(user.home_path, ".mozilla/firefox/*.default/Cache"));
-		list.add(path_combine(user.home_path, ".mozilla/firefox/*.default/OfflineCache"));
-		list.add(path_combine(user.home_path, ".opera/cache"));
-		list.add(path_combine(user.home_path, ".kde/share/apps/kio_http/cache"));
-		list.add(path_combine(user.home_path, ".kde/share/cache/http"));
+		list.add(".thumbnails");
+		list.add(".cache");
+		list.add(".dbus");
+		list.add(".gvfs");
+		list.add(".config/dconf/user");
+		list.add(".local/share/Trash");
+		list.add(".local/share/trash");
+		list.add(".mozilla/firefox/*.default/Cache");
+		list.add(".mozilla/firefox/*.default/OfflineCache");
+		list.add(".opera/cache");
+		list.add(".kde/share/apps/kio_http/cache");
+		list.add(".kde/share/cache/http");
 
-		if (exclude_hidden){
-			list.add(path_combine(user.home_path, ".*"));
-		}
-
-		foreach(var item in list){
-			log_msg("%s: %s".printf(_("exclude"), item));
-		}
+		//if (exclude_hidden){
+			//list.add(".*"); // use .+ as .* will exclude everything
+		//}
 
 		if ((exclude_from_file.length > 0) && file_exists(exclude_from_file)){
 
@@ -308,21 +315,19 @@ public class UserHomeDataManager : GLib.Object {
 				
 				if (line.strip().length > 0){
 					
-					list.add(path_combine(user.home_path, line)); // don't strip
-
-					log_msg("%s: %s".printf(_("exclude"), path_combine(user.home_path, line)));
+					list.add(line); // don't strip
 				}
 			}
 		}
 
+		foreach(var item in list){
+			log_msg("%s: %s".printf(_("exclude"), path_combine(user.home_path, item)));
+		}
+
 		log_msg("");
 
-		string home_parent = file_parent(user.home_path);
-		int index = home_parent.length;
-		if (home_parent != "/"){
-			index += 1;  // remove / after parent path
-		}
-		
+		/*int index = user.home_path.length + 1;
+
 		foreach(var item in list){
 			if (tar_format){
 				txt += "%s\n".printf(item[index:item.length]);
@@ -330,10 +335,14 @@ public class UserHomeDataManager : GLib.Object {
 			else{
 				txt += "%s\n".printf(item);
 			}
-		}
+		}*/
 
-		if (dry_run || LOG_DEBUG){
-			log_msg("Exclude:\n%s\n".printf(txt));
+		//if (dry_run || LOG_DEBUG){
+			//log_msg("Exclude:\n%s\n".printf(txt));
+		//}
+
+		foreach(var item in list){
+			txt += "%s\n".printf(item);
 		}
 
 		return txt;
@@ -438,7 +447,7 @@ public class UserHomeDataManager : GLib.Object {
 			//	file_delete(exclude_list);
 			//}
 			//file_write(exclude_list, exclude_list_create(user));
-
+			
 			// create script ---------------------------
 
 			var cmd = "";
@@ -447,7 +456,7 @@ public class UserHomeDataManager : GLib.Object {
 			
 			cmd += "tar xf -";
 			
-			cmd += " -C '%s'".printf(escape_single_quote(file_parent(user.home_path)));
+			cmd += " -C '%s'".printf(escape_single_quote(user.home_path));
 
 			//cmd += " >/dev/null 2>&1";
 
@@ -473,6 +482,51 @@ public class UserHomeDataManager : GLib.Object {
 
 			log_msg(string.nfill(70,'-'));
 		}
+
+		if (redist){
+
+			string tar_file_gz = path_combine(backup_path_user, "data.tar.gz");
+
+			string tar_file_xz = path_combine(backup_path_user, "data.tar.xz");
+
+			if (file_exists(tar_file_xz)){
+				extract_to_etc_skel(tar_file_xz);
+			}
+			else if (file_exists(tar_file_gz)){
+				extract_to_etc_skel(tar_file_gz);
+			}
+		}
+		
+		return status;
+	}
+
+	public bool extract_to_etc_skel(string tar_file){
+
+		bool status = true;
+		
+		var cmd = "";
+
+		cmd += "pv '%s' | ".printf(escape_single_quote(tar_file));
+		
+		cmd += "tar xf -";
+		
+		cmd += " -C '%s'".printf("/etc/skel");
+
+		// execute ---------------------------------
+
+		int retval = 0;
+
+		log_msg("%s '%s'...\n".printf(_("Extracting"), "/etc/skel"));
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			retval = Posix.system(cmd);
+		}
+		
+		if (retval != 0){ status = false; }
 
 		return status;
 	}

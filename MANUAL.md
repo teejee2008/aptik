@@ -467,11 +467,45 @@ Following actions are executed for restore:
 6. It's recommended to **review changes** before rebooting the system. Run `sudo aptik --list-mounts` to view updated entries after restore completes. Replace the backup files in case of any issues. These backups can be found in `/etc` folder with names - `/etc/fstab.bkup.<timestamp>` and `/etc/crypttab.bkup.<timestamp>`.
 
 
+### Files & Directories (Advanced)
 
+This option is for advanced users. It will simply backup files and directories and dump them on the target system during restore. Permissions, timestamps and other file properties will be preserved.
+
+#### Backup
+
+Usage: `aptik --backup-files --add <path>`
+
+Following actions are executed for backup:
+
+1. The file or directory specified by `<path>` will be archived with TAR and saved to backup folder  `<basepath>/files/data`
+
+2. You can add more files and directories by executing this command multiple times. There should be only one `--add <path>` argument per invocation.
+
+3. This is useful for saving files and directories that are not directly supported by Aptik. For example, you can use the following command to backup virtual machines created by Virt-Manager:
+
+   `aptik --backup-files --add "/var/lib/libvirt/images/"`
+
+#### Restore
+
+Usage: `aptik --restore-files`
+
+Following actions are executed for restore:
+
+1. All TAR files in backup folder  `<basepath>/files/data` will be extracted to the root of the filesystem (`/`). Existing files will be overwritten without any warnings.
+
+### Post-Restore Scripts (Advanced)
+
+Scripts can be placed in `<basepath>/scripts` for any actions that need to be executed after restore is complete. These scripts are executed by commands `--restore-all` and `--restore-scripts`.
+
+Scripts will be sorted alphanumerically on file name and executed one by one. Scripts should be numbered or named in the order in which they need to be executed.
+
+Scripts having file name ending with tilde character `~` will be ignored. This can be used to disable individual scripts.
 
 #Aptik Generator Plugin
 
 The Aptik Generator plugin creates a stand-alone installer from current system settings. The backup files created for inclusion in installer are similar to what is described above but with some important changes. Bacups are created for only the current user account from which installer is being generated. Backups are skipped for other users. During restore, the same backups are restored for every user account on the target system.
+
+Backups are created in `<basepath>/distribution` folder for generating the installer. Existing backups in `<basepath>` are not used. Any files and scripts in `<basepath>/files` and `<basepath>/scripts` will be copied over to `<basepath>/distribution/files`  and `<basepath>/distribution/scripts`.
 
 ### Software Repositories
 

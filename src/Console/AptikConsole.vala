@@ -97,9 +97,12 @@ public class AptikConsole : GLib.Object {
 
 		init_tmp(AppShortName);
 
-		string pkg = "pv";
 		if (!cmd_exists("pv")){
-			PackageManager.install_package(pkg, pkg, pkg);
+			PackageManager.install_package("pv", "pv", "pv");
+		}
+
+		if (!cmd_exists("xz")){
+			PackageManager.install_package("xz-utils", "xz", "xz");
 		}
 
 		check_dependencies();

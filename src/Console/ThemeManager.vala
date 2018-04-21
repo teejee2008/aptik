@@ -232,7 +232,7 @@ public class ThemeManager : GLib.Object {
 
 	// save ---------------------------------------
 
-	public bool save_themes(string _basepath){
+	public bool save_themes(string _basepath, bool use_xz){
 
 		basepath = _basepath;
 		
@@ -245,8 +245,26 @@ public class ThemeManager : GLib.Object {
 		chmod(backup_path, "a+rwx");
 
 		foreach(var theme in themes_sorted) {
+			
 			if (theme.is_selected) {
-				theme.zip(backup_path);
+
+				// delete existing ---------------
+				
+				string tar_file_gz = path_combine(backup_path, "%s.tar.gz".printf(theme.name));
+
+				string tar_file_xz = path_combine(backup_path, "%s.tar.xz".printf(theme.name));
+
+				if (file_exists(tar_file_gz)){
+					file_delete(tar_file_gz);
+				}
+				if (file_exists(tar_file_xz)){
+					file_delete(tar_file_xz);
+				}
+
+				// zip it ------------------------
+				
+				theme.zip(backup_path, use_xz);
+				
 				while (theme.is_running) {
 					sleep(500);
 				}
@@ -556,9 +574,9 @@ public class Theme : GLib.Object{
 	
 	// zip and unzip --------------------------
 
-	public bool zip(string backup_path) {
+	public bool zip(string backup_path, bool use_xz) {
 		
-		string file_name = name + ".tar.gz";
+		string file_name = "%s.tar.%s".printf(name, (use_xz ? "xz" : "gz"));
 		string zip_file = path_combine(backup_path, file_name);
 
 		try {
@@ -569,7 +587,7 @@ public class Theme : GLib.Object{
 			}
 
 			// silent -- no -v
-			string cmd = "tar czf '%s' -C '%s' '%s' >/dev/null 2>&1".printf(zip_file, file_parent(theme_path), name);
+			string cmd = "tar caf '%s' -C '%s' '%s' >/dev/null 2>&1".printf(zip_file, file_parent(theme_path), name);
 			log_debug(cmd);
 
 			stdout.printf("%-80s".printf(_("Archiving") + " '%s'".printf(theme_path)));
@@ -604,7 +622,7 @@ public class Theme : GLib.Object{
 		dir_create(theme_path);
 
 		// silent -- no -v
-		string cmd = "tar xzf '%s' --directory='%s' >/dev/null 2>&1".printf(archive_path, file_parent(theme_path));
+		string cmd = "tar xf '%s' --directory='%s' >/dev/null 2>&1".printf(archive_path, file_parent(theme_path));
 
 		if (dry_run){
 			log_msg("$ %s".printf(cmd));

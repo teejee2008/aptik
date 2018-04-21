@@ -49,9 +49,9 @@ public class AptikConsole : GLib.Object {
 	public bool dry_run = false;
 	public bool list_only = false;
 	public bool robot = false;
-	public bool use_xz = true;
+	public bool use_xz = false;
 	public bool redist = false;
-
+	
 	public User current_user;
 	
 	// info
@@ -1378,7 +1378,7 @@ public class AptikConsole : GLib.Object {
 
 		var mgr = new ThemeManager(distro, dry_run, "themes");
 		mgr.check_installed_themes();
-		return mgr.save_themes(basepath);
+		return mgr.save_themes(basepath, use_xz);
 	}
 
 	public bool restore_themes(){
@@ -1414,7 +1414,7 @@ public class AptikConsole : GLib.Object {
 
 		var mgr = new ThemeManager(distro, dry_run, "icons");
 		mgr.check_installed_themes();
-		return mgr.save_themes(basepath);
+		return mgr.save_themes(basepath, use_xz);
 	}
 
 	public bool restore_icons(){

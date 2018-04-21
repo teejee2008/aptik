@@ -397,7 +397,23 @@ public class AptikConsole : GLib.Object {
 			switch (args[k].down()) {
 			case "--basepath":
 				k += 1;
-				basepath = args[k] + (args[k].has_suffix("/") ? "" : "/");
+				basepath = args[k];
+
+				if (basepath.has_prefix("./")){
+					basepath = path_combine(Environment.get_current_dir(), basepath[2:basepath.length]);
+				}
+				else if (basepath.has_prefix("../")){
+					basepath = path_combine(file_parent(Environment.get_current_dir()), basepath[3:basepath.length]);
+				}
+				else if (!basepath.has_prefix("/")){
+					basepath = path_combine(Environment.get_current_dir(), basepath);
+				}
+
+				if (!file_exists(basepath)){
+					log_error("%s: %s".printf(_("Path not found"), basepath));
+					exit(1);
+				}
+
 				break;
 
 			case "--password":
@@ -621,7 +637,12 @@ public class AptikConsole : GLib.Object {
 		}
 
 		if (redist){
-			basepath = path_combine(basepath, "distribution");
+			
+			//basepath = path_combine(basepath, "distribution");
+
+			skip_cache = true;
+			skip_users = true;
+			skip_groups = true;
 		}
 
 		// process command ----------------------------------
@@ -947,15 +968,15 @@ public class AptikConsole : GLib.Object {
 			if (!ok) { status = false; }
 		}
 
-		if (!skip_files && redist){
+		/*if (!skip_files && redist){
 			ok = copy_files_for_dist();
 			if (!ok) { status = false; }
-		}
+		}*/
 		
-		if (!skip_scripts && redist){
+		/*if (!skip_scripts && redist){
 			ok = copy_scripts_for_dist();
 			if (!ok) { status = false; }
-		}
+		}*/
 		
 		return status;
 	}
@@ -1148,27 +1169,38 @@ public class AptikConsole : GLib.Object {
 			log_msg("%s: %s".printf(_("Removed"), path));
 		}
 
-		path = path_combine(basepath, "debs");
-		
-		if (dir_exists(path)){
-			
-			var list = dir_list_names(path, false);
-			int count = 0;
-			foreach(var fpath in list){
-				if (fpath.has_suffix(".deb")) { count++; }
-			}
-			
-			if (count > 0){
-				// skip if not empty
-				log_msg("%s: %s (%d debs found)".printf(_("Skipped"), path, count));
-			}
-			else{
-				// remove if empty
-				remove_backup("debs");
-			}
+		path = path_combine(basepath, "restore-all.sh");
+		if (file_exists(path)){
+			file_delete(path);
+			log_msg("%s: %s".printf(_("Removed"), path));
 		}
 
+		foreach(string dirname in new string[]{ "debs", "files", "scripts"}){
+			path = path_combine(basepath, dirname);
+			delete_if_empty(path);
+		}
+		
 		return status;
+	}
+
+	public bool delete_if_empty(string dirname){
+
+		string path = path_combine(basepath, dirname);
+		
+		if (!dir_exists(path)){ return true; }
+		
+		var list = dir_list_names(path, false);
+
+		if (list.size > 0){
+			// skip if not empty
+			log_msg("%s: %s (%d files found)".printf(_("Skipped"), path, list.size));
+		}
+		else{
+			// remove if empty
+			remove_backup(dirname);
+		}
+
+		return true;
 	}
 
 	public bool remove_backup(string item_name){

@@ -52,5 +52,21 @@ public class FsTabEntry : GLib.Object {
 			return "";
 		}
 	}
+
+	public bool is_normal_device_mount(){
+
+		return device.has_prefix("/dev/") || device.has_prefix("LABEL=") || device.has_prefix("UUID=")
+			|| device.has_prefix("PARTLABEL=") || device.has_prefix("PARTUUID=");
+	}
+
+	public bool is_tmpfs_mount(){
+
+		return (device == "tmpfs");
+	}
+
+	public bool is_bind_mount(){
+
+		return device.has_prefix("/") && !device.has_prefix("/dev/") && (fs_type == "none") && options.contains("bind");
+	}
 }
 

@@ -1568,7 +1568,7 @@ public class AptikConsole : GLib.Object {
 
 		check_admin_access();
 		
-		var mgr = new MountEntryManager(false);
+		var mgr = new MountEntryManager(false, false);
 		mgr.query_mount_entries();
 		mgr.list_mount_entries();
 		return true;
@@ -1585,7 +1585,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 
-		var mgr = new MountEntryManager(dry_run);
+		var mgr = new MountEntryManager(dry_run, redist);
 		mgr.query_mount_entries();
 		bool ok = mgr.backup_mount_entries(basepath);
 		if (!ok){ status = false; }
@@ -1602,7 +1602,7 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 		
-		var mgr = new MountEntryManager(dry_run);
+		var mgr = new MountEntryManager(dry_run, redist);
 		bool ok = mgr.restore_mount_entries(basepath);
 		if (!ok){ status = false; }
 		

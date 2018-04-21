@@ -32,10 +32,12 @@ public class MountEntryManager : GLib.Object {
 	public Gee.ArrayList<CryptTabEntry> crypttab;
 
 	public bool dry_run = false;
-
-	public MountEntryManager(bool _dry_run){
+	public bool redist = false;
+	
+	public MountEntryManager(bool _dry_run, bool _redist){
 
 		dry_run = _dry_run;
+		redist = _redist;
 		
 		fstab = new Gee.ArrayList<FsTabEntry>();
 		crypttab = new Gee.ArrayList<CryptTabEntry>();
@@ -346,14 +348,28 @@ public class MountEntryManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 		
 		string backup_path = path_combine(basepath, "mounts");
+		dir_delete(backup_path);
 		dir_create(backup_path);
 		chmod(backup_path, "a+rwx");
 		
 		bool status = true;
 
 		foreach(var entry in fstab){
-			
-			string backup_file = path_combine(backup_path, "%s %s.fstab".printf(entry.device.replace("/","╱"), entry.mount_point.replace("/","╱")));
+
+			if (redist && entry.is_normal_device_mount()){
+				continue;
+			}
+
+			switch (entry.mount_point){
+			case "/":
+			case "/home":
+			case "/boot":
+			case "/boot/efi":
+				continue; // it's too risky to migrate these entries
+			}
+
+			//string backup_file = path_combine(backup_path, "%s %s.fstab".printf(entry.device.replace("/","╱"), entry.mount_point.replace("/","╱")));
+			string backup_file = path_combine(backup_path, "%s.fstab".printf(entry.mount_point.replace("/","_")));
 			bool ok = file_write(backup_file, entry.get_line());
 			chmod(backup_file, "a+rw");
 			
@@ -362,8 +378,13 @@ public class MountEntryManager : GLib.Object {
 		}
 
 		foreach(var entry in crypttab){
+
+			if (redist){
+				continue;
+			}
 			
-			string backup_file = path_combine(backup_path, "%s %s.crypttab".printf(entry.name.replace("/","╱"), entry.device.replace("/","╱")));
+			//string backup_file = path_combine(backup_path, "%s %s.crypttab".printf(entry.name.replace("/","╱"), entry.device.replace("/","╱")));
+			string backup_file = path_combine(backup_path, "%s.crypttab".printf(entry.name.replace("/","_")));
 			bool ok = file_write(backup_file, entry.get_line());
 			chmod(backup_file, "a+rw");
 			
@@ -400,7 +421,7 @@ public class MountEntryManager : GLib.Object {
 
 		this.query_mount_entries();
 
-		var mgr = new MountEntryManager(dry_run);
+		var mgr = new MountEntryManager(dry_run, redist);
 		mgr.read_mount_entries_from_folder(backup_path);
 
 		ok = this.restore_mount_entries_fstab(mgr.fstab);
@@ -436,13 +457,7 @@ public class MountEntryManager : GLib.Object {
 			}
 			
 			if (dup != null){
-				
 				fstab_bkup.remove(dup);
-
-				// keep mount options if file system type matches
-				if (entry.fs_type == dup.fs_type){
-					entry.options = dup.options;
-				}
 			}
 		}
 
@@ -450,22 +465,14 @@ public class MountEntryManager : GLib.Object {
 
 		foreach(var entry in fstab_bkup){
 
-			if (entry.mount_point == "/boot/efi"){
-				continue; // do not add if not already existing
+			switch (entry.mount_point){
+			case "/":
+			case "/home":
+			case "/boot":
+			case "/boot/efi":
+				continue; // it's too risky to migrate these entries
 			}
-
-			if (entry.mount_point == "/boot"){
-				continue; // do not add if not already existing
-			}
-
-			if (entry.mount_point == "/home"){
-				continue; // do not add if not already existing
-			}
-
-			if (entry.mount_point == "/"){
-				continue; // do not add if not already existing
-			}
-
+			
 			list.add(entry);
 		}
 

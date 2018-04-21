@@ -159,9 +159,9 @@ Common Options -----------------------------------
   --help                         Show all options
 ```
 
-### One-line Backup & Restore
+### Backup & Restore All Items
 
-> `aptik --backup-all` and `aptik --restore-all` are one-line commands for taking a backup of your system and restoring it on a new system. You can safely use these 2 commands and skip the rest of this document, if you are not interested in knowing the details of backup and restore steps.
+`aptik --backup-all` and `aptik --restore-all` are one-line commands for taking a backup of your system and restoring it on a new system. You can safely use these 2 commands and skip the rest of this document, if you are not interested in knowing the details of each step.
 
 #### Backup
 
@@ -393,7 +393,7 @@ Usage: `aptik --backup-dconf`
 
 Following actions are executed for backup:
 
-1. For each user, dconf settings that are different from defaults are dumped to backup file `<basepath>/dconf/<username>/dconf.settings`
+1. For each user, dconf settings that are different from defaults are dumped to backup file `<basepath>/dconf/<username>.dconf-settings`
 
 #### Restore
 
@@ -403,7 +403,7 @@ Dconf settings can be restored only when users are logged-in. The restore operat
 
 Following actions are executed for restore:
 
-1. Backup file `<basepath>/dconf/<username>/dconf.settings` will be copied to the user's home directory -  `$HOME/.config/aptik/dconf.settings`
+1. Backup file `<basepath>/dconf/<username>.dconf-settings` will be copied to the user's home directory -  `$HOME/.config/aptik/dconf.settings`
 
 2. A script is created which will restore the settings from backup file when executed:
 
@@ -439,7 +439,7 @@ Following actions are executed for restore:
 3. Permissions are updated to 644 for files in folder `/etc/cron.d`
 4. Permissions are updated to 755 for files in folder `/etc/cron.{daily,hourly,monthly,weekly}`
 
-### Mount Entries (fstab and crypttab entries)
+### Mount Entries
 
 #### Backup
 
@@ -447,8 +447,11 @@ Usage: `aptik --backup-mounts`
 
 Following actions are executed for backup:
 
-1. Entries in `/etc/fstab` and `/etc/crypttab` are saved to backup folder  `<basepath>/mounts` . Entries are saved individually as `<dev-name>_<mount-point>.fstab` and `<dev-name>_<mount-point>.crypttab` in the backup folder. You can delete the files for any mount entries that you do not wish to restore.
+1. Entries in `/etc/fstab` and `/etc/crypttab` are saved to backup folder  `<basepath>/mounts` . Entries are saved individually as `<mount-point>.fstab` and `<dev-name>.crypttab`. You can delete files for any mount entries that you do not wish to restore.
 2. Device names like `/dev/sda1` and `/dev/mapper/sd2_crypt` will be replaced by UUIDs like `UUID=576be21b-3c3a-4287-b971-40b8e8b39823` while saving backup files. This makes the entries portable so that they can be used on other systems where the device names may be different.
+3. System mount entries for `/, /home, /boot, /boot/efi` will be ignored since these are system specific, and not applicable to the new system where restore will be executed. Existing entries if any will remain unchanged.
+4. `tmpfs` and `bind` mounts will also be saved to backup location
+5. When generating an installer for redistribution, all device specific entries are ignored, and only `tmpfs` and `bind` mounts are included.
 
 #### Restore
 
@@ -457,11 +460,75 @@ Usage: `aptik --restore-mounts`
 Following actions are executed for restore:
 
 1. Backups are created for  `/etc/fstab` and `/etc/crypttab` by moving existing files to  `/etc/fstab.bkup.<timestamp>` and `/etc/crypttab.bkup.<timestamp>`
-2. fstab file has following fields - `<file_system> <mount_point> <fstype> <options> <dump> <pass>`. Fields `<file_system> <mount_point> <fstype> <dump> <pass>` will remain unchanged for existing entries in `/etc/fstab`.
-3. If a backup entry exists for same `<mount_point>` and same `<fstype>` field, then field `<options>` will be replaced from backup entry.
-4. *New entries* in backup folder are *added* to `/etc/fstab` and `/etc/crypttab` .  New entries are determined by comparing field `<mount_point>`
-5. New entries for system mount points - `/`,  `/boot`, `/boot/efi` and  `/home` - will **not** be added to `/etc/fstab` since these are system specific, and not applicable to the new system where restore is being executed. Existing entries if any will remain unchanged.
-6. All entries are sorted on mount point field before the fstab file is written to disk. This ensures that base mount paths are populated before mounting subdirectories.
-7. New entries added to `/etc/crypttab` will have `nofail` appended to `<options>` if not already present. This allows the system to boot successfully even if device is missing at boot time.
-8. It's recommended to **review changes** before rebooting the system. Run `sudo aptik --list-mounts` to view updated entries after restore completes. Replace the backup files in case of any issues - `/etc/fstab.bkup.<timestamp>` and `/etc/crypttab.bkup.<timestamp>`.
+2. *New entries* in backup folder are *added* to `/etc/fstab` and `/etc/crypttab` .  New entries are determined by comparing field `<mount_point>` for fstab file and `<device-name>` for crypttab file.
+3. System mount entries for `/, /home, /boot, /boot/efi ` will remain unchanged
+4. All entries are sorted on mount point field before fstab file is written to disk. This ensures that base dircetories are populated before mounting sub-directories.
+5. New entries added to `/etc/crypttab` will have `nofail` appended to `<options>` if not already present. This allows the system to boot successfully even if device is missing at boot time.
+6. It's recommended to **review changes** before rebooting the system. Run `sudo aptik --list-mounts` to view updated entries after restore completes. Replace the backup files in case of any issues. These backups can be found in `/etc` folder with names - `/etc/fstab.bkup.<timestamp>` and `/etc/crypttab.bkup.<timestamp>`.
+
+
+
+
+#Aptik Generator Plugin
+
+The Aptik Generator plugin creates a stand-alone installer from current system settings. The backup files created for inclusion in installer are similar to what is described above but with some important changes. Bacups are created for only the current user account from which installer is being generated. Backups are skipped for other users. During restore, the same backups are restored for every user account on the target system.
+
+### Software Repositories
+
+No changes to backup and restore steps
+
+### Downloaded Packages
+
+Backup and restore is skipped to reduce installer size.
+
+### Installed Packages
+
+No changes to backup and restore steps
+
+### User Accounts
+
+Backup and restore is skipped since the installer is meant for distribution.
+
+### User Groups
+
+Backup and restore is skipped since the installer is meant for distribution.
+
+### Home Directory Data
+
+**Backup**
+
+1. Backup is taken only for current user account from which installer is generated.
+2. Data is saved to file  `<basepath>/home/data.tar.gz`
+
+**Restore**
+
+1. Same backup is restored for all users on the target system. Other steps remain the same.
+2. Data will be unpacked to `/etc/skel` so that files are copied to new user accounts created in future.
+
+### Mount Entries
+
+All device-specific entries are ignored in fstab file, and only `tmpfs` and `bind` mounts are included. Crypttab entries will be ignored since they are device specific.
+
+### DConf Settings
+
+**Backup**
+
+1. Backup is taken only for current user account from which installer is generated.
+2. Data is saved to file `<basepath>/dconf/user.dconf-settings`
+
+**Restore**
+
+1. Same backup is restored for all users on the target system. Other steps remain the same.
+
+### Scheduled Tasks
+
+**Backup**
+
+1. Backup is taken only for current user account from which installer is generated.
+2. Data is saved to file `<basepath>/cron/user.crontab`
+
+**Restore**
+
+1. Same backup is restored for all users on the target system. Other steps remain the same.
+
 

@@ -205,6 +205,8 @@ public class UserManager : GLib.Object {
 			}
 
 			users[user.name] = user;
+
+			user.check_encrypted_dirs();
 		}
 		else{
 			log_error("'passwd' file contains a record with non-standard fields" + ": %d".printf(fields.length));
@@ -300,14 +302,14 @@ public class UserManager : GLib.Object {
 			bool ok = file_write(backup_file, user.get_passwd_line());
 			chmod(backup_file, "a+rw");
 			
-			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"))); }
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath"))); }
 			else{ status = false; }
 
 			backup_file = path_combine(backup_path, "%s.shadow".printf(user.name));
 			ok = file_write(backup_file, user.get_shadow_line());
 			chmod(backup_file, "a+rw");
 			
-			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"))); }
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath"))); }
 			else{ status = false; }
 		}
 

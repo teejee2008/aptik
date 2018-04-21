@@ -42,7 +42,7 @@ public class User : GLib.Object {
 	public string phone_home = "";
 	public string other_info = "";
 
-	//public string
+	// public string
 	public string shadow_line = "";
 	public string pwd_hash = "";
 	public string pwd_last_changed = "";
@@ -52,6 +52,12 @@ public class User : GLib.Object {
 	public string pwd_inactivity_period = "";
 	public string pwd_expiraton_date = "";
 	public string reserved_field = "";
+
+	// encryption
+	public bool has_encrypted_home = false;
+	public bool has_encrypted_private_dirs = false;
+	public Gee.ArrayList<string> encrypted_dirs = new Gee.ArrayList<string>();
+	public Gee.ArrayList<string> encrypted_private_dirs = new Gee.ArrayList<string>();
 	
 	public bool is_selected = false;
 
@@ -83,6 +89,58 @@ public class User : GLib.Object {
 		return name; // assume group name = user name
 	}
 
+	public void check_encrypted_dirs() {
+
+		// check encrypted home ------------------------------
+		
+		string ecryptfs_mount_file = "/home/.ecryptfs/%s/.ecryptfs/Private.mnt".printf(name);
+		
+		if (file_exists(ecryptfs_mount_file)){
+
+			string txt = file_read(ecryptfs_mount_file);
+
+			foreach(string line in txt.split("\n")){
+
+				string path = line.strip();
+
+				if (path.length == 0){ continue; }
+				
+				if (path == home_path){
+					has_encrypted_home = true;
+				}
+
+				encrypted_dirs.add(path);
+			}
+		}
+
+		// check encrypted Private dirs --------------------------
+
+		ecryptfs_mount_file = "%s/.ecryptfs/Private.mnt".printf(home_path);
+		
+		if (file_exists(ecryptfs_mount_file)){
+
+			string txt = file_read(ecryptfs_mount_file);
+
+			foreach(string line in txt.split("\n")){
+
+				string path = line.strip();
+
+				if (path.length == 0){ continue; }
+				
+				if (path != home_path){
+					has_encrypted_private_dirs = true;
+					encrypted_private_dirs.add(path);
+				}
+
+				encrypted_dirs.add(path);
+			}
+		}
+	}
+
+	public string get_home_ecryptfs_path(){
+		return "/home/.ecryptfs/%s".printf(name);
+	}
+	
 	// get line ------------------------------------
 
 	public string get_passwd_line(){

@@ -99,32 +99,56 @@ public class UserHomeDataManager : GLib.Object {
 			
 			string backup_path_user = "";
 
+			string src_path_user = "";
+
 			if (redist){
+				
 				backup_path_user = backup_path;
+
+				src_path_user = user.home_path; // always use home data in redist mode. use decrypted home data for encrypted home.
 			}
 			else{
 				backup_path_user = path_combine(backup_path, user.name);
+
 				dir_delete(backup_path_user); // remove existing backups if any
 				dir_create(backup_path_user);
 				chmod(backup_path_user, "a+rwx");
+
+				if (user.has_encrypted_home){
+					src_path_user = user.get_home_ecryptfs_path();
+				}
+				else{
+					src_path_user = user.home_path;
+				}
 			}
 
 			// save exclude list -----------------------
+
+			string exclude_list = "";
 			
-			var exclude_list = path_combine(backup_path_user, "exclude.list");
-			if (file_exists(exclude_list)){
-				file_delete(exclude_list);
+			if (redist || !user.has_encrypted_home){
+
+				exclude_list = path_combine(backup_path_user, "exclude.list");
+				if (file_exists(exclude_list)){
+					file_delete(exclude_list);
+				}
+				file_write(exclude_list, exclude_list_create(user, exclude_hidden, exclude_from_file, true));
+				chmod(exclude_list, "a+rw");
 			}
-			file_write(exclude_list, exclude_list_create(user, exclude_hidden, exclude_from_file, true));
-			chmod(exclude_list, "a+rw");
-			
+
 			// prepare -----------------------------------------
 
-			string tar_file = path_combine(backup_path_user, "data.tar." + (use_xz ? "xz" : "gz"));
+			string basename = "data.tar";
 
-			string tar_file_gz = path_combine(backup_path_user, "data.tar.gz");
+			if (!redist && user.has_encrypted_home){
+				basename = "data-ecryptfs.tar";
+			}
+			
+			string tar_file = path_combine(backup_path_user, basename + (use_xz ? ".xz" : ".gz"));
 
-			string tar_file_xz = path_combine(backup_path_user, "data.tar.xz");
+			string tar_file_gz = path_combine(backup_path_user, basename +".gz");
+
+			string tar_file_xz = path_combine(backup_path_user, basename +".xz");
 
 			if (file_exists(tar_file_gz)){
 				file_delete(tar_file_gz);
@@ -142,15 +166,17 @@ public class UserHomeDataManager : GLib.Object {
 			
 			var cmd = "";
 
-			cmd += "cd '%s' ; ".printf(escape_single_quote(user.home_path));
+			cmd += "cd '%s' ; ".printf(escape_single_quote(src_path_user));
 
 			cmd += "tar cf -";
 
-			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
+			if (exclude_list.length > 0){
+				cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
+			}
+			
+			cmd += " -C '%s'".printf(escape_single_quote(src_path_user));
 
-			cmd += " -C '%s'".printf(escape_single_quote(user.home_path));
-
-			if (exclude_hidden){
+			if (!redist && exclude_hidden){
 				cmd += " *";
 			}
 			else{
@@ -161,7 +187,12 @@ public class UserHomeDataManager : GLib.Object {
 
 			//cmd += " 2>/dev/null";
 
-			cmd += " | pv -s $(du -sb '%s' | awk '{print $1}')".printf(escape_single_quote(user.home_path));
+			string cmd_exc = "";
+			if (exclude_list.length > 0){
+				cmd_exc = " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
+			}
+	
+			cmd += " | pv -s $(du -sb '%s' %s | awk '{print $1}')".printf(escape_single_quote(src_path_user), cmd_exc);
 
 			cmd += " | %s > '%s'".printf(compressor, escape_single_quote(temp_file));
 
@@ -169,7 +200,7 @@ public class UserHomeDataManager : GLib.Object {
 
 			// execute ---------------------------------
 
-			log_msg("%s: '%s'\n".printf(_("Archiving"), user.home_path));
+			log_msg("%s: '%s'\n".printf(_("Archiving"), src_path_user));
 			
 			if (dry_run){
 				log_msg("$ %s".printf(cmd));
@@ -182,12 +213,12 @@ public class UserHomeDataManager : GLib.Object {
 			if (retval != 0){
 				status = false;
 				file_delete(temp_file);
-				log_msg("Deleted: %s".printf(temp_file.replace(basepath, "$basepath/")));
+				log_msg("Deleted: %s".printf(temp_file.replace(basepath, "$basepath")));
 			}
 			else{
 				file_move(temp_file, tar_file, false);
 				chmod(tar_file, "a+rw");
-				log_msg("Created: %s".printf(tar_file.replace(basepath, "$basepath/")));
+				log_msg("Created: %s".printf(tar_file.replace(basepath, "$basepath")));
 			}
 
 			log_msg(string.nfill(70,'-'));
@@ -420,33 +451,50 @@ public class UserHomeDataManager : GLib.Object {
 			}
 
 			// prepare ------------------------------------------
-			
-			string tar_file_gz = path_combine(backup_path_user, "data.tar.gz");
 
-			string tar_file_xz = path_combine(backup_path_user, "data.tar.xz");
+			string basename = "data.tar";
 
-			string tar_file = "";
+			string tar_file = path_combine(backup_path_user, basename);
+
+			bool encrypted_home = false;
 			
-			if (file_exists(tar_file_xz)){
-				tar_file = tar_file_xz;
+			if (file_exists(tar_file + ".xz")){
+				tar_file = tar_file + ".xz";
 			}
-			else if (file_exists(tar_file_gz)){
-				tar_file = tar_file_gz;
+			else if (file_exists(tar_file + ".gz")){
+				tar_file = tar_file + ".gz";
 			}
-			else {
-				log_error("%s: %s".printf(Messages.FILE_MISSING, tar_file_gz));
-				log_error(_("No backup found"));
-				log_msg(string.nfill(70,'-'));
-				continue;
+			else{
+
+				// check for ecryptfs backup
+				
+				basename = "data-ecryptfs.tar";
+
+				tar_file = path_combine(backup_path_user, basename);
+
+				if (file_exists(tar_file + ".xz")){
+					tar_file = tar_file + ".xz";
+					encrypted_home = true;
+				}
+				else if (file_exists(tar_file + ".gz")){
+					tar_file = tar_file + ".gz";
+					encrypted_home = true;
+				}
+				else{
+					log_error(_("No backup found"));
+					log_msg(string.nfill(70,'-'));
+					continue;
+				}
 			}
 
-			// save exclude list -----------------------
-			
-			//var exclude_list = path_combine(backup_path_user, "exclude.list");
-			//if (file_exists(exclude_list)){
-			//	file_delete(exclude_list);
-			//}
-			//file_write(exclude_list, exclude_list_create(user));
+			string dst_path_user = "";
+
+			if (!redist && encrypted_home){
+				dst_path_user = user.get_home_ecryptfs_path();
+			}
+			else{
+				dst_path_user = user.home_path;
+			}
 			
 			// create script ---------------------------
 
@@ -454,9 +502,9 @@ public class UserHomeDataManager : GLib.Object {
 
 			cmd += "pv '%s' | ".printf(escape_single_quote(tar_file));
 			
-			cmd += "tar xf -";
+			cmd += "tar xaf -";
 			
-			cmd += " -C '%s'".printf(escape_single_quote(user.home_path));
+			cmd += " -C '%s'".printf(escape_single_quote(dst_path_user));
 
 			//cmd += " >/dev/null 2>&1";
 
@@ -464,7 +512,7 @@ public class UserHomeDataManager : GLib.Object {
 
 			int retval = 0;
 
-			log_msg("%s '%s'...\n".printf(_("Extracting"), user.home_path));
+			log_msg("%s '%s'...\n".printf(_("Extracting"), dst_path_user));
 			
 			if (dry_run){
 				log_msg("$ %s".printf(cmd));
@@ -485,9 +533,9 @@ public class UserHomeDataManager : GLib.Object {
 
 		if (redist){
 
-			string tar_file_gz = path_combine(backup_path_user, "data.tar.gz");
+			string tar_file_gz = path_combine(backup_path, "data.tar.gz");
 
-			string tar_file_xz = path_combine(backup_path_user, "data.tar.xz");
+			string tar_file_xz = path_combine(backup_path, "data.tar.xz");
 
 			if (file_exists(tar_file_xz)){
 				extract_to_etc_skel(tar_file_xz);
@@ -508,7 +556,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		cmd += "pv '%s' | ".printf(escape_single_quote(tar_file));
 		
-		cmd += "tar xf -";
+		cmd += "tar xaf -";
 		
 		cmd += " -C '%s'".printf("/etc/skel");
 
@@ -807,7 +855,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		cmd += "pv '%s'".printf(escape_single_quote(tar_file));
 			
-		cmd += " | tar xf -";
+		cmd += " | tar xaf -";
 		
 		cmd += " -C '%s'".printf(escape_single_quote(dst_path));
 

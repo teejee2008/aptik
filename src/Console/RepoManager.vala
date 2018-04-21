@@ -454,6 +454,9 @@ public class RepoManager : GLib.Object {
 		string backup_path = init_backup_path();
 
 		read_exclude_file();
+
+		string backup_file = path_combine(backup_path, "CODENAME");
+		file_write(backup_file, distro.codename);
 		
 		switch(distro.dist_type){
 		case "fedora":
@@ -462,14 +465,10 @@ public class RepoManager : GLib.Object {
 			return save_repos_arch(backup_path);
 		case "debian":
 			return save_repos_debian(backup_path);
+		default:
+			log_msg(_("Nothing to save"));
+			return false;
 		}
-
-		string backup_file = path_combine(backup_path, "CODENAME");
-		file_write(backup_file, distro.codename);
-
-		log_msg(_("Nothing to save"));
-
-		return false;
 	}
 
 	public bool save_repos_fedora(string backup_path){
@@ -563,7 +562,7 @@ public class RepoManager : GLib.Object {
 
 		if (ok){
 			chmod(backup_file, "a+rw");
-			log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/")));
+			log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath")));
 		}
 
 		return ok;
@@ -594,7 +593,7 @@ public class RepoManager : GLib.Object {
 				if (!ok){ status = false; continue; }
 
 				chmod(backup_file, "a+rw");
-				log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/")));
+				log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath")));
 			}
 		}
 
@@ -837,6 +836,8 @@ public class RepoManager : GLib.Object {
 			if (name == "sources.list"){ continue; }
 
 			if (name == "launchpad-ppas.list"){ continue; }
+
+			if (name == "exclude.list"){ continue; }
 
 			if (!name.has_suffix(".list")){ continue; }
 

@@ -845,7 +845,7 @@ public class PackageManager : GLib.Object {
 
 		if (ok){
 			chmod(backup_file, "a+rw");
-			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"), count));
+			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file.replace(basepath, "$basepath"), count));
 		}
 
 		return ok;
@@ -903,7 +903,7 @@ public class PackageManager : GLib.Object {
 
 		if (ok){
 			chmod(backup_file, "a+rw");
-			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"), count));
+			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file.replace(basepath, "$basepath"), count));
 		}
 
 		return ok;

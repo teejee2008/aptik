@@ -565,4 +565,3 @@ All device-specific entries are ignored in fstab file, and only `tmpfs` and `bin
 
 1. Same backup is restored for all users on the target system. Other steps remain the same.
 
-

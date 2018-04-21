@@ -138,7 +138,7 @@ public class PackageCacheManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
-		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", backup_path.replace(basepath, "$basepath/")));
+		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", backup_path.replace(basepath, "$basepath")));
 
 		return (status == 0);
 	}

@@ -160,10 +160,10 @@ public class CronTaskManager : GLib.Object {
 		}
 		
 		if (status == 0){
-			log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file.replace(basepath, "$basepath/")));
+			log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file.replace(basepath, "$basepath")));
 		}
 		else{
-			log_error("%s (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath/")));
+			log_error("%s (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath")));
 		}
 
 		return (status == 0);
@@ -185,7 +185,7 @@ public class CronTaskManager : GLib.Object {
 			status = Posix.system(cmd);
 		}
 
-		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "666", backup_path.replace(basepath, "$basepath/")));
+		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "666", backup_path.replace(basepath, "$basepath")));
 
 		return (status == 0);
 	}
@@ -278,10 +278,10 @@ public class CronTaskManager : GLib.Object {
 		}
 
 		if (status == 0){
-			log_msg("%s: (%s) %s".printf(_("Restored"), user.name, backup_file.replace(basepath, "$basepath/")));
+			log_msg("%s: (%s) %s".printf(_("Restored"), user.name, backup_file.replace(basepath, "$basepath")));
 		}
 		else{
-			log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath/")));
+			log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath")));
 		}
 		
 		return (status == 0);

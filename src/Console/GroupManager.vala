@@ -243,14 +243,14 @@ public class GroupManager : GLib.Object {
 			bool ok = file_write(backup_file, group.get_group_line());
 			chmod(backup_file, "a+rw");
 
-			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"))); }
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath"))); }
 			else{ status = false; }
 
 			backup_file = path_combine(backup_path, "%s.gshadow".printf(group.name));
 			ok = file_write(backup_file, group.get_gshadow_line());
 			chmod(backup_file, "a+rw");
 
-			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/"))); }
+			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath"))); }
 			else{ status = false; }
 		}
 
@@ -282,7 +282,7 @@ public class GroupManager : GLib.Object {
 		bool ok = file_write(backup_file, txt);
 		if (ok){
 			chmod(backup_file, "a+rw");
-			log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath/")));
+			log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath")));
 		}
 
 		return ok;

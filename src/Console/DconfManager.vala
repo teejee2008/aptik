@@ -116,11 +116,11 @@ public class DconfManager : GLib.Object {
 			
 			if (ok){
 				chmod(backup_file, "a+rw");
-				log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file.replace(basepath, "$basepath/")));
+				log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file.replace(basepath, "$basepath")));
 			}
 			else {
 				status = false;
-				log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath/")));
+				log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath")));
 			}
 		}
 		else{

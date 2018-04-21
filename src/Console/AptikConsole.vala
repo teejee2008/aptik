@@ -620,6 +620,10 @@ public class AptikConsole : GLib.Object {
 			return false;
 		}
 
+		if (redist){
+			basepath = path_combine(basepath, "distribution");
+		}
+
 		// process command ----------------------------------
 		
 		switch (command) {
@@ -875,6 +879,8 @@ public class AptikConsole : GLib.Object {
 		return true;
 	}
 
+	// all ------------------------------
+	
 	public bool backup_all(){
 
 		bool status = true;
@@ -941,6 +947,16 @@ public class AptikConsole : GLib.Object {
 			if (!ok) { status = false; }
 		}
 
+		if (!skip_files && redist){
+			ok = copy_files_for_dist();
+			if (!ok) { status = false; }
+		}
+		
+		if (!skip_scripts && redist){
+			ok = copy_scripts_for_dist();
+			if (!ok) { status = false; }
+		}
+		
 		return status;
 	}
 
@@ -1856,9 +1872,47 @@ public class AptikConsole : GLib.Object {
 
 		return true;
 	}
-	
+
+	public bool copy_files_for_dist(){
+
+		string src = path_combine(file_parent(basepath), "files");
+		string dst = path_combine(basepath, "files");
+
+		if (!file_exists(src)){ return true; }
+		
+		string cmd = "cp -vf '%s' '%s'".printf(escape_single_quote(src), escape_single_quote(dst));
+
+		log_debug(cmd);
+		
+		Posix.system(cmd);
+
+		log_msg(_("copied files to distribution directory"));
+		log_msg(string.nfill(70,'-'));
+
+		return true;
+	}
+
 	// scripts --------------
 
+	public bool copy_scripts_for_dist(){
+
+		string src = path_combine(file_parent(basepath), "scripts");
+		string dst = path_combine(basepath, "scripts");
+
+		if (!file_exists(src)){ return true; }
+		
+		string cmd = "cp -vf '%s' '%s'".printf(escape_single_quote(src), escape_single_quote(dst));
+
+		log_debug(cmd);
+		
+		Posix.system(cmd);
+
+		log_msg(_("copied scripts to distribution directory"));
+		log_msg(string.nfill(70,'-'));
+
+		return true;
+	}
+	
 	public bool execute_scripts(){
 
 		var scripts_path = path_combine(basepath,"scripts");

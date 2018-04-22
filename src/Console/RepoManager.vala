@@ -1199,9 +1199,9 @@ public class RepoManager : GLib.Object {
 
 	// update ----------------------
 
-	public bool update_repos(string basepath, out string temp_file){
+	public bool update_repos(){
 
-		temp_file = "";
+		string temp_file = "";
 		
 		switch(distro.dist_type){
 		case "fedora":

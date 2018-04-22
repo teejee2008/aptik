@@ -427,11 +427,14 @@ public class MountEntryManager : GLib.Object {
 		ok = this.restore_mount_entries_fstab(mgr.fstab);
 		if (!ok){ status = false; }
 
-		log_msg(string.nfill(70,'-'));
-		
-		ok = this.restore_mount_entries_crypttab(mgr.crypttab);
-		if (!ok){ status = false; }
-		
+		if (!redist){
+
+			log_msg(string.nfill(70,'-'));
+			
+			ok = this.restore_mount_entries_crypttab(mgr.crypttab);
+			if (!ok){ status = false; }
+		}
+
 		return status;
 	}
 

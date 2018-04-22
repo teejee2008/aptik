@@ -74,6 +74,7 @@ Options:
 
   --exclude-hidden               Exclude hidden files and directories (app configs)
                                  (default: include)
+  --exclude-from <file>          Exclude files which match patterns in specified file
 
 Mount Entries -----------------------------------
 
@@ -125,6 +126,16 @@ Options:
   --users <usr1,usr2,..>         Users to backup and restore
                                  (default: all users)
 
+Files and Directories -----------------------------------
+
+Commands:
+  --list-files                   List files from backup
+  --backup-files                 Backup files and directories (specify with --add)
+  --restore-files                Restore files and directories from backup
+
+Options:
+  --add <path>                   Add file or directory to backups
+
 All Items -----------------------------------
 
 Commands:
@@ -148,6 +159,8 @@ Options:
   --skip-mounts                  Skip item: mounts
   --skip-dconf                   Skip item: dconf
   --skip-cron                    Skip item: cron
+  --skip-files                   Skip copying files in $basepath/files
+  --skip-scripts                 Skip execution of post-restore scripts in $basepath/scripts
 
 Note: Options for individual items listed in previous sections can also be used
 
@@ -368,11 +381,11 @@ Following actions are executed for backup:
 
 4. You can specify a text file with names of additional files and directories to be excluded from backup. For example, `aptik --backup-home --exclude-from 'exclude.txt'`
 
-  Sample 'exclude.txt':
-   ```
+  Sample file:
+  ```
   .steam
   .java
-   ```
+  ```
   Paths should be relative to user's home directory. It will be applied to every user's home directory. Do not specify full paths, or paths specific to a user.
 
 5. Hidden files and folders (with names starting with a dot) can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings. Its recommended to keep these files and folders since they contain configuration changes that users have made to different applications.

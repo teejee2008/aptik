@@ -520,7 +520,7 @@ Scripts will be sorted alphanumerically on file name and executed one by one. Sc
 
 Scripts having file name ending with tilde character `~` will be ignored. This can be used to disable individual scripts.
 
-#Aptik Generator Plugin
+# Aptik Generator Plugin
 
 The Aptik Generator plugin creates a stand-alone installer from current system settings. The backup files created for inclusion in installer are similar to what is described above but with some important changes. Bacups are created for only the current user account from which installer is being generated. Backups are skipped for other users. During restore, the same backups are restored for every user account on the target system.
 

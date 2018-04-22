@@ -457,7 +457,7 @@ public class UserHomeDataManager : GLib.Object {
 			string tar_file = path_combine(backup_path_user, basename);
 
 			bool encrypted_home = false;
-			
+
 			if (file_exists(tar_file + ".xz")){
 				tar_file = tar_file + ".xz";
 			}
@@ -498,11 +498,13 @@ public class UserHomeDataManager : GLib.Object {
 			
 			// create script ---------------------------
 
+			string comp_option = tar_file.has_suffix(".xz") ? "J" : "z";
+			
 			var cmd = "";
 
 			cmd += "pv '%s' | ".printf(escape_single_quote(tar_file));
 			
-			cmd += "tar xaf -";
+			cmd += "tar x%sf -".printf(comp_option);
 			
 			cmd += " -C '%s'".printf(escape_single_quote(dst_path_user));
 
@@ -528,6 +530,10 @@ public class UserHomeDataManager : GLib.Object {
 
 			update_owner_for_directory_contents(user, grpmgr.groups_sorted);
 
+			if (encrypted_home && !cmd_exists("ecryptfs-migrate-home")){
+				PackageManager.install_package("ecryptfs-utils", "ecryptfs-utils", "ecryptfs-utils");
+			}
+
 			log_msg(string.nfill(70,'-'));
 		}
 
@@ -551,12 +557,14 @@ public class UserHomeDataManager : GLib.Object {
 	public bool extract_to_etc_skel(string tar_file){
 
 		bool status = true;
+
+		string comp_option = tar_file.has_suffix(".xz") ? "J" : "z";
 		
 		var cmd = "";
 
 		cmd += "pv '%s' | ".printf(escape_single_quote(tar_file));
 		
-		cmd += "tar xaf -";
+		cmd += "tar x%sf -".printf(comp_option);
 		
 		cmd += " -C '%s'".printf("/etc/skel");
 
@@ -758,6 +766,21 @@ public class UserHomeDataManager : GLib.Object {
 						break;
 					}
 				}
+			}
+		}
+
+		if (redist){
+			
+			User? root = null;
+			
+			foreach(var user in users){
+				if (user.name == "root"){
+					root = user;
+					break;
+				}
+			}
+			if (root != null){
+				users.remove(root);
 			}
 		}
 

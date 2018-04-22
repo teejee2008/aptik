@@ -214,6 +214,9 @@ public class FontManager : GLib.Object {
 
 	private bool update_font_cache(){
 
+		log_msg(_("Updating font cache:"));
+		log_msg("");
+		
 		string cmd = "fc-cache";
 		if (!cmd_exists(cmd)){
 			log_error("%s: %s".printf(Messages.MISSING_COMMAND, cmd));

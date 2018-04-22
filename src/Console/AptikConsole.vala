@@ -97,14 +97,6 @@ public class AptikConsole : GLib.Object {
 
 		init_tmp(AppShortName);
 
-		if (!cmd_exists("pv")){
-			PackageManager.install_package("pv", "pv", "pv");
-		}
-
-		if (!cmd_exists("xz")){
-			PackageManager.install_package("xz-utils", "xz", "xz");
-		}
-
 		check_dependencies();
 		
 		var console =  new AptikConsole();
@@ -122,7 +114,7 @@ public class AptikConsole : GLib.Object {
 	public static void check_dependencies(){
 
 		string[] dependencies = {
-			"rsync","cp","rm","touch","ln","grep","find","awk","pv","mount","umount","crontab","sync", "lsblk"
+			"rsync","cp","rm","touch","ln","grep","find","awk","mount","umount","crontab","sync", "lsblk"
 		};
 
 		string missing = "";
@@ -164,6 +156,39 @@ public class AptikConsole : GLib.Object {
 		var mgr = new UserManager();
 		mgr.query_users(false);
 		current_user = mgr.get_current_user();
+
+		install_dependencies();
+	}
+
+	public void install_dependencies(){
+
+		if (!cmd_exists("pv") || !cmd_exists("xz")){
+
+			log_msg(string.nfill(70,'-'));
+			log_msg(_("Installing Dependencies"));
+			log_msg(string.nfill(70,'-'));
+		
+			var mgr = new RepoManager(distro, dry_run);
+			mgr.update_repos();
+		}
+
+		if (!cmd_exists("pv")){
+			PackageManager.install_package("pv", "pv", "pv");
+		}
+
+		if (!cmd_exists("xz")){
+			PackageManager.install_package("xz-utils", "xz", "xz");
+		}
+
+		if (!cmd_exists("pv")){
+			log_error("%s: %s".printf(_("Missing dependency"), "pv"));
+			exit(1);
+		}
+
+		if (!cmd_exists("xz")){
+			log_error("%s: %s".printf(_("Missing dependency"), "xz"));
+			exit(1);
+		}
 	}
 
 	public void print_backup_path(){
@@ -643,6 +668,14 @@ public class AptikConsole : GLib.Object {
 			skip_cache = true;
 			skip_users = true;
 			skip_groups = true;
+
+			use_xz = true;
+
+			no_prompt = true;
+		}
+		else if (command == "--restore-all"){
+
+			no_prompt = true;
 		}
 
 		// process command ----------------------------------
@@ -1893,13 +1926,13 @@ public class AptikConsole : GLib.Object {
 				}
 			}
 			else{
-				log_msg(_("no files found for copy"));
-				log_msg(string.nfill(70,'-'));
+				log_msg(_("no files found"));
+				//log_msg(string.nfill(70,'-'));
 			}
 		}
 		else{
 			log_msg("%s: %s".printf(_("directory not found"), data_path));
-			log_msg(string.nfill(70,'-'));
+			//log_msg(string.nfill(70,'-'));
 		}
 
 		return true;
@@ -1926,25 +1959,6 @@ public class AptikConsole : GLib.Object {
 
 	// scripts --------------
 
-	public bool copy_scripts_for_dist(){
-
-		string src = path_combine(file_parent(basepath), "scripts");
-		string dst = path_combine(basepath, "scripts");
-
-		if (!file_exists(src)){ return true; }
-		
-		string cmd = "cp -vf '%s' '%s'".printf(escape_single_quote(src), escape_single_quote(dst));
-
-		log_debug(cmd);
-		
-		Posix.system(cmd);
-
-		log_msg(_("copied scripts to distribution directory"));
-		log_msg(string.nfill(70,'-'));
-
-		return true;
-	}
-	
 	public bool execute_scripts(){
 
 		var scripts_path = path_combine(basepath,"scripts");
@@ -1960,26 +1974,54 @@ public class AptikConsole : GLib.Object {
 
 			if (files.size > 0){
 
+				bool scripts_found = false;
+				
 				foreach(string file in files){
 
 					if (file.has_suffix("~")){ continue; }
+
+					if (file.has_suffix("README")){ continue; }
+
+					scripts_found = true;
 					
 					chmod(file, "a+x");
 					log_msg("%s: %s\n".printf(_("Executed"), file));
 					Posix.system("sh '%s'".printf(escape_single_quote(file)));
 					log_msg(string.nfill(70,'-'));
 				}
+
+				if (!scripts_found){
+					log_msg(_("no scripts found"));
+				}
 			}
 			else{
 				log_msg(_("no scripts found"));
-				log_msg(string.nfill(70,'-'));
+				//log_msg(string.nfill(70,'-'));
 			}
-			
 		}
 		else{
 			log_msg(_("scripts directory not found"));
-			log_msg(string.nfill(70,'-'));
+			//log_msg(string.nfill(70,'-'));
 		}
+
+		return true;
+	}
+
+	public bool copy_scripts_for_dist(){
+
+		string src = path_combine(file_parent(basepath), "scripts");
+		string dst = path_combine(basepath, "scripts");
+
+		if (!file_exists(src)){ return true; }
+		
+		string cmd = "cp -vf '%s' '%s'".printf(escape_single_quote(src), escape_single_quote(dst));
+
+		log_debug(cmd);
+		
+		Posix.system(cmd);
+
+		log_msg(_("copied scripts to distribution directory"));
+		log_msg(string.nfill(70,'-'));
 
 		return true;
 	}
@@ -2005,8 +2047,8 @@ public class AptikConsole : GLib.Object {
 
 		string s = "#!/bin/bash" + "\n";
 		s += """basepath="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" """ + "\n";
-		s += "chmod a+x \"$basepath/aptik\"" + "\n";
-		s += "\"$basepath/aptik\" --restore-all --basepath \"$basepath\"" + (redist ? " --redist" : "") + "\n";
+		s += "sudo chmod a+x \"$basepath/aptik\"" + "\n";
+		s += "sudo \"$basepath/aptik\" --restore-all --basepath \"$basepath\"" + (redist ? " --redist" : "") + "\n";
 
 		string sh_file = path_combine(basepath, "restore-all.sh");
 		file_write(sh_file, s);

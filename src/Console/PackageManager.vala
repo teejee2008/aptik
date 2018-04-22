@@ -1030,7 +1030,11 @@ public class PackageManager : GLib.Object {
 				log_msg(list_missing);
 			}
 			log_msg(string.nfill(70,'-'));
+
+			return true;
 		}
+
+		install_updates(no_prompt, dry_run);
 
 		switch(distro.dist_type){
 		case "fedora":
@@ -1068,6 +1072,10 @@ public class PackageManager : GLib.Object {
 		else{
 			log_debug("$ %s".printf(cmd));
 			status = Posix.system(cmd);
+
+			if (status != 0){
+				handle_package_restore_error(_("There were errors while installing packages"));
+			}
 		}
 
 		log_msg(string.nfill(70,'-'));
@@ -1100,6 +1108,10 @@ public class PackageManager : GLib.Object {
 		else{
 			log_debug("$ %s".printf(cmd));
 			status = Posix.system(cmd);
+
+			if (status != 0){
+				handle_package_restore_error(_("There were errors while installing packages"));
+			}
 		}
 
 		log_msg(string.nfill(70,'-'));
@@ -1198,6 +1210,9 @@ public class PackageManager : GLib.Object {
 				return install_packages_apt(basepath, list, no_prompt, false);
 			}
 		}
+		else if ((status != 0) && !try_resolve){
+			handle_package_restore_error(_("There were errors while installing packages"));
+		}
 
 		return (status == 0);
 	}
@@ -1261,6 +1276,10 @@ public class PackageManager : GLib.Object {
 		else{
 			log_debug("$ %s".printf(cmd));
 			status = Posix.system(cmd);
+
+			if (status != 0){
+				handle_package_restore_error(_("There were errors while installing packages"));
+			}
 		}
 		
 		return (status == 0);
@@ -1344,6 +1363,94 @@ public class PackageManager : GLib.Object {
 
 		if (cmd.length > 0){
 			Posix.system(cmd);
+		}
+	}
+
+	public static bool install_updates(bool no_prompt, bool dry_run){
+
+		var distro = new LinuxDistro();
+		
+		string cmd = "";
+		
+		switch(distro.dist_type){
+			
+		case "fedora":
+
+			cmd = distro.package_manager;
+
+			if (no_prompt){
+				cmd += " -y";
+			}
+
+			cmd += " upgrade";
+			
+			break;
+
+		case "arch":
+		
+			cmd = distro.package_manager;
+			
+			if (no_prompt){
+				cmd += " --noconfirm";
+			}
+			
+			cmd += " -Syy";
+			
+			break;
+
+		case "debian":
+		
+			cmd = distro.package_manager;
+			
+			cmd += " upgrade";
+			
+			break;
+
+		default:
+			log_error(Messages.UNKNOWN_DISTRO);
+			return false;
+		}
+
+		int status = 0;
+		
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+
+		log_msg(string.nfill(70,'-'));
+
+		if (status == 0){
+			log_msg(_("Installed all available updates"));
+			log_msg(string.nfill(70,'-'));
+		}
+		else{
+			handle_package_restore_error(_("There were errors while running a full system update"));
+		}
+
+		return (status == 0);
+	}
+
+	private static void handle_package_restore_error(string message){
+		
+		log_error(message);
+		
+		stdout.printf("%s (y/n): ".printf(_("Continue restoring remaining items ?")));
+		stdout.flush();
+
+		var counter = new TimeoutCounter();
+		counter.exit_on_timeout();
+		string? line = stdin.read_line();
+		counter.stop();
+
+		line = (line != null) ? line.strip() : "";
+
+		if (line != "y"){
+			log_msg("\nExiting. You can run same command again to continue restore.");
+			exit(1);
 		}
 	}
 }

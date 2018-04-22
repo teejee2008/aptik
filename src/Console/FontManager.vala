@@ -34,7 +34,8 @@ public class FontManager : GLib.Object {
 	
 	public LinuxDistro distro;
 	public bool dry_run = false;
-
+	private string basepath = "";
+	
 	public Gee.HashMap<string,Font> fonts;
 	
 	public FontManager(LinuxDistro _distro, bool _dry_run){
@@ -85,7 +86,9 @@ public class FontManager : GLib.Object {
 
 	// save -------------------------------------------
 
-	public bool backup_fonts(string basepath){
+	public bool backup_fonts(string _basepath){
+
+		basepath = _basepath;
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_FONTS));
@@ -124,6 +127,8 @@ public class FontManager : GLib.Object {
 				backup_fonts_from_path(path, backup_path);
 			}
 		}
+
+		update_permissions_for_backup_files(backup_path, dry_run);
 
 		log_msg(Messages.BACKUP_OK);
 
@@ -164,10 +169,41 @@ public class FontManager : GLib.Object {
 		return (status == 0);
 	}
 
+	public bool update_permissions_for_backup_files(string path, bool dry_run) {
+
+		string cmd = "";
+
+		int status = 0;
+
+		// dirs -------------
+		
+		cmd = "find '%s' -type d -exec chmod a+rwx '{}' ';'".printf(path);
+
+		log_msg("$ %s".printf(cmd));
+		
+		if (!dry_run){
+			status = Posix.system(cmd);
+		}
+
+		// files -------------
+		
+		cmd = "find '%s' -type f -exec chmod a+rw '{}' ';'".printf(path);
+
+		log_msg("$ %s".printf(cmd));
+		
+		if (!dry_run){
+			status = Posix.system(cmd);
+		}
+
+		return (status == 0);
+	}
+
 	// restore ---------------------------------------
 	
-	public bool restore_fonts(string basepath){
+	public bool restore_fonts(string _basepath){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_FONTS));
 		log_msg(string.nfill(70,'-'));
@@ -205,6 +241,8 @@ public class FontManager : GLib.Object {
 		
 		log_msg(string.nfill(70,'-'));
 
+		update_permissions_for_restored_files(dry_run, system_path);
+
 		update_font_cache();
 
 		log_msg(Messages.RESTORE_OK);
@@ -237,6 +275,35 @@ public class FontManager : GLib.Object {
 		}
 	
 		log_msg(string.nfill(70,'-'));
+
+		return (status == 0);
+	}
+
+	public bool update_permissions_for_restored_files(bool dry_run, string path) {
+
+		string cmd = "";
+
+		cmd = "find '%s' -type d -exec chmod 755 '{}' ';'".printf(path);
+
+		int status = 0;
+	
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
+		
+		cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(path);
+
+		if (dry_run){
+			log_msg("$ %s".printf(cmd));
+		}
+		else{
+			log_debug("$ %s".printf(cmd));
+			status = Posix.system(cmd);
+		}
 
 		return (status == 0);
 	}

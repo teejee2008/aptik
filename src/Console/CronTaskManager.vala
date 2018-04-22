@@ -117,15 +117,15 @@ public class CronTaskManager : GLib.Object {
 			log_msg("%s: /etc/%s\n".printf(_("Saving"), subdir));
 
 			bool ok = rsync_copy(cron_path, backup_subdir);
-			if (ok){
-				update_permissions_for_backup_files(backup_subdir);
-			}
-			else {
+
+			if (!ok){
 				status = false;
 			}
 			
 			log_msg(string.nfill(70,'-'));
 		}
+
+		update_permissions_for_backup_files(backup_path, dry_run);
 		
 		if (status){
 			log_msg(Messages.BACKUP_OK);
@@ -169,23 +169,31 @@ public class CronTaskManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_backup_files(string backup_path) {
+	public bool update_permissions_for_backup_files(string path, bool dry_run) {
 
-		// files  -----------------
-		
-		string cmd = "find '%s' -type f -exec chmod 666 '{}' ';'".printf(backup_path);
+		string cmd = "";
 
 		int status = 0;
-	
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
+
+		// dirs -------------
+		
+		cmd = "find '%s' -type d -exec chmod a+rwx '{}' ';'".printf(path);
+
+		log_msg("$ %s".printf(cmd));
+		
+		if (!dry_run){
 			status = Posix.system(cmd);
 		}
 
-		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "666", backup_path.replace(basepath, "$basepath")));
+		// files -------------
+		
+		cmd = "find '%s' -type f -exec chmod a+rw '{}' ';'".printf(path);
+
+		log_msg("$ %s".printf(cmd));
+		
+		if (!dry_run){
+			status = Posix.system(cmd);
+		}
 
 		return (status == 0);
 	}

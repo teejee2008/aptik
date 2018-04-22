@@ -359,17 +359,23 @@ Following actions are executed for backup:
    ~/.opera/cache
    ~/.kde/share/apps/kio_http/cache
    ~/.kde/share/cache/http
+   ~/.temp
+   ~/.xsession-errors*
+   ~/.Xauthority
+   ~/.ICEauthority
+   ~/.sudo_as_admin_successful
    ```
+
 4. You can specify a text file with names of additional files and directories to be excluded from backup. For example, `aptik --backup-home --exclude-from 'exclude.txt'`
 
-	Sample 'exclude.txt':
+  Sample 'exclude.txt':
    ```
-.steam
-.java
+  .steam
+  .java
    ```
-Paths should be relative to user's home directory. It will be applied to every user's home directory. Do not specify full paths, or paths specific to a user.
+  Paths should be relative to user's home directory. It will be applied to every user's home directory. Do not specify full paths, or paths specific to a user.
 
-4. Hidden files and folders (with names starting with a dot) can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings. Its recommended to keep these files and folders since they contain configuration changes that users have made to different applications.
+5. Hidden files and folders (with names starting with a dot) can be excluded with option `--exclude-hidden` . These files and folders contain *user-specific application and system settings*. These can be excluded if you wish to only migrate your data, without migrating your application settings. Its recommended to keep these files and folders since they contain configuration changes that users have made to different applications.
 
 #### Restore
 
@@ -507,6 +513,8 @@ The Aptik Generator plugin creates a stand-alone installer from current system s
 
 Backups are created in `<basepath>/distribution` folder for generating the installer. Existing backups in `<basepath>` are not used. Any files and scripts in `<basepath>/files` and `<basepath>/scripts` will be copied over to `<basepath>/distribution/files`  and `<basepath>/distribution/scripts`.
 
+> This plugin must be used from a fresh user account. If you use this from your regular user account, then all your personal files in your home directory will get included in the installer.
+
 ### Software Repositories
 
 No changes to backup and restore steps
@@ -532,7 +540,20 @@ Backup and restore is skipped since the installer is meant for distribution.
 **Backup**
 
 1. Backup is taken only for current user account from which installer is generated.
+
 2. Data is saved to file  `<basepath>/home/data.tar.gz`
+
+3. Some additional files and directories are excluded by default to avoid sharing personal data. 
+   ```
+   ~/.bazaar/bazaar.conf
+   ~/.gitconfig
+   ~/.gnupg
+   ~/.ssh
+   ~/.config/google-chrome/Default/Login Data
+   ```
+4. Always use a fresh installation or user account for generating the installer. This ensures that your personal data does not end up in the installer that you are going to distribute.
+
+
 
 **Restore**
 

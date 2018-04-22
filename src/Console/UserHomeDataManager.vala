@@ -331,14 +331,26 @@ public class UserHomeDataManager : GLib.Object {
 		list.add(".local/share/Trash");
 		list.add(".local/share/trash");
 		list.add(".mozilla/firefox/*.default/Cache");
+		list.add(".mozilla/firefox/*.default/Cache2");
 		list.add(".mozilla/firefox/*.default/OfflineCache");
+		list.add(".mozilla/firefox/*.default/startupCache");
 		list.add(".opera/cache");
 		list.add(".kde/share/apps/kio_http/cache");
 		list.add(".kde/share/cache/http");
+		list.add(".gksu.lock");
+		list.add(".temp");
+		list.add(".xsession-errors*");
+		list.add(".Xauthority");
+		list.add(".ICEauthority");
+		list.add(".sudo_as_admin_successful");
 
-		//if (exclude_hidden){
-			//list.add(".*"); // use .+ as .* will exclude everything
-		//}
+		if (redist){
+			list.add(".bazaar/bazaar.conf");
+			list.add(".gitconfig");
+			list.add(".gnupg");
+			list.add(".ssh");
+			list.add(".config/google-chrome/Default/Login Data");
+		}
 
 		if ((exclude_from_file.length > 0) && file_exists(exclude_from_file)){
 

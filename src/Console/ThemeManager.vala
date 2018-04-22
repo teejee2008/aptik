@@ -55,7 +55,7 @@ public class ThemeManager : GLib.Object {
 	
 	// check -------------------------------------------
 
-	public void check_installed_themes(){
+	public void check_installed_themes(PackageManager pkg_mgr){
 
 		//if (!list_only){
 		//	log_msg("Checking installed themes (%s)...".printf(type));
@@ -87,6 +87,42 @@ public class ThemeManager : GLib.Object {
 				subtypes[theme.name] = theme.subtypes_desc;
 			}
 		}
+		
+		// exclude list ---------------
+
+		if (pkg_mgr.dist_files.size > 0){
+			
+			foreach(var theme in themes.values){
+				
+				if (pkg_mgr.dist_files.contains(theme.theme_path)){
+					
+					theme.is_dist = true;
+				}
+			}
+		}
+	}
+
+	public void save_exclude_list(){
+
+		string backup_path = init_backup_path();
+		
+		string exclude_list = path_combine(backup_path, "exclude.list");
+		
+		string txt = "";
+
+		foreach(var theme in themes.values){
+			
+			if (theme.is_dist){
+
+				log_msg("%s: %s".printf(_("exclude"), theme.theme_path));
+				
+				txt += theme.theme_path + "\n";
+			}
+		}
+
+		file_write(exclude_list, txt);
+		log_msg("%s: %s".printf(_("saved"), exclude_list.replace(basepath, "$basepath")));
+		log_msg("");
 	}
 
 	public void add_themes_from_path(string path){
@@ -130,9 +166,9 @@ public class ThemeManager : GLib.Object {
 		//log_msg("Checking archived themes...");
 
 		string backup_path = "%s/%s".printf(basepath, type);
-		add_archived_themes_from_path(backup_path);
+		add_archived_themes_from_path(backup_path + "/files");
 
-		load_index_file(basepath);
+		load_index_file(backup_path);
 
 		//log_msg("Found: %d".printf(themes.size));
 		//log_msg(string.nfill(70,'-'));
@@ -240,30 +276,17 @@ public class ThemeManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_path = path_combine(basepath, type);
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+		string backup_path = init_backup_path();
+
+		save_exclude_list();
 
 		foreach(var theme in themes_sorted) {
 			
-			if (theme.is_selected) {
-
-				// delete existing ---------------
-				
-				string tar_file_gz = path_combine(backup_path, "%s.tar.gz".printf(theme.name));
-
-				string tar_file_xz = path_combine(backup_path, "%s.tar.xz".printf(theme.name));
-
-				if (file_exists(tar_file_gz)){
-					file_delete(tar_file_gz);
-				}
-				if (file_exists(tar_file_xz)){
-					file_delete(tar_file_xz);
-				}
+			if (theme.is_selected && !theme.is_dist) {
 
 				// zip it ------------------------
 				
-				theme.zip(backup_path, use_xz);
+				theme.zip(backup_path + "/files", use_xz);
 				
 				while (theme.is_running) {
 					sleep(500);
@@ -291,6 +314,23 @@ public class ThemeManager : GLib.Object {
 
 		file_delete(index_file);
 		file_write(index_file, txt);
+	}
+
+	public string init_backup_path(){
+		
+		string backup_path = path_combine(basepath, type);
+		
+		if (!dir_exists(backup_path)){
+			dir_create(backup_path);
+			chmod(backup_path, "a+rwx");
+		}
+
+		string files_path = path_combine(backup_path, "files");
+		dir_delete(files_path);
+		dir_create(files_path);
+		chmod(files_path, "a+rwx");
+		
+		return backup_path;
 	}
 
 	public bool restore_themes(string _basepath){
@@ -324,8 +364,7 @@ public class ThemeManager : GLib.Object {
 					sleep(500);
 				}
 
-				theme.update_permissions(dry_run);
-				theme.update_owner(dry_run);
+				theme.update_permissions_for_restored_files(theme.theme_path, dry_run);
 			}
 		}
 
@@ -377,6 +416,7 @@ public class Theme : GLib.Object{
 	
 	public bool is_selected = false;
 	public bool is_installed = false;
+	public bool is_dist = false;
 	
 	public Gee.ArrayList<ThemeType> subtypes = new Gee.ArrayList<ThemeType>();
 	public string subtypes_desc = "";
@@ -652,46 +692,26 @@ public class Theme : GLib.Object{
 	
 	//permissions -------------
 	
-	public bool update_permissions(bool dry_run) {
+	public bool update_permissions_for_restored_files(string path, bool dry_run) {
 
-		string cmd = "";
+		if (dry_run){ return true; }
+		
+		bool ok = true;
+		bool status = true;
 
-		//log_debug("set_permission (755)(dirs) : %s".printf(theme_path));
-		cmd = "find '%s' -type d -exec chmod 755 '{}' ';'".printf(theme_path);
+		ok = chmod(path, "755");
+		if (!ok){ status = false; }
+		
+		ok = chmod_dir_contents(path, "d", "755");
+		if (!ok){ status = false; }
+		
+		ok = chmod_dir_contents(path, "f", "644");
+		if (!ok){ status = false; }
 
-		int status = 0;
-	
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
-
-		//log_debug("set_permission (644)(files): %s".printf(theme_path));
-		cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(theme_path);
-
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
-
-		return (status == 0);
-	}
-	
-	public void update_owner(bool dry_run) {
-
-		if (dry_run){
-			log_msg("set_owner (root:root): %s".printf(theme_path));
-		}
-		else{
-			log_debug("set_owner (root:root): %s".printf(theme_path));
-			chown(theme_path, "root", "root");
-		}
+		ok = chown(path, "root", "root");
+		if (!ok){ status = false; }
+		
+		return status;
 	}
 
 	//enums and helpers ------------------
@@ -789,8 +809,6 @@ public class Theme : GLib.Object{
 			log_error ("Theme: fix_nested_folders_in_path()");
 		}
 	}
-
-
 
 }
 

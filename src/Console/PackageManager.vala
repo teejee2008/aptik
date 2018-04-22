@@ -48,6 +48,11 @@ public class PackageManager : GLib.Object {
 	public string basepath = "";
 
 	public Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+
+	//public Gee.ArrayList<string> dist_files_icon_themes = new Gee.ArrayList<string>();
+	//public Gee.ArrayList<string> dist_files_themes = new Gee.ArrayList<string>();
+	//public Gee.ArrayList<string> dist_files_fonts = new Gee.ArrayList<string>();
+	public Gee.ArrayList<string> dist_files = new Gee.ArrayList<string>();
 	
 	public PackageManager(LinuxDistro _distro, bool _dry_run){
 
@@ -463,12 +468,52 @@ public class PackageManager : GLib.Object {
 			}
 		}
 
-		//log_msg("time_taken: %s".printf(timer_elapsed_string(tmr)));
+		log_debug("time_taken: %s".printf(timer_elapsed_string(tmr)));
 
 		dist_installed_known = true;
 
 		if (count > 0){
 			log_debug("Installed-Dist: %'6d".printf(count));
+		}
+	}
+
+	public void save_dist_file_list(){
+
+		string list_file = path_combine(basepath, "packages/distfiles");
+
+		dist_files.clear();
+		
+		if (file_exists(list_file)){
+			
+			string pkgs = "";
+			foreach(var pkg in packages.values){
+				if (pkg.is_dist){
+					pkgs += " " + pkg.name;
+				}
+			}
+
+			string cmd = "dpkg-query -L %s > '%s'".printf(pkgs, escape_single_quote(list_file));
+
+			string std_out, std_err;
+			exec_script_sync(cmd, out std_out, out std_err);
+			
+			chmod(list_file, "a+rw");
+		}
+
+		if (file_exists(list_file)){
+			foreach(string line in file_read(list_file).split("\n")){
+				dist_files.add(line);
+			}
+		}
+	}
+
+	public void add_files_from_package_to_list(string pkgname, Gee.ArrayList<string> list){
+
+		string std_out, std_err;
+		exec_sync("dpkg-query -L %s".printf(pkgname), out std_out, out std_err);
+
+		foreach(string line in std_out.split("\n")){
+			list.add(line);
 		}
 	}
 	
@@ -842,6 +887,8 @@ public class PackageManager : GLib.Object {
 		}
 
 		bool ok = file_write(backup_file, txt);
+
+		save_dist_file_list();
 
 		if (ok){
 			chmod(backup_file, "a+rw");

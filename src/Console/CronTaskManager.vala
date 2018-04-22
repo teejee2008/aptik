@@ -78,7 +78,7 @@ public class CronTaskManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 	}
 
-	public bool backup_cron_tasks(string _basepath, string userlist){
+	public bool backup_cron_tasks(string _basepath, string userlist, PackageManager mgr_pkg){
 
 		basepath = _basepath;
 		
@@ -88,42 +88,31 @@ public class CronTaskManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_CRON));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "cron");
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+		string backup_path = init_backup_path();
 
-		// backup -----------------------------------
+		// backup users -----------------------------------
 
 		foreach(var user in get_users(userlist, true)){
 
 			if (user.is_system){ continue; }
 
-			bool ok = backup_cron_tasks_for_user(backup_path, user);
+			bool ok = backup_cron_tasks_for_user(backup_path + "/files", user);
 			if (!ok){ status = false; }
 		}
 		
 		log_msg(string.nfill(70,'-'));
 
-		// backup system folders -------------------------
+		// backup system ------------------
 
-		foreach(string subdir in new string[] { "cron.d", "cron.daily", "cron.hourly", "cron.monthly", "cron.weekly" }){
+		string exclude_list = save_exclude_list(backup_path, mgr_pkg);
+		
+		bool ok = rsync_copy("/etc", backup_path + "/files", exclude_list);
 
-			string cron_path = "/etc/%s".printf(subdir);
-			
-			string backup_subdir = path_combine(backup_path, subdir);
-			dir_create(backup_subdir);
-			chmod(backup_subdir, "a+rwx");
-			
-			log_msg("%s: /etc/%s\n".printf(_("Saving"), subdir));
-
-			bool ok = rsync_copy(cron_path, backup_subdir);
-
-			if (!ok){
-				status = false;
-			}
-			
-			log_msg(string.nfill(70,'-'));
+		if (!ok){
+			status = false;
 		}
+		
+		log_msg(string.nfill(70,'-'));
 
 		update_permissions_for_backup_files(backup_path, dry_run);
 		
@@ -179,7 +168,9 @@ public class CronTaskManager : GLib.Object {
 		
 		cmd = "find '%s' -type d -exec chmod a+rwx '{}' ';'".printf(path);
 
-		log_msg("$ %s".printf(cmd));
+		log_debug("$ %s".printf(cmd));
+
+		//log_msg("%s (0%s): (dirs) %s".printf(_("set permissions"), "a+rwx", path));
 		
 		if (!dry_run){
 			status = Posix.system(cmd);
@@ -189,7 +180,9 @@ public class CronTaskManager : GLib.Object {
 		
 		cmd = "find '%s' -type f -exec chmod a+rw '{}' ';'".printf(path);
 
-		log_msg("$ %s".printf(cmd));
+		log_debug("$ %s".printf(cmd));
+
+		//log_msg("%s (0%s): (files) %s".printf(_("set permissions"), "a+rwx", path));
 		
 		if (!dry_run){
 			status = Posix.system(cmd);
@@ -198,6 +191,70 @@ public class CronTaskManager : GLib.Object {
 		return (status == 0);
 	}
 
+	public string init_backup_path(){
+		
+		string backup_path = path_combine(basepath, "cron");
+		
+		if (!dir_exists(backup_path)){
+			dir_create(backup_path);
+			chmod(backup_path, "a+rwx");
+		}
+
+		string files_path = path_combine(backup_path, "files");
+		dir_delete(files_path);
+		dir_create(files_path);
+		chmod(files_path, "a+rwx");
+		
+		return backup_path;
+	}
+
+	public string save_exclude_list(string backup_path, PackageManager? mgr_pkg){
+
+		string exclude_list = path_combine(backup_path, "exclude.list");
+		
+		string txt = "";
+
+		var exlist = new Gee.ArrayList<string>();
+		
+		if ((mgr_pkg != null) && (mgr_pkg.dist_files.size > 0)){
+
+			foreach(string path in mgr_pkg.dist_files){
+				
+				if (path.has_prefix("/etc/cron.d/") || path.has_prefix("/etc/cron.hourly/")
+				|| path.has_prefix("/etc/cron.daily/") || path.has_prefix("/etc/cron.weekly/")
+				|| path.has_prefix("/etc/cron.monthly/")){
+
+					string relpath = path["/etc/".length: path.length];
+					
+					txt += relpath + "\n";
+
+					exlist.add(relpath);
+				}
+			}
+		}
+
+		txt += "+ cron.d/***\n";
+		txt += "+ cron.daily/***\n";
+		txt += "+ cron.hourly/***\n";
+		txt += "+ cron.monthly/***\n";
+		txt += "+ cron.weekly/***\n";
+		txt += "*\n";
+
+		exlist.sort();
+		foreach(var path in exlist){
+			log_msg("%s: %s".printf(_("exclude"), path));
+		}
+		log_msg("");
+		
+		file_write(exclude_list, txt);
+		log_msg("%s: %s".printf(_("saved"), exclude_list.replace(basepath, "$basepath")));
+		log_msg("");
+		
+		return exclude_list;
+	}
+	
+	// restore ----------------
+	
 	public bool restore_cron_tasks(string _basepath, string userlist){
 
 		basepath = _basepath;
@@ -216,40 +273,33 @@ public class CronTaskManager : GLib.Object {
 			return false;
 		}
 		
-		// backup -----------------------------------
+		// restore users -----------------------------------
 
 		foreach(var user in get_users(userlist, false)){
 
 			if (user.is_system){ continue; }
 
-			bool ok = restore_cron_tasks_for_user(backup_path, user);
+			bool ok = restore_cron_tasks_for_user(backup_path + "/files", user);
 			if (!ok){ status = false; }
 		}
 		
 		log_msg(string.nfill(70,'-'));
 
-		// restore system folders -------------------------
+		// restore system ------------------
 
-		foreach(string subdir in new string[] { "cron.d", "cron.daily", "cron.hourly", "cron.monthly", "cron.weekly" }){
+		string exclude_list = save_exclude_list(backup_path, null);
+		
+		bool ok = rsync_copy(backup_path + "/files", "/etc", exclude_list);
+		if (!ok){ status = false; }
 
-			string cron_path = "/etc/%s".printf(subdir);
-			
-			string backup_subdir = path_combine(backup_path, subdir);
-			if (!dir_exists(backup_subdir)){ continue; }
-			
-			log_msg("%s: /etc/%s\n".printf(_("Restoring"), subdir));
-
-			bool ok = rsync_copy(backup_subdir, cron_path);
-			if (!ok){ status = false; }
-
-			log_msg("");
-			
-			update_permissions_for_cron_directory(cron_path);
-
-			update_owner_for_cron_directory(cron_path);
-			
-			log_msg(string.nfill(70,'-'));
+		log_msg(string.nfill(70,'-'));
+		
+		foreach(string dirname in new string[] { "cron.d", "cron.daily", "cron.hourly", "cron.monthly", "cron.weekly" }){ 
+			string cron_dir = path_combine("/etc", dirname);
+			update_permissions_for_cron_directory(cron_dir);
 		}
+
+		log_msg("");
 
 		if (status){
 			log_msg(Messages.RESTORE_OK);
@@ -295,13 +345,16 @@ public class CronTaskManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool rsync_copy(string src_path, string dst_path){
+	public bool rsync_copy(string src_path, string dst_path, string exclude_list){
 
 		// NOTE: copy links as links (no -L)
 
 		string cmd = "rsync -avh '%s/' '%s/'".printf(escape_single_quote(src_path), escape_single_quote(dst_path));
-		log_debug(cmd);
-		
+
+		if (exclude_list.length > 0){
+			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
+		}
+
 		int status = 0;
 	
 		if (dry_run){
@@ -317,26 +370,39 @@ public class CronTaskManager : GLib.Object {
 
 	public bool update_permissions_for_cron_directory(string path){
 
+		if (dry_run){
+			return true;
+		}
+		
 		string permissions = "755"; // rwx r-x r-x
 
 		if (path.has_suffix("cron.d")){
 			permissions = "644"; // rw- r-- r-- not executable by anyone since these are not valid shell scripts
 		}
 
-		log_msg("%s (0%s): %s".printf(_("Updating permissions"), permissions, path));
+		int status = 0;
+
+		// update contents ---------------
 		
 		string cmd = "find '%s' -type f -exec chmod %s '{}' ';'".printf(path, permissions);
-		log_debug(cmd);
+		log_debug("$ %s".printf(cmd));
+		status = Posix.system(cmd);
 
-		int status = 0;
-	
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
+		cmd = "find '%s' -exec chown -h %s '{}' ';'".printf(path, "root:root");
+		log_debug("$ %s".printf(cmd));
+		status = Posix.system(cmd);
+
+		// update cron dir -------------
+		
+		cmd = "chmod 755 '%s'".printf(path);
+		log_debug("$ %s".printf(cmd));
+		status = Posix.system(cmd);
+
+		cmd = "chown root:root '%s'".printf(path);
+		log_debug("$ %s".printf(cmd));
+		status = Posix.system(cmd);
+
+		log_msg("%s: %s".printf(_("Updated permissions"), path));
 		
 		return (status == 0);
 	}

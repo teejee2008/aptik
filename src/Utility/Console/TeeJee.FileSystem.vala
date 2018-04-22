@@ -685,10 +685,44 @@ namespace TeeJee.FileSystem{
 		return false;
 	}
 
-	public bool chown(string dir_path, string user_name, string group){
-		string cmd = "chown %s:%s -R '%s'".printf(user_name, group, escape_single_quote(dir_path));
-		log_debug("cmd: %s".printf(cmd));
+	public bool chown(string file_path, string username, string group){
+
+		// Note: chown is recursive, chmod is not. use chmod_dir_contents() for recursive chmod()
+		
+		string cmd = "chown %s:%s -R -h '%s'".printf(username, group, escape_single_quote(file_path));
+		
+		log_debug("$ %s".printf(cmd));
+		
 		int status = exec_sync(cmd, null, null);
+		
+		return (status == 0);
+	}
+
+	public bool chmod(string file_path, string perms){
+		
+		string cmd = "chmod %s '%s'".printf(perms, escape_single_quote(file_path));
+		
+		log_debug("$ %s".printf(cmd));
+		
+		int status = exec_sync(cmd, null, null);
+		
+		return (status == 0);
+	}
+
+	public bool chmod_dir_contents(string dir_path, string type, string perms){
+
+		string cmd = "find '%s'".printf(escape_single_quote(dir_path));
+
+		if (type in "fdl"){
+			cmd += " -type %s".printf(type);
+		}
+		
+		cmd += " -exec chmod %s '{}' ';'".printf(perms);
+		
+		log_debug("$ %s".printf(cmd));
+		
+		int status = exec_sync(cmd, null, null);
+		
 		return (status == 0);
 	}
 	
@@ -794,15 +828,6 @@ namespace TeeJee.FileSystem{
 
 	public string escape_single_quote(string file_path){
 		return file_path.replace("'","'\\''");
-	}
-
-
-	// dep: chmod
-	public int chmod (string file, string permission){
-
-		/* Change file permissions */
-		string cmd = "chmod %s '%s'".printf(permission, escape_single_quote(file));
-		return exec_sync (cmd, null, null);
 	}
 
 	// dep: realpath

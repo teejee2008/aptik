@@ -114,7 +114,7 @@ public class PackageCacheManager : GLib.Object {
 
 		log_msg("");
 		
-		update_permissions_for_backup_files(backup_path);
+		update_permissions_for_backup_files(backup_path, dry_run);
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg(Messages.BACKUP_OK);
@@ -122,25 +122,26 @@ public class PackageCacheManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_backup_files(string backup_path) {
+	public bool update_permissions_for_backup_files(string path, bool dry_run) {
 
-		// files  -----------------
+		if (dry_run){ return true; }
 		
-		string cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(backup_path);
+		bool ok = true;
+		bool status = true;
 
-		int status = 0;
-	
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
+		ok = chmod(path, "a+rwx");
+		if (!ok){ status = false; }
+		
+		ok = chmod_dir_contents(path, "d", "a+rwx");
+		if (!ok){ status = false; }
+		
+		ok = chmod_dir_contents(path, "f", "a+rw");
+		if (!ok){ status = false; }
 
-		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", backup_path.replace(basepath, "$basepath")));
-
-		return (status == 0);
+		//ok = chown(path, "root", "root");
+		//if (!ok){ status = false; }
+		
+		return status;
 	}
 	
 	// restore ---------------------------------------
@@ -205,7 +206,7 @@ public class PackageCacheManager : GLib.Object {
 		}
 
 		log_msg("");
-		update_permissions_for_restored_packages(system_cache);
+		update_permissions_for_restored_files(system_cache, dry_run);
 		
 		log_msg("");
 		log_msg(Messages.RESTORE_OK);
@@ -213,25 +214,26 @@ public class PackageCacheManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_restored_packages(string system_cache_path) {
+	public bool update_permissions_for_restored_files(string path, bool dry_run) {
 
-		// files -----------------
+		if (dry_run){ return true; }
 		
-		string cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(system_cache_path);
+		bool ok = true;
+		bool status = true;
 
-		int status = 0;
-	
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
+		ok = chmod(path, "755");
+		if (!ok){ status = false; }
+		
+		ok = chmod_dir_contents(path, "d", "755");
+		if (!ok){ status = false; }
+		
+		ok = chmod_dir_contents(path, "f", "644");
+		if (!ok){ status = false; }
 
-		log_msg("%s: %s: %s".printf(_("Updated permissions (files)"), "644", system_cache_path));
-
-		return (status == 0);
+		ok = chown(path, "root", "root");
+		if (!ok){ status = false; }
+		
+		return status;
 	}
 
 	// clear -----------------------------------------

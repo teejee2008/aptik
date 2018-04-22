@@ -133,31 +133,24 @@ public class DconfManager : GLib.Object {
 
 	public bool update_permissions_for_backup_files(string path, bool dry_run) {
 
-		string cmd = "";
-
-		int status = 0;
-
-		// dirs -------------
+		if (dry_run){ return true; }
 		
-		cmd = "find '%s' -type d -exec chmod a+rwx '{}' ';'".printf(path);
+		bool ok = true;
+		bool status = true;
 
-		log_msg("$ %s".printf(cmd));
+		ok = chmod(path, "a+rwx");
+		if (!ok){ status = false; }
 		
-		if (!dry_run){
-			status = Posix.system(cmd);
-		}
-
-		// files -------------
+		ok = chmod_dir_contents(path, "d", "a+rwx");
+		if (!ok){ status = false; }
 		
-		cmd = "find '%s' -type f -exec chmod a+rw '{}' ';'".printf(path);
+		ok = chmod_dir_contents(path, "f", "a+rw");
+		if (!ok){ status = false; }
 
-		log_msg("$ %s".printf(cmd));
+		//ok = chown(path, "root", "root");
+		//if (!ok){ status = false; }
 		
-		if (!dry_run){
-			status = Posix.system(cmd);
-		}
-
-		return (status == 0);
+		return status;
 	}
 	
 	public bool restore_dconf_settings(string _basepath, string userlist){

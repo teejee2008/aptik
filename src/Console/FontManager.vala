@@ -86,19 +86,57 @@ public class FontManager : GLib.Object {
 
 	// save -------------------------------------------
 
-	public bool backup_fonts(string _basepath){
+	public bool backup_fonts(string _basepath, PackageManager mgr_pkg){
 
 		basepath = _basepath;
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_FONTS));
 		log_msg(string.nfill(70,'-'));
+
+		// begin ----------------------------
 		
 		string system_path = "/usr/share/fonts";
 		
-		string backup_path = path_combine(basepath, "fonts");
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+		string backup_path = init_backup_path();
+
+		string backup_path_files = path_combine(backup_path, "files");
+		dir_delete(backup_path_files);
+		dir_create(backup_path_files);
+		chmod(backup_path_files, "a+rwx");
+
+		// exclude list ---------------------------------------
+
+		string exclude_list = path_combine(backup_path, "exclude.list");
+		
+		if (!file_exists(exclude_list) && (mgr_pkg.dist_files.size > 0)){
+
+			string txt = "";
+			
+			foreach(string path in mgr_pkg.dist_files){
+				
+				if (path.has_prefix("/usr/share/fonts/")){
+					
+					txt += path["/usr/share/fonts/".length: path.length] + "\n";
+				}
+			}
+			
+			file_write(exclude_list, txt);
+			log_msg("%s: %s".printf(_("saved"), exclude_list.replace(basepath, "$basepath")));
+		}
+
+		if (file_exists(exclude_list)){
+			
+			foreach(string path in file_read(exclude_list).split("\n")){
+				
+				if (path.has_suffix(".ttf") || path.has_suffix(".otf")){
+					
+					log_msg("%s: %s".printf(_("exclude"), path));
+				}
+			}
+
+			log_msg("");
+		}
 		
 		// system fonts --------------------------
 
@@ -151,8 +189,16 @@ public class FontManager : GLib.Object {
 		}
 		
 		cmd += " --exclude=cmap/ --exclude=type1/ --exclude=X11/";
+
+		string exclude_list = path_combine(backup_path, "exclude.list");
+		
+		if (file_exists(exclude_list)){
+			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
+		}
+
 		cmd += " '%s/'".printf(escape_single_quote(system_path));
-		cmd += " '%s/'".printf(escape_single_quote(backup_path));
+		
+		cmd += " '%s/files/'".printf(escape_single_quote(backup_path));
 
 		int status = 0;
 		
@@ -171,33 +217,43 @@ public class FontManager : GLib.Object {
 
 	public bool update_permissions_for_backup_files(string path, bool dry_run) {
 
-		string cmd = "";
-
-		int status = 0;
-
-		// dirs -------------
+		if (dry_run){ return true; }
 		
-		cmd = "find '%s' -type d -exec chmod a+rwx '{}' ';'".printf(path);
+		bool ok = true;
+		bool status = true;
 
-		log_msg("$ %s".printf(cmd));
+		ok = chmod(path, "a+rwx");
+		if (!ok){ status = false; }
 		
-		if (!dry_run){
-			status = Posix.system(cmd);
-		}
-
-		// files -------------
+		ok = chmod_dir_contents(path, "d", "a+rwx");
+		if (!ok){ status = false; }
 		
-		cmd = "find '%s' -type f -exec chmod a+rw '{}' ';'".printf(path);
+		ok = chmod_dir_contents(path, "f", "a+rw");
+		if (!ok){ status = false; }
 
-		log_msg("$ %s".printf(cmd));
+		//ok = chown(path, "root", "root");
+		//if (!ok){ status = false; }
 		
-		if (!dry_run){
-			status = Posix.system(cmd);
-		}
-
-		return (status == 0);
+		return status;
 	}
 
+	public string init_backup_path(){
+		
+		string backup_path = path_combine(basepath, "fonts");
+		
+		if (!dir_exists(backup_path)){
+			dir_create(backup_path);
+			chmod(backup_path, "a+rwx");
+		}
+
+		string files_path = path_combine(backup_path, "files");
+		dir_delete(files_path);
+		dir_create(files_path);
+		chmod(files_path, "a+rwx");
+		
+		return backup_path;
+	}
+	
 	// restore ---------------------------------------
 	
 	public bool restore_fonts(string _basepath){
@@ -226,7 +282,7 @@ public class FontManager : GLib.Object {
 		}
 		
 		cmd += " --exclude=cmap/ --exclude=type1/ --exclude=X11/";
-		cmd += " '%s/'".printf(escape_single_quote(backup_path));
+		cmd += " '%s/files/'".printf(escape_single_quote(backup_path));
 		cmd += " '%s/'".printf(escape_single_quote(system_path));
 
 		int status = 0;
@@ -241,7 +297,7 @@ public class FontManager : GLib.Object {
 		
 		log_msg(string.nfill(70,'-'));
 
-		update_permissions_for_restored_files(dry_run, system_path);
+		update_permissions_for_restored_files(system_path, dry_run);
 
 		update_font_cache();
 
@@ -279,35 +335,28 @@ public class FontManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_restored_files(bool dry_run, string path) {
+	public bool update_permissions_for_restored_files(string path, bool dry_run) {
 
-		string cmd = "";
-
-		cmd = "find '%s' -type d -exec chmod 755 '{}' ';'".printf(path);
-
-		int status = 0;
-	
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
+		if (dry_run){ return true; }
 		
-		cmd = "find '%s' -type f -exec chmod 644 '{}' ';'".printf(path);
+		bool ok = true;
+		bool status = true;
 
-		if (dry_run){
-			log_msg("$ %s".printf(cmd));
-		}
-		else{
-			log_debug("$ %s".printf(cmd));
-			status = Posix.system(cmd);
-		}
+		ok = chmod(path, "755");
+		if (!ok){ status = false; }
+		
+		ok = chmod_dir_contents(path, "d", "755");
+		if (!ok){ status = false; }
+		
+		ok = chmod_dir_contents(path, "f", "644");
+		if (!ok){ status = false; }
 
-		return (status == 0);
+		ok = chown(path, "root", "root");
+		if (!ok){ status = false; }
+		
+		return status;
 	}
-
+	
 	// static ----------------------
 
 	public static Gee.ArrayList<Font> get_sorted_array(Gee.HashMap<string,Font> dict){

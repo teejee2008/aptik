@@ -1,4 +1,4 @@
-## Aptik - User Manual
+## Aptik User Manual
 
 ```
 Aptik v18.4 by Tony George (teejeetech@gmail.com)
@@ -524,9 +524,9 @@ Scripts having file name ending with tilde character `~` will be ignored. This c
 
 The Aptik Generator plugin creates a stand-alone installer from current system settings. The backup files created for inclusion in installer are similar to what is described above but with some important changes. Bacups are created for only the current user account from which installer is being generated. Backups are skipped for other users. During restore, the same backups are restored for every user account on the target system.
 
-Backups are created in `<basepath>/distribution` folder for generating the installer. Existing backups in `<basepath>` are not used. Any files and scripts in `<basepath>/files` and `<basepath>/scripts` will be copied over to `<basepath>/distribution/files`  and `<basepath>/distribution/scripts`.
+Backups are created in `<basepath>/distribution` folder for generating the installer. Existing backups in `<basepath>` are not used.
 
-> This plugin must be used from a fresh user account. If you use this from your regular user account, then all your personal files in your home directory will get included in the installer.
+> This plugin must be used from a fresh user account. If you use this from your regular user account, then all your personal files in your home directory will get included in the installer. Create a new user account, login, customize the desktop, and then use this plugin to generate an installer.
 
 ### Software Repositories
 

@@ -53,6 +53,7 @@ public class AptikConsole : GLib.Object {
 	public bool redist = false;
 	
 	public User current_user;
+	public PackageManager? mgr_pkg = null;
 	
 	// info
 	//public string user_name = "";
@@ -1419,8 +1420,8 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 		
-		var mgr = new PackageManager(distro, dry_run);
-		return mgr.save_package_list(basepath, include_foreign, exclude_icons, exclude_themes, exclude_fonts);
+		mgr_pkg = new PackageManager(distro, dry_run);
+		return mgr_pkg.save_package_list(basepath, include_foreign, exclude_icons, exclude_themes, exclude_fonts);
 	}
 
 	public bool restore_packages(){
@@ -1452,9 +1453,13 @@ public class AptikConsole : GLib.Object {
 	public bool list_themes(){
 
 		check_admin_access();
+
+		if (mgr_pkg == null){
+			mgr_pkg = new PackageManager(distro, dry_run);
+		}
 		
 		var mgr = new ThemeManager(distro, dry_run, "themes");
-		mgr.check_installed_themes();
+		mgr.check_installed_themes(mgr_pkg);
 		mgr.list_themes();
 		return true;
 	}
@@ -1467,8 +1472,13 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 
+		if (mgr_pkg == null){
+			mgr_pkg = new PackageManager(distro, dry_run);
+			mgr_pkg.save_dist_file_list();
+		}
+
 		var mgr = new ThemeManager(distro, dry_run, "themes");
-		mgr.check_installed_themes();
+		mgr.check_installed_themes(mgr_pkg);
 		return mgr.save_themes(basepath, use_xz);
 	}
 
@@ -1489,9 +1499,13 @@ public class AptikConsole : GLib.Object {
 	public bool list_icons(){
 
 		check_admin_access();
+
+		if (mgr_pkg == null){
+			mgr_pkg = new PackageManager(distro, dry_run);
+		}
 		
 		var mgr = new ThemeManager(distro, dry_run, "icons");
-		mgr.check_installed_themes();
+		mgr.check_installed_themes(mgr_pkg);
 		return true;
 	}
 	
@@ -1503,8 +1517,13 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 
+		if (mgr_pkg == null){
+			mgr_pkg = new PackageManager(distro, dry_run);
+			mgr_pkg.save_dist_file_list();
+		}
+
 		var mgr = new ThemeManager(distro, dry_run, "icons");
-		mgr.check_installed_themes();
+		mgr.check_installed_themes(mgr_pkg);
 		return mgr.save_themes(basepath, use_xz);
 	}
 
@@ -1539,8 +1558,13 @@ public class AptikConsole : GLib.Object {
 
 		copy_binary();
 
+		if (mgr_pkg == null){
+			mgr_pkg = new PackageManager(distro, dry_run);
+			mgr_pkg.save_dist_file_list();
+		}
+
 		var mgr = new FontManager(distro, dry_run);
-		return mgr.backup_fonts(basepath);
+		return mgr.backup_fonts(basepath, mgr_pkg);
 	}
 
 	public bool restore_fonts(){
@@ -1803,8 +1827,13 @@ public class AptikConsole : GLib.Object {
 
 		bool status = true;
 
+		if (mgr_pkg == null){
+			mgr_pkg = new PackageManager(distro, dry_run);
+			mgr_pkg.save_dist_file_list();
+		}
+
 		var mgr = new CronTaskManager(dry_run, redist, current_user);
-		bool ok = mgr.backup_cron_tasks(basepath, userlist);
+		bool ok = mgr.backup_cron_tasks(basepath, userlist, mgr_pkg);
 		if (!ok){ status = false; }
 		
 		return status; 

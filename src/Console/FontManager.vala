@@ -37,6 +37,10 @@ public class FontManager : GLib.Object {
 	private string basepath = "";
 	
 	public Gee.HashMap<string,Font> fonts;
+
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 	
 	public FontManager(LinuxDistro _distro, bool _dry_run){
 
@@ -83,12 +87,18 @@ public class FontManager : GLib.Object {
 		}
 	}
 
-
+	public string get_backup_path(){
+		
+		return path_combine(basepath, "fonts");
+	}
+	
 	// save -------------------------------------------
 
-	public bool backup_fonts(string _basepath, PackageManager mgr_pkg){
+	public bool backup_fonts(string _basepath, PackageManager mgr_pkg, bool _apply_selections){
 
 		basepath = _basepath;
+
+		apply_selections = _apply_selections;
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_FONTS));
@@ -105,15 +115,25 @@ public class FontManager : GLib.Object {
 		dir_create(backup_path_files);
 		chmod(backup_path_files, "a+rwx");
 
-		// exclude list ---------------------------------------
+		read_selections();
 
-		string exclude_list = path_combine(backup_path, "exclude.list");
+		// exclude list for rsync ---------------------------------------
+
+		string list_file = path_combine(backup_path, "exclude.list");
 		
-		if (!file_exists(exclude_list) && (mgr_pkg.dist_files.size > 0)){
+		if (App.dist_files.size > 0){
 
 			string txt = "";
 			
-			foreach(string path in mgr_pkg.dist_files){
+			foreach(string path in App.dist_files){
+				
+				if (path.has_prefix("/usr/share/fonts/")){
+					
+					txt += path["/usr/share/fonts/".length: path.length] + "\n";
+				}
+			}
+
+			foreach(string path in exclude_list){
 				
 				if (path.has_prefix("/usr/share/fonts/")){
 					
@@ -121,13 +141,15 @@ public class FontManager : GLib.Object {
 				}
 			}
 			
-			file_write(exclude_list, txt);
-			log_msg("%s: %s".printf(_("saved"), exclude_list.replace(basepath, "$basepath")));
+			file_write(list_file, txt);
+			log_msg("%s: %s".printf(_("saved"), list_file.replace(basepath, "$basepath")));
 		}
 
-		if (file_exists(exclude_list)){
+		// print items ------------------------
+		
+		if (file_exists(list_file)){
 			
-			foreach(string path in file_read(exclude_list).split("\n")){
+			foreach(string path in file_read(list_file).split("\n")){
 				
 				if (path.has_suffix(".ttf") || path.has_suffix(".otf")){
 					
@@ -137,7 +159,7 @@ public class FontManager : GLib.Object {
 
 			log_msg("");
 		}
-		
+
 		// system fonts --------------------------
 
 		backup_fonts_from_path(system_path, backup_path);
@@ -239,7 +261,7 @@ public class FontManager : GLib.Object {
 
 	public string init_backup_path(){
 		
-		string backup_path = path_combine(basepath, "fonts");
+		string backup_path = get_backup_path();
 		
 		if (!dir_exists(backup_path)){
 			dir_create(backup_path);
@@ -253,18 +275,43 @@ public class FontManager : GLib.Object {
 		
 		return backup_path;
 	}
+
+	public void read_selections(){
+
+		include_list.clear();
+		exclude_list.clear();
+		
+		if (!apply_selections){ return; }
+
+		string backup_path = get_backup_path();
+
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				exclude_list.add(name[2:name.length]);
+			}
+		}
+	}
 	
 	// restore ---------------------------------------
 	
-	public bool restore_fonts(string _basepath){
+	public bool restore_fonts(string _basepath, bool _apply_selections){
 
 		basepath = _basepath;
+
+		apply_selections = _apply_selections;
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_FONTS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "fonts");
+		string backup_path = get_backup_path();
 
 		string system_path = "/usr/share/fonts";
 		

@@ -33,6 +33,10 @@ public class UserHomeDataManager : GLib.Object {
 	private bool use_xz = false;
 	private bool redist = false;
 	private User current_user;
+
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 	
 	public UserHomeDataManager(bool _dry_run, bool _redist, User _current_user){
 
@@ -41,9 +45,15 @@ public class UserHomeDataManager : GLib.Object {
 		current_user = _current_user;
 	}
 
-	// backup and restore ----------------------
+	public string get_backup_path(){
+		
+		return path_combine(basepath, "home");
+	}
 	
-	public bool backup_home(string _basepath, string userlist, bool exclude_hidden, bool _use_xz, string exclude_from_file){
+	// backup ----------------------
+	
+	public bool backup_home(string _basepath, string userlist, bool exclude_hidden, bool _use_xz,
+		string exclude_from_file, bool _apply_selections){
 
 		basepath = _basepath;
 
@@ -64,6 +74,8 @@ public class UserHomeDataManager : GLib.Object {
 
 		var users = get_users(userlist, true);
 
+		read_selections();
+
 		// backup --------------------------------------
 		
 		bool ok = backup_home_tar(backup_path, users, current_user, exclude_hidden, exclude_from_file);
@@ -80,7 +92,8 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users, User current_user, bool exclude_hidden, string exclude_from_file){
+	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users, User current_user,
+		bool exclude_hidden, string exclude_from_file){
 
 		bool status = true;
 		int retval = 0;
@@ -88,6 +101,8 @@ public class UserHomeDataManager : GLib.Object {
 		foreach(var user in users){
 
 			if (user.is_system){ continue; }
+
+			if (exclude_list.contains(user.name)){ continue; }
 
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
@@ -227,7 +242,8 @@ public class UserHomeDataManager : GLib.Object {
 		return status;
 	}
 
-	public bool backup_home_duplicity(string backup_path, Gee.ArrayList<User> users, string _password, bool full_backup, bool exclude_hidden){
+	public bool backup_home_duplicity(string backup_path, Gee.ArrayList<User> users, string _password,
+		bool full_backup, bool exclude_hidden){
 
 		string password = _password;
 		
@@ -237,6 +253,8 @@ public class UserHomeDataManager : GLib.Object {
 		foreach(var user in users){
 
 			if (user.is_system){ continue; }
+
+			if (exclude_list.contains(user.name)){ continue; }
 
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
@@ -391,7 +409,32 @@ public class UserHomeDataManager : GLib.Object {
 		return txt;
 	}
 
-	public bool restore_home(string _basepath, string userlist){
+	public void read_selections(){
+
+		include_list.clear();
+		exclude_list.clear();
+		
+		if (!apply_selections){ return; }
+
+		string backup_path = get_backup_path();
+
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				exclude_list.add(name[2:name.length]);
+			}
+		}
+	}
+	
+	// restore -----------------------------
+	
+	public bool restore_home(string _basepath, string userlist, bool _apply_selections){
 
 		basepath = _basepath;
 		
@@ -411,6 +454,8 @@ public class UserHomeDataManager : GLib.Object {
 
 		var users = get_users(userlist, false);
 
+		read_selections();
+		
 		// restore ----------------------------------------
 
 		bool ok = restore_home_tar(backup_path, users, current_user);
@@ -439,6 +484,8 @@ public class UserHomeDataManager : GLib.Object {
 		foreach(var user in users){
 
 			if (user.is_system){ continue; }
+
+			if (exclude_list.contains(user.name)){ continue; }
 
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			
@@ -611,6 +658,8 @@ public class UserHomeDataManager : GLib.Object {
 		foreach(var user in users){
 
 			if (user.is_system){ continue; }
+
+			if (exclude_list.contains(user.name)){ continue; }
 
 			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
 			

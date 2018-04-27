@@ -31,8 +31,13 @@ public class MountEntryManager : GLib.Object {
 	public Gee.ArrayList<FsTabEntry> fstab;
 	public Gee.ArrayList<CryptTabEntry> crypttab;
 
+	public string basepath = "";
 	public bool dry_run = false;
 	public bool redist = false;
+
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 	
 	public MountEntryManager(bool _dry_run, bool _redist){
 
@@ -43,6 +48,13 @@ public class MountEntryManager : GLib.Object {
 		crypttab = new Gee.ArrayList<CryptTabEntry>();
 	}
 
+	public string get_backup_path(){
+		
+		return path_combine(basepath, "mounts");
+	}
+	
+	// query -----------------------------------
+	
 	public void query_mount_entries(){
 
 		read_fstab_file();
@@ -341,16 +353,20 @@ public class MountEntryManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 	}
 
-	public bool backup_mount_entries(string basepath){
+	public bool backup_mount_entries(string _basepath, bool _apply_selections){
 
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_MOUNTS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "mounts");
+		string backup_path = get_backup_path();
 		dir_delete(backup_path);
 		dir_create(backup_path);
 		chmod(backup_path, "a+rwx");
+
+		read_selections();
 		
 		bool status = true;
 
@@ -359,6 +375,8 @@ public class MountEntryManager : GLib.Object {
 			if (redist && entry.is_normal_device_mount()){
 				continue;
 			}
+
+			if (exclude_list.contains(entry.mount_point)){ continue; }
 
 			switch (entry.mount_point){
 			case "/":
@@ -382,6 +400,8 @@ public class MountEntryManager : GLib.Object {
 			if (redist){
 				continue;
 			}
+
+			if (exclude_list.contains(entry.name)){ continue; }
 			
 			//string backup_file = path_combine(backup_path, "%s %s.crypttab".printf(entry.name.replace("/","╱"), entry.device.replace("/","╱")));
 			string backup_file = path_combine(backup_path, "%s.crypttab".printf(entry.name.replace("/","_")));
@@ -402,13 +422,40 @@ public class MountEntryManager : GLib.Object {
 		return status;
 	}
 
-	public bool restore_mount_entries(string basepath){
+	public void read_selections(){
 
+		include_list.clear();
+		exclude_list.clear();
+		
+		if (!apply_selections){ return; }
+
+		string backup_path = get_backup_path();
+
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				exclude_list.add(name[2:name.length]);
+			}
+		}
+	}
+
+	// restore -------------------------------
+	
+	public bool restore_mount_entries(string _basepath, bool _apply_selections){
+
+		basepath = _basepath;
+		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_MOUNTS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "mounts");
+		string backup_path = get_backup_path();
 		chmod(backup_path, "a+rwx");
 		
 		if (!dir_exists(backup_path)) {
@@ -417,6 +464,8 @@ public class MountEntryManager : GLib.Object {
 			return false;
 		}
 
+		read_selections();
+		
 		bool status = true, ok;
 
 		this.query_mount_entries();

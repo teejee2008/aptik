@@ -45,24 +45,27 @@ public class PackageManager : GLib.Object {
 	public LinuxDistro distro;
 	public bool dry_run = false;
 	public bool list_only = false;
+
 	public string basepath = "";
 
-	public Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-
-	//public Gee.ArrayList<string> dist_files_icon_themes = new Gee.ArrayList<string>();
-	//public Gee.ArrayList<string> dist_files_themes = new Gee.ArrayList<string>();
-	//public Gee.ArrayList<string> dist_files_fonts = new Gee.ArrayList<string>();
-	public Gee.ArrayList<string> dist_files = new Gee.ArrayList<string>();
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 	
 	public PackageManager(LinuxDistro _distro, bool _dry_run){
 
 		distro = _distro;
 
 		dry_run = _dry_run;
-
+		
 		check_packages();
 	}
 
+	public string get_backup_path(){
+		
+		return path_combine(basepath, "packages");
+	}
+	
 	// check --------------------------------
 	
 	private void check_packages(){
@@ -242,6 +245,8 @@ public class PackageManager : GLib.Object {
 		}
 
 		check_packages_apt_default();
+
+		save_dist_file_list();
 	}
 	
 	private void check_packages_apt(){
@@ -400,8 +405,9 @@ public class PackageManager : GLib.Object {
 		int count = 0;
 
 		string DEF_PKG_LIST = "/var/log/installer/initial-status.gz";
-		string DEF_PKG_LIST_UNPACKED = "/tmp/initial-status";
 
+		string list_file = path_combine(App.current_user.home_path, ".config/aptik/initial-status.list");
+		
 		log_debug("check_packages_apt_default()");
 
 		if (!file_exists(DEF_PKG_LIST)) {
@@ -411,19 +417,19 @@ public class PackageManager : GLib.Object {
 
 		var tmr = timer_start();
 
-		if (!file_exists(DEF_PKG_LIST_UNPACKED)){
+		if (!file_exists(list_file)){
 			string std_out, std_err;
-			string cmd = "gzip -dc '%s'".printf(DEF_PKG_LIST);
+			string cmd = "gzip -dc '%s' > '%s'".printf(DEF_PKG_LIST, list_file);
 			log_debug(cmd);
 			exec_script_sync(cmd, out std_out, out std_err);
-			file_write(DEF_PKG_LIST_UNPACKED, std_out);
+			chmod(list_file, "a+rw");
 		}
 
-		if (!file_exists(DEF_PKG_LIST_UNPACKED)){
+		if (!file_exists(list_file)){
 			return;
 		}
 		
-		foreach(string line in file_read(DEF_PKG_LIST_UNPACKED).split("\n")){
+		foreach(string line in file_read(list_file).split("\n")){
 
 			if (line.strip().length == 0) { continue; }
 			if (line.index_of(":") == -1) { continue; }
@@ -472,18 +478,14 @@ public class PackageManager : GLib.Object {
 
 		dist_installed_known = true;
 
-		if (count > 0){
-			log_debug("Installed-Dist: %'6d".printf(count));
-		}
+		log_debug("dist_packages: %'6d".printf(count));
 	}
 
-	public void save_dist_file_list(){
+	private void save_dist_file_list(){
 
-		string list_file = path_combine(basepath, "packages/distfiles");
+		string list_file = path_combine(App.current_user.home_path, ".config/aptik/initial-files.list");
 
-		dist_files.clear();
-		
-		if (file_exists(list_file)){
+		if (!file_exists(list_file)){
 			
 			string pkgs = "";
 			foreach(var pkg in packages.values){
@@ -494,17 +496,17 @@ public class PackageManager : GLib.Object {
 
 			string cmd = "dpkg-query -L %s > '%s'".printf(pkgs, escape_single_quote(list_file));
 
+			//log_debug("$ " + cmd);
+
 			string std_out, std_err;
 			exec_script_sync(cmd, out std_out, out std_err);
 			
 			chmod(list_file, "a+rw");
+
+			App.read_distfiles();
 		}
 
-		if (file_exists(list_file)){
-			foreach(string line in file_read(list_file).split("\n")){
-				dist_files.add(line);
-			}
-		}
+		log_debug("dist_files: %d".printf(App.dist_files.size));
 	}
 
 	public void add_files_from_package_to_list(string pkgname, Gee.ArrayList<string> list){
@@ -795,28 +797,31 @@ public class PackageManager : GLib.Object {
 		return backup_path;
 	}
 
-	public void read_exclude_file(){
+	public void read_selections(){
 
-		string backup_path = path_combine(basepath, "packages");
-		
-		string exclude_list_file = path_combine(backup_path, "exclude.list");
+		string backup_path = path_combine(basepath, "cache");
 
-		exclude_list.clear();
-		
-		if (file_exists(exclude_list_file)){
-			
-			foreach(string line in file_read(exclude_list_file).split("\n")){
-				
-				exclude_list.add(line.strip());
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				include_list.add(name[2:name.length]);
 			}
 		}
 	}
 	
 	// save --------------------------
 	
-	public bool save_package_list(string _basepath, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
+	public bool save_package_list(string _basepath, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts, bool _apply_selections){
 
 		basepath = _basepath;
+
+		apply_selections = _apply_selections;
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_PACKAGES));
@@ -826,7 +831,7 @@ public class PackageManager : GLib.Object {
 
 		string backup_path = init_backup_path();
 
-		read_exclude_file();
+		read_selections();
 
 		ok = save_package_list_installed(backup_path);
 		if (!ok){ status = false; }
@@ -888,8 +893,6 @@ public class PackageManager : GLib.Object {
 
 		bool ok = file_write(backup_file, txt);
 
-		save_dist_file_list();
-
 		if (ok){
 			chmod(backup_file, "a+rw");
 			log_msg("%s: %s (%d packages)".printf(_("Saved"), backup_file.replace(basepath, "$basepath"), count));
@@ -913,21 +916,24 @@ public class PackageManager : GLib.Object {
 
 			if (!pkg.is_installed){ continue; }
 
-			if (exclude_list.contains(pkg.name)){ continue; }
-
-			if (auto_installed_known && pkg.is_auto){ continue; }
-
-			if (dist_installed_known && pkg.is_dist){ continue; }
-
 			if (pkg.name.has_prefix("linux-headers")){ continue; }
 			if (pkg.name.has_prefix("linux-signed")){ continue; }
 			if (pkg.name.has_prefix("linux-tools")){ continue; }
 			if (pkg.name.has_prefix("linux-image")){ continue; }
 
-			if (!include_foreign && pkg.is_foreign){ continue; }
-			if (exclude_icons && pkg.name.contains("-icon-theme")){ continue; }
-			if (exclude_themes && pkg.name.contains("-theme") && !pkg.name.contains("-icon-theme")){ continue; }
-			if (exclude_fonts && pkg.name.has_prefix("fonts-")){ continue; }
+			if (exclude_list.contains(pkg.name)){ continue; }
+
+			if (!include_list.contains(pkg.name)){
+
+				if (auto_installed_known && pkg.is_auto){ continue; }
+
+				if (dist_installed_known && pkg.is_dist){ continue; }
+
+				if (!include_foreign && pkg.is_foreign){ continue; }
+				if (exclude_icons && pkg.name.contains("-icon-theme")){ continue; }
+				if (exclude_themes && pkg.name.contains("-theme") && !pkg.name.contains("-icon-theme")){ continue; }
+				if (exclude_fonts && pkg.name.has_prefix("fonts-")){ continue; }
+			}
 
 			if (pkg.name.has_prefix("lib") || (pkg.name == "ttf-mscorefonts-installer")){
 					
@@ -970,9 +976,11 @@ public class PackageManager : GLib.Object {
 
 	// restore ---------------------
 
-	public bool restore_packages(string _basepath, bool no_prompt){
+	public bool restore_packages(string _basepath, bool no_prompt, bool _apply_selections){
 
 		basepath = _basepath;
+
+		apply_selections = _apply_selections;
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_PACKAGES));
@@ -988,7 +996,7 @@ public class PackageManager : GLib.Object {
 			return false;
 		}
 
-		read_exclude_file();
+		read_selections();
 		
 		string backup_file = path_combine(backup_path, "selected.list");
 

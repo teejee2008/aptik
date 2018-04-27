@@ -33,12 +33,21 @@ public class DconfManager : GLib.Object {
 	private string basepath = "";
 	private bool redist = false;
 	private User current_user;
+
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 	
 	public DconfManager(bool _dry_run, bool _redist, User _current_user){
 
 		dry_run = _dry_run;
 		redist = _redist;
 		current_user = _current_user;
+	}
+
+	public string get_backup_path(){
+		
+		return path_combine(basepath, "dconf");
 	}
 	
 	// backup and restore ----------------------
@@ -59,8 +68,8 @@ public class DconfManager : GLib.Object {
 			log_msg(string.nfill(70,'-'));
 		}
 	}
-
-	public bool backup_dconf_settings(string _basepath, string userlist){
+	
+	public bool backup_dconf_settings(string _basepath, string userlist, bool _apply_selections){
 
 		basepath = _basepath;
 		
@@ -70,15 +79,19 @@ public class DconfManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_DCONF));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "dconf");
+		string backup_path = get_backup_path();
 		dir_create(backup_path);
 		chmod(backup_path, "a+rwx");
+
+		read_selections();
 		
 		// backup -----------------------------------
 
 		foreach(var user in get_users(userlist, true)){
 
 			if (user.is_system){ continue; }
+
+			if (exclude_list.contains(user.name)){ continue; }
 
 			bool ok = backup_dconf_settings_for_user(backup_path, user);
 			if (!ok){ status = false; }
@@ -152,8 +165,33 @@ public class DconfManager : GLib.Object {
 		
 		return status;
 	}
+
+	public void read_selections(){
+
+		include_list.clear();
+		exclude_list.clear();
+		
+		if (!apply_selections){ return; }
+
+		string backup_path = get_backup_path();
+
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				exclude_list.add(name[2:name.length]);
+			}
+		}
+	}
+
+	// restore ------------
 	
-	public bool restore_dconf_settings(string _basepath, string userlist){
+	public bool restore_dconf_settings(string _basepath, string userlist, bool _apply_selections){
 
 		basepath = _basepath;
 		
@@ -163,19 +201,23 @@ public class DconfManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_DCONF));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "dconf");
+		string backup_path = get_backup_path();
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
 		}
+
+		read_selections();
 		
 		// backup -----------------------------------
 
 		foreach(var user in get_users(userlist, false)){
 
 			if (user.is_system){ continue; }
+
+			if (exclude_list.contains(user.name)){ continue; }
 
 			bool ok = restore_dconf_settings_for_user(backup_path, user);
 			if (!ok){ status = false; }

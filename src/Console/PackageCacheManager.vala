@@ -35,6 +35,10 @@ public class PackageCacheManager : GLib.Object {
 	public LinuxDistro distro;
 	public bool dry_run = false;
 	public string basepath = "";
+
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 	
 	public PackageCacheManager(LinuxDistro _distro, bool _dry_run){
 
@@ -43,9 +47,92 @@ public class PackageCacheManager : GLib.Object {
 		dry_run = _dry_run;
 	}
 
+	public string get_backup_path(){
+		
+		return path_combine(basepath, "cache");
+	}
+	
+	public void dump_info(){
+
+		string txt = "";
+
+		string system_cache = "";
+
+		switch(distro.dist_type){
+		case "fedora":
+			//not supported
+			return;
+
+		case "arch":
+			system_cache = "/var/cache/pacman/pkg";
+			break;
+
+		case "debian":
+			system_cache = "/var/cache/apt/archives";
+			break;
+
+		default:
+			log_error(Messages.UNKNOWN_DISTRO);
+			return;
+		}
+
+		if (system_cache.length == 0){ return; }
+
+		var list = dir_list_names(system_cache, false);
+		
+		foreach(var name in list){
+			
+			if ((distro.dist_type == "arch") && !name.has_suffix(".tar.xz") && !name.has_suffix(".txz")){
+				continue;
+			}
+
+			if ((distro.dist_type == "debian") && !name.has_suffix(".deb")){
+				continue;
+			}
+			
+			txt += "NAME='%s'".printf(name);
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
+	public void dump_info_backup(string basepath){
+
+		string backup_path = path_combine(basepath, "packages");
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+			log_error(msg);
+			return;
+		}
+
+		string txt = "";
+
+		string backup_path_dist = path_combine(backup_path, distro.dist_type);
+
+		var list = dir_list_names(backup_path_dist, false);
+		
+		foreach(var name in list){
+			
+			if ((distro.dist_type == "arch") && !name.has_suffix(".tar.xz") && !name.has_suffix(".txz")){
+				continue;
+			}
+
+			if ((distro.dist_type == "debian") && !name.has_suffix(".deb")){
+				continue;
+			}
+			
+			txt += "NAME='%s'".printf(name);
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+	
 	// save -------------------------------------------
 
-	public bool backup_cache(string _basepath, bool copyback){
+	public bool backup_cache(string _basepath, bool copyback, bool _apply_selections){
 
 		basepath = _basepath;
 
@@ -60,13 +147,13 @@ public class PackageCacheManager : GLib.Object {
 			log_msg(string.nfill(70,'-'));
 		}
 		
-		string backup_path = path_combine(basepath, "cache");
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+		string backup_path = init_backup_path();
 		
 		string backup_path_distro = path_combine(backup_path, distro.dist_type);
 		dir_create(backup_path_distro);
 		chmod(backup_path_distro, "a+rwx");
+
+		read_selections();
 		
 		string system_cache = "";
 		string filter = "";
@@ -98,8 +185,11 @@ public class PackageCacheManager : GLib.Object {
 		}
 		
 		cmd += " --exclude=lock --exclude=partial/ --exclude=apt-fast/";
+		
 		cmd += filter;
+		
 		cmd += " '%s/'".printf(escape_single_quote(system_cache));
+		
 		cmd += " '%s/'".printf(escape_single_quote(backup_path_distro));
 
 		int status = 0;
@@ -143,10 +233,45 @@ public class PackageCacheManager : GLib.Object {
 		
 		return status;
 	}
+
+	public string init_backup_path(){
+		
+		string backup_path = get_backup_path();
+
+		if (!dir_exists(backup_path)){
+			dir_create(backup_path);
+			chmod(backup_path, "a+rwx");
+		}
+		
+		return backup_path;
+	}
+
+	public void read_selections(){
+
+		include_list.clear();
+		exclude_list.clear();
+		
+		if (!apply_selections){ return; }
+
+		string backup_path = get_backup_path();
+
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				exclude_list.add(name[2:name.length]);
+			}
+		}
+	}
 	
 	// restore ---------------------------------------
 	
-	public bool restore_cache(string _basepath){
+	public bool restore_cache(string _basepath, bool _apply_selections){
 
 		basepath = _basepath;
 		
@@ -154,12 +279,14 @@ public class PackageCacheManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_CACHE));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_cache = path_combine(basepath, "cache/%s".printf(distro.dist_type));
+		string backup_cache = get_backup_path() + "/%s".printf(distro.dist_type);
 
 		if (!dir_exists(backup_cache)){
 			log_error("%s: %s".printf(_("Directory not found"), backup_cache));
 			return false;
 		}
+
+		read_selections();
 
 		string system_cache = "";
 		string filter = "";

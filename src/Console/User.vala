@@ -90,27 +90,37 @@ public class User : GLib.Object {
 	}
 
 	public void check_encrypted_dirs() {
-
+		
 		// check encrypted home ------------------------------
 		
 		string ecryptfs_mount_file = "/home/.ecryptfs/%s/.ecryptfs/Private.mnt".printf(name);
 		
 		if (file_exists(ecryptfs_mount_file)){
 
-			string txt = file_read(ecryptfs_mount_file);
-
-			foreach(string line in txt.split("\n")){
-
-				string path = line.strip();
-
-				if (path.length == 0){ continue; }
+			has_encrypted_home = true;
+			encrypted_dirs.add(home_path);
 				
-				if (path == home_path){
-					has_encrypted_home = true;
-				}
+			/*string? txt = file_read(ecryptfs_mount_file);
 
-				encrypted_dirs.add(path);
+			if (txt == null){
+
+				has_encrypted_home = true;
+				encrypted_dirs.add(home_path);
 			}
+			else{
+				foreach(string line in txt.split("\n")){
+
+					string path = line.strip();
+
+					if (path.length == 0){ continue; }
+					
+					if (path == home_path){
+						has_encrypted_home = true;
+					}
+
+					encrypted_dirs.add(path);
+				}
+			}*/	
 		}
 
 		// check encrypted Private dirs --------------------------
@@ -118,22 +128,34 @@ public class User : GLib.Object {
 		ecryptfs_mount_file = "%s/.ecryptfs/Private.mnt".printf(home_path);
 		
 		if (file_exists(ecryptfs_mount_file)){
-
-			string txt = file_read(ecryptfs_mount_file);
-
-			foreach(string line in txt.split("\n")){
-
-				string path = line.strip();
-
-				if (path.length == 0){ continue; }
+			
+			has_encrypted_private_dirs = true;
+			encrypted_private_dirs.add("%s/Private".printf(home_path));
 				
-				if (path != home_path){
-					has_encrypted_private_dirs = true;
-					encrypted_private_dirs.add(path);
-				}
+			/*
+			string? txt = file_read(ecryptfs_mount_file);
 
-				encrypted_dirs.add(path);
+			if (txt == null){
+
+				has_encrypted_private_dirs = true;
+				encrypted_private_dirs.add("%s/Private".printf(home_path));
 			}
+			else{
+				
+				foreach(string line in txt.split("\n")){
+
+					string path = line.strip();
+
+					if (path.length == 0){ continue; }
+					
+					if (path != home_path){
+						has_encrypted_private_dirs = true;
+						encrypted_private_dirs.add(path);
+					}
+
+					encrypted_dirs.add(path);
+				}
+			}*/
 		}
 	}
 

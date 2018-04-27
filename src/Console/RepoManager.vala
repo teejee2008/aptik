@@ -35,9 +35,12 @@ public class RepoManager : GLib.Object {
 	public Gee.HashMap<string,Repo> repos;
 
 	public LinuxDistro distro;
-	public bool dry_run = false;
+	public bool dry_run = false;	
 	public string basepath = "";
-	public Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 
 	public RepoManager(LinuxDistro _distro, bool _dry_run){
 
@@ -46,6 +49,11 @@ public class RepoManager : GLib.Object {
 		dry_run = _dry_run;
 
 		check_repos();
+	}
+
+	public string get_backup_path(){
+		
+		return path_combine(basepath, "repos");
 	}
 	
 	// check -------------------------------------------
@@ -294,7 +302,7 @@ public class RepoManager : GLib.Object {
 
 	public void dump_info_backup(string basepath){
 
-		string backup_path = path_combine(basepath, "repos");
+		string backup_path = get_backup_path();
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
@@ -402,7 +410,7 @@ public class RepoManager : GLib.Object {
 
 	public string init_backup_path(){
 		
-		string backup_path = path_combine(basepath, "repos");
+		string backup_path = get_backup_path();
 		
 		if (dir_exists(backup_path)){
 
@@ -424,28 +432,36 @@ public class RepoManager : GLib.Object {
 		return backup_path;
 	}
 
-	public void read_exclude_file(){
+	public void read_selections(){
 
-		string backup_path = path_combine(basepath, "repos");
-		
-		string exclude_list_file = path_combine(backup_path, "exclude.list");
-
+		include_list.clear();
 		exclude_list.clear();
 		
-		if (file_exists(exclude_list_file)){
+		if (!apply_selections){ return; }
 
-			foreach(string line in file_read(exclude_list_file).split("\n")){
-				
-				exclude_list.add(line.strip());
+		string backup_path = get_backup_path();
+
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				exclude_list.add(name[2:name.length]);
 			}
 		}
 	}
 	
 	// save ---------------------------------------
 
-	public bool save_repos(string _basepath){
+	public bool save_repos(string _basepath, bool _apply_selections){
 
 		basepath = _basepath;
+
+		apply_selections = _apply_selections;
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_REPOS));
@@ -453,7 +469,7 @@ public class RepoManager : GLib.Object {
 
 		string backup_path = init_backup_path();
 
-		read_exclude_file();
+		read_selections();
 
 		string backup_file = path_combine(backup_path, "CODENAME");
 		file_write(backup_file, distro.codename);
@@ -602,9 +618,11 @@ public class RepoManager : GLib.Object {
 
 	// restore ---------------------------
 
-	public bool restore_repos(string _basepath){
+	public bool restore_repos(string _basepath, bool _apply_selections){
 
 		basepath = _basepath;
+
+		apply_selections = _apply_selections;
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_REPOS));
@@ -612,7 +630,7 @@ public class RepoManager : GLib.Object {
 
 		check_repos();
 
-		string backup_path = path_combine(basepath, "repos");
+		string backup_path = get_backup_path();
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
@@ -620,7 +638,7 @@ public class RepoManager : GLib.Object {
 			return false;
 		}
 
-		read_exclude_file();
+		read_selections();
 
 		switch(distro.dist_type){
 		case "fedora":
@@ -922,7 +940,7 @@ public class RepoManager : GLib.Object {
 
 	public bool import_keys(string basepath){
 
-		string backup_path = path_combine(basepath, "repos");
+		string backup_path = get_backup_path();
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);

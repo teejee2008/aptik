@@ -40,6 +40,10 @@ public class ThemeManager : GLib.Object {
 	public LinuxDistro distro;
 	public bool dry_run = false;
 	public string basepath = "";
+
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 	
 	public ThemeManager(LinuxDistro _distro, bool _dry_run, string _type){
 	
@@ -52,10 +56,15 @@ public class ThemeManager : GLib.Object {
 		themes = new Gee.HashMap<string,Theme>();
 		subtypes = new Gee.HashMap<string,string>();
 	}
+
+	public string get_backup_path(){
+		
+		return path_combine(basepath, type);
+	}
 	
 	// check -------------------------------------------
 
-	public void check_installed_themes(PackageManager pkg_mgr){
+	public void check_installed_themes(){
 
 		//if (!list_only){
 		//	log_msg("Checking installed themes (%s)...".printf(type));
@@ -71,7 +80,7 @@ public class ThemeManager : GLib.Object {
 		var mgr = new UserManager();
 		mgr.query_users(false);
 		
-		foreach(var user in mgr.users.values){
+		/*foreach(var user in mgr.users.values){
 
 			if (user.is_system) { continue; }
 			
@@ -80,7 +89,7 @@ public class ThemeManager : GLib.Object {
 
 			path = "%s/.local/share/%s".printf(user.home_path, type);
 			add_themes_from_path(path);
-		}
+		}*/
 
 		foreach(var theme in themes.values){
 			if (!subtypes.has_key(theme.name)){
@@ -90,15 +99,18 @@ public class ThemeManager : GLib.Object {
 		
 		// exclude list ---------------
 
-		if (pkg_mgr.dist_files.size > 0){
+		if (App.dist_files.size > 0){
 			
 			foreach(var theme in themes.values){
 				
-				if (pkg_mgr.dist_files.contains(theme.theme_path)){
+				if (App.dist_files.contains(theme.theme_path)){
 					
 					theme.is_dist = true;
 				}
 			}
+		}
+		else{
+			log_debug("dist_files.size == 0");
 		}
 	}
 
@@ -212,7 +224,7 @@ public class ThemeManager : GLib.Object {
 
 	private void load_index_file(string basepath){
 
-		string backup_path = path_combine(basepath, type);
+		string backup_path = get_backup_path();
 		string index_file = path_combine(backup_path, "index.list");
 		
 		if (!file_exists(index_file)){ return; }
@@ -258,6 +270,44 @@ public class ThemeManager : GLib.Object {
 
 	// list  --------------------------
 
+	public void dump_info(){
+
+		string txt = "";
+		
+		foreach(var theme in themes_sorted){
+			
+			if (!theme.is_installed){ continue; }
+			
+			txt += "NAME='%s',DESC='%s'".printf(theme.name, theme.subtypes_desc);
+			txt += ",D='%s'".printf(theme.is_dist ? "1" : "0");
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
+	public void dump_info_backup(string basepath){
+
+		string backup_path = get_backup_path();
+		
+		if (!dir_exists(backup_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+			log_error(msg);
+			return;
+		}
+
+		string txt = "";
+
+		foreach(var theme in themes_sorted){
+			
+			txt += "NAME='%s',DESC='%s'".printf(theme.name, theme.subtypes_desc);
+			txt += ",I='%s'".printf(theme.is_installed ? "1" : "0");
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
 	public void list_themes(){
 
 		foreach(var theme in themes_sorted){
@@ -265,12 +315,14 @@ public class ThemeManager : GLib.Object {
 			log_msg("%-50s -- %s".printf(theme.theme_path, theme.subtypes_desc));
 		}
 	}
-
+	
 	// save ---------------------------------------
 
-	public bool save_themes(string _basepath, bool use_xz){
+	public bool save_themes(string _basepath, bool use_xz, bool _apply_selections){
 
 		basepath = _basepath;
+
+		apply_selections = _apply_selections;
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
@@ -278,19 +330,22 @@ public class ThemeManager : GLib.Object {
 
 		string backup_path = init_backup_path();
 
+		read_selections();
+
 		save_exclude_list();
 
 		foreach(var theme in themes_sorted) {
-			
-			if (theme.is_selected && !theme.is_dist) {
 
-				// zip it ------------------------
+			if (exclude_list.contains(theme.name)){ continue; }
+
+			if (theme.is_dist && !include_list.contains(theme.name)){ continue; }
+			
+			// zip it ------------------------
 				
-				theme.zip(backup_path + "/files", use_xz);
-				
-				while (theme.is_running) {
-					sleep(500);
-				}
+			theme.zip(backup_path + "/files", use_xz);
+			
+			while (theme.is_running) {
+				sleep(500);
 			}
 		}
 
@@ -318,7 +373,7 @@ public class ThemeManager : GLib.Object {
 
 	public string init_backup_path(){
 		
-		string backup_path = path_combine(basepath, type);
+		string backup_path = get_backup_path();
 		
 		if (!dir_exists(backup_path)){
 			dir_create(backup_path);
@@ -333,15 +388,42 @@ public class ThemeManager : GLib.Object {
 		return backup_path;
 	}
 
-	public bool restore_themes(string _basepath){
+	public void read_selections(){
+
+		include_list.clear();
+		exclude_list.clear();
+		
+		if (!apply_selections){ return; }
+
+		string backup_path = get_backup_path();
+
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				exclude_list.add(name[2:name.length]);
+			}
+		}
+	}
+
+	// restore -------------------------
+	
+	public bool restore_themes(string _basepath, bool _apply_selections){
 
 		basepath = _basepath;
+
+		apply_selections = _apply_selections;
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_path = path_combine(basepath, type);
+		string backup_path = get_backup_path();
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
@@ -349,23 +431,25 @@ public class ThemeManager : GLib.Object {
 			return false;
 		}
 
-		foreach(var theme in themes_sorted){
+		read_selections();
 
-			theme.is_selected = !theme.is_installed;
-		}
-
+		// restore ---------------------------------
+		
 		foreach(var theme in themes_sorted) {
 
-			if (theme.is_selected && !theme.is_installed) {
+			if (theme.is_installed){ continue; }
 
-				theme.unzip(dry_run);
-				
-				while (theme.is_running) {
-					sleep(500);
-				}
+			if (exclude_list.contains(theme.name)){ continue; }
 
-				theme.update_permissions_for_restored_files(theme.theme_path, dry_run);
+			//if (!include_list.contains(theme.name)){ continue; }
+
+			theme.unzip(dry_run);
+			
+			while (theme.is_running) {
+				sleep(500);
 			}
+
+			theme.update_permissions_for_restored_files(theme.theme_path, dry_run);
 		}
 
 		//Theme.fix_nested_folders(); // Not needed
@@ -630,7 +714,7 @@ public class Theme : GLib.Object{
 			string cmd = "tar caf '%s' -C '%s' '%s' >/dev/null 2>&1".printf(zip_file, file_parent(theme_path), name);
 			log_debug(cmd);
 
-			stdout.printf("%-80s".printf(_("Archiving") + " '%s'".printf(theme_path)));
+			stdout.printf("%-70s".printf(_("Archiving") + " '%s'".printf(theme_path)));
 			stdout.flush();
 
 			int status = Posix.system(cmd);
@@ -671,7 +755,7 @@ public class Theme : GLib.Object{
 			log_debug("$ %s".printf(cmd));
 		}
 		
-		stdout.printf("%-80s".printf(_("Extracting") + " '%s'".printf(theme_path)));
+		stdout.printf("%-70s".printf(_("Extracting") + " '%s'".printf(theme_path)));
 		stdout.flush();
 
 		int status = 0;

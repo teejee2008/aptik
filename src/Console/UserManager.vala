@@ -32,16 +32,27 @@ public class UserManager : GLib.Object {
 
 	public bool dry_run = false;
 	public string basepath = "";
-	
+
+	private bool apply_selections = false;
+	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
+	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
+
 	public UserManager(bool _dry_run = false){
 
 		dry_run = _dry_run;
 
 		users = new Gee.HashMap<string,User>();
-		
+
 		//query_users(query_passwords);
 	}
 
+	public string get_backup_path(){
+		
+		return path_combine(basepath, "users");
+	}
+
+	// query ---------------------------------------------
+	
 	public void query_users(bool query_passwords){
 		
 		if (query_passwords){
@@ -267,7 +278,7 @@ public class UserManager : GLib.Object {
 		return status;
 	}
 
-	// backup and restore ----------------------
+	// list, backup, restore ----------------------
 	
 	public void list_users(bool all){
 		
@@ -280,7 +291,7 @@ public class UserManager : GLib.Object {
 		}
 	}
 
-	public bool backup_users(string _basepath){
+	public bool backup_users(string _basepath, bool _apply_selections){
 
 		basepath = _basepath;
 		
@@ -291,12 +302,16 @@ public class UserManager : GLib.Object {
 		string backup_path = path_combine(basepath, "users");
 		dir_create(backup_path);
 		chmod(backup_path, "a+rwx");
+
+		read_selections();
 		
 		bool status = true;
 
 		foreach(var user in users_sorted){
 			
 			if (user.is_system) { continue; }
+
+			if (exclude_list.contains(user.name)){ continue; }
 	
 			string backup_file = path_combine(backup_path, "%s.passwd".printf(user.name));
 			bool ok = file_write(backup_file, user.get_passwd_line());
@@ -325,7 +340,30 @@ public class UserManager : GLib.Object {
 		return status;
 	}
 
-	public bool restore_users(string _basepath){
+	public void read_selections(){
+
+		include_list.clear();
+		exclude_list.clear();
+		
+		if (!apply_selections){ return; }
+
+		string backup_path = get_backup_path();
+
+		string selections_list = path_combine(backup_path, "selections.list");
+
+		if (!file_exists(selections_list)){ return; }
+
+		foreach(string name in file_read(selections_list).split("\n")){
+			if (name.has_prefix("+ ")){
+				include_list.add(name[2:name.length]);
+			}
+			else if (name.has_prefix("- ")){
+				exclude_list.add(name[2:name.length]);
+			}
+		}
+	}
+	
+	public bool restore_users(string _basepath, bool _apply_selections){
 
 		basepath = _basepath;
 		
@@ -340,6 +378,8 @@ public class UserManager : GLib.Object {
 			log_error(msg);
 			return false;
 		}
+
+		read_selections();
 		
 		bool status = true, ok;
 		
@@ -374,6 +414,8 @@ public class UserManager : GLib.Object {
 		foreach(var user in mgr.users_sorted){
 			
 			if (users.has_key(user.name)){ continue; }
+
+			if (exclude_list.contains(user.name)){ continue; }
 
 			ok = (user.add(dry_run) == 0);
 
@@ -412,6 +454,8 @@ public class UserManager : GLib.Object {
 		foreach(var old_user in mgr.users_sorted){
 
 			if (!users.has_key(old_user.name)){ continue; }
+
+			if (exclude_list.contains(old_user.name)){ continue; }
 			
 			var user = users[old_user.name];
 

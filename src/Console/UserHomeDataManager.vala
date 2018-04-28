@@ -123,7 +123,7 @@ public class UserHomeDataManager : BackupManager {
 
 		// backup --------------------------------------
 		
-		bool ok = backup_home_tar(backup_path, users, current_user, exclude_hidden, exclude_from_file);
+		bool ok = backup_home_tar(users, exclude_hidden, exclude_from_file);
 
 		if (!ok){ status = false; }
 		
@@ -137,8 +137,7 @@ public class UserHomeDataManager : BackupManager {
 		return status;
 	}
 
-	public bool backup_home_tar(string backup_path, Gee.ArrayList<User> users, User current_user,
-		bool exclude_hidden, string exclude_from_file){
+	public bool backup_home_tar(Gee.ArrayList<User> users, bool exclude_hidden, string exclude_from_file){
 
 		bool status = true;
 		int retval = 0;
@@ -168,7 +167,7 @@ public class UserHomeDataManager : BackupManager {
 				src_path_user = user.home_path; // always use home data in redist mode. use decrypted home data for encrypted home.
 			}
 			else{
-				backup_path_user = path_combine(backup_path, user.name);
+				backup_path_user = path_combine(files_path, user.name);
 
 				dir_delete(backup_path_user); // remove existing backups if any
 				dir_create(backup_path_user);
@@ -287,99 +286,6 @@ public class UserHomeDataManager : BackupManager {
 		return status;
 	}
 
-	public bool backup_home_duplicity(string backup_path, Gee.ArrayList<User> users, string _password,
-		bool full_backup, bool exclude_hidden){
-
-		string password = _password;
-		
-		bool status = true;
-		int retval = 0;
-		
-		foreach(var user in users){
-
-			if (user.is_system){ continue; }
-
-			if (exclude_list.contains(user.name)){ continue; }
-
-			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
-			
-			if (!dir_exists(user.home_path)){
-				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
-				log_msg(string.nfill(70,'-'));
-				continue;
-			}
-			
-			var backup_path_user = path_combine(backup_path, user.name);
-			dir_create(backup_path_user);
-
-			// remove TAR backup if any
-			string tar_file = path_combine(backup_path_user, "data.tar.gz");
-			file_delete(tar_file);
-
-			// save exclude list -----------------------
-			
-			var exclude_list = path_combine(backup_path_user, "exclude.list");
-			if (file_exists(exclude_list)){
-				file_delete(exclude_list);
-			}
-			file_write(exclude_list, exclude_list_create(user, exclude_hidden, "", false));
- 
-			// check for existing backup -----------------------
-			
-			var list = dir_list_names(backup_path_user, false);
-			bool backup_found = false;
-			foreach(var name in list){
-				if (name.has_suffix(".manifest.gpg") || name.has_suffix(".difftar.gpg") || name.has_suffix(".sigtar.gpg")){
-					backup_found = true;
-					break;
-				}
-			}
-
-			// create script ---------------------------
-			
-			var cmd = "";
-
-			if (password.length == 0){ password = "aptik"; } 
-			
-			cmd += "export PASSPHRASE='%s' ; ".printf(escape_single_quote(password));
-			
-			cmd += "duplicity";
-
-			if (full_backup || !backup_found){
-				cmd += " full";
-			}
-			else{
-				cmd += " incr";
-			}
-
-			cmd += " --verbosity i --force";
-			
-			cmd += " --exclude-filelist '%s'".printf(escape_single_quote(exclude_list));
-
-			cmd += " '%s'".printf(escape_single_quote(user.home_path));
-
-			cmd += " 'file://%s' ; ".printf(escape_single_quote(backup_path_user));
-
-			cmd += "unset PASSPHRASE\n";
-
-			// execute ---------------------------------
-
-			if (dry_run){
-				log_msg("$ %s".printf(cmd));
-			}
-			else{
-				log_debug("$ %s".printf(cmd));
-				retval = Posix.system(cmd);
-			}
-			
-			if (retval != 0){ status = false; }
-
-			log_msg(string.nfill(70,'-'));
-		}
-
-		return status;
-	}
-
 	public string exclude_list_create(User user, bool exclude_hidden, string exclude_from_file, bool tar_format){
 		
 		string txt = "";
@@ -462,8 +368,6 @@ public class UserHomeDataManager : BackupManager {
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_HOME));
 		log_msg(string.nfill(70,'-'));
 		
-		init_backup_path();
-
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
@@ -478,7 +382,7 @@ public class UserHomeDataManager : BackupManager {
 		
 		// restore ----------------------------------------
 
-		bool ok = restore_home_tar(backup_path, users, current_user);
+		bool ok = restore_home_tar(users);
 
 		if (!ok){ status = false; }
 		
@@ -492,7 +396,7 @@ public class UserHomeDataManager : BackupManager {
 		return status;
 	}
 
-	public bool restore_home_tar(string backup_path, Gee.ArrayList<User> users, User current_user){
+	public bool restore_home_tar(Gee.ArrayList<User> users){
 
 		bool status = true;
 
@@ -519,7 +423,7 @@ public class UserHomeDataManager : BackupManager {
 				backup_path_user = backup_path;
 			}
 			else{
-				backup_path_user = path_combine(backup_path, user.name);
+				backup_path_user = path_combine(files_path, user.name);
 			}
 			
 			if (!dir_exists(backup_path_user)){
@@ -662,84 +566,6 @@ public class UserHomeDataManager : BackupManager {
 		}
 		
 		if (retval != 0){ status = false; }
-
-		return status;
-	}
-
-	public bool restore_home_duplicity(string backup_path, Gee.ArrayList<User> users, string _password){
-
-		string password = _password;
-		
-		bool status = true;
-
-		var grpmgr = new GroupManager(distro, current_user, basepath, dry_run, redist, apply_selections);
-		grpmgr.query_groups(false);
-		
-		foreach(var user in users){
-
-			if (user.is_system){ continue; }
-
-			if (exclude_list.contains(user.name)){ continue; }
-
-			log_msg("%s: %s ~ %s\n".printf(_("User"), user.name, user.full_name));
-			
-			if (!dir_exists(user.home_path)){
-				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
-				log_msg(string.nfill(70,'-'));
-				continue;
-			}
-
-			var backup_path_user = path_combine(backup_path, user.name);
-
-			if (!dir_exists(backup_path_user)){
-				log_error("%s: %s".printf(Messages.DIR_MISSING, user.home_path));
-				log_error(_("No backup found for this user"));
-				log_msg(string.nfill(70,'-'));
-				continue;
-			}
-
-			// create script ---------------------------
-			
-			var cmd = "";
-
-			if (password.length == 0){ password = "aptik"; } 
-			
-			cmd += "export PASSPHRASE='%s'\n".printf(escape_single_quote(password));
-			
-			cmd += "duplicity";
-
-			cmd += " restore";
-
-			cmd += " --verbosity i --force";
-
-			cmd += " 'file://%s'".printf(escape_single_quote(backup_path_user));
-
-			cmd += " '%s'".printf(escape_single_quote(user.home_path));
-
-			cmd += "\n";
-			
-			cmd += "unset PASSPHRASE\n";
-
-			// execute ---------------------------------
-
-			int retval = 0;
-			
-			if (dry_run){
-				log_msg("$ %s".printf(cmd));
-			}
-			else{
-				log_debug("$ %s".printf(cmd));
-				retval = Posix.system(cmd);
-			}
-			
-			if (retval != 0){ status = false; }
-
-			// update ownership --------------------------
-			
-			update_owner_for_directory_contents(user, grpmgr.groups_sorted);
-
-			log_msg(string.nfill(70,'-'));
-		}
 
 		return status;
 	}
@@ -1020,9 +846,3 @@ public class UserHomeDataManager : BackupManager {
 		return (status == 0);
 	}
 }
-
-public enum HomeDataBackupMode {
-	TAR,
-	DUPLICITY
-}
-

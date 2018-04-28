@@ -170,11 +170,13 @@ public class AptikConsole : GLib.Object {
 		current_user = mgr.get_current_user();
 
 		install_dependencies();
+
+		read_distfiles();
 	}
 
 	public void read_distfiles(){
 
-		string list_file = path_combine(App.current_user.home_path, ".config/aptik/initial-files.list");
+		string list_file = path_combine(current_user.home_path, ".config/aptik/initial-files.list");
 
 		dist_files.clear();
 		

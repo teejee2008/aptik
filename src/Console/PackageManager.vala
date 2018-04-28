@@ -827,7 +827,7 @@ public class PackageManager : BackupManager {
 
 	public bool save_package_list_installed() {
 
-		string backup_file = path_combine(backup_path, "installed.list");
+		string backup_file = path_combine(files_path, "installed.list");
 
 		string txt = "\n# Do not edit - This list is not used for restore\n\n";
 
@@ -860,7 +860,7 @@ public class PackageManager : BackupManager {
 
 	public bool save_package_list_selected(bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts) {
 
-		string backup_file = path_combine(backup_path, "selected.list");
+		string backup_file = path_combine(files_path, "selected.list");
 
 		string txt = "\n";
 
@@ -941,8 +941,6 @@ public class PackageManager : BackupManager {
 
 		//check_packages();
 		
-		string backup_path = path_combine(basepath, "packages");
-		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
@@ -951,7 +949,7 @@ public class PackageManager : BackupManager {
 
 		read_selections();
 		
-		string backup_file = path_combine(backup_path, "selected.list");
+		string backup_file = path_combine(files_path, "selected.list");
 
 		if (!file_exists(backup_file)) {
 			string msg = "%s: %s".printf(Messages.FILE_MISSING, backup_file);
@@ -1229,13 +1227,13 @@ public class PackageManager : BackupManager {
 
 		log_debug("install_packages_deb()");
 
-		string backup_path = path_combine(basepath, "debs");
+		string deb_path = path_combine(basepath, "debs");
 		
-		if (!dir_exists(backup_path)){ return true; }
+		if (!dir_exists(deb_path)){ return true; }
 		
 		// check count ---------------------
 		
-		var list = dir_list_names(backup_path, true);
+		var list = dir_list_names(deb_path, true);
 		int count = 0;
 		
 		foreach(var file_path in list){

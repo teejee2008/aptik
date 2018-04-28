@@ -92,7 +92,7 @@ public class PackageCacheManager : BackupManager {
 
 		string txt = "";
 
-		string backup_path_dist = path_combine(backup_path, distro.dist_type);
+		string backup_path_dist = path_combine(files_path, distro.dist_type);
 
 		var list = dir_list_names(backup_path_dist, false);
 
@@ -133,7 +133,7 @@ public class PackageCacheManager : BackupManager {
 		
 		init_backup_path();
 		
-		string backup_path_distro = path_combine(backup_path, distro.dist_type);
+		string backup_path_distro = path_combine(files_path, distro.dist_type);
 		dir_create(backup_path_distro);
 		chmod(backup_path_distro, "a+rwx");
 
@@ -204,7 +204,7 @@ public class PackageCacheManager : BackupManager {
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_CACHE));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_cache = path_combine(backup_path, distro.dist_type);
+		string backup_cache = path_combine(files_path, distro.dist_type);
 
 		if (!dir_exists(backup_cache)){
 			log_error("%s: %s".printf(_("Directory not found"), backup_cache));

@@ -621,6 +621,53 @@ namespace TeeJee.FileSystem{
 
 		return list;
 	}
+
+	public Gee.ArrayList<string> dir_list_files_recursive(string path, bool full_path, Gee.ArrayList<string>? file_list = null){
+
+		var list = new Gee.ArrayList<string>();
+		 
+		if (file_list != null){
+			list = file_list;
+		}
+
+		try
+		{
+			File f_path = File.new_for_path (path);
+
+			if (!f_path.query_exists()){ return list; }
+			
+			FileEnumerator enumerator = f_path.enumerate_children("%s,%s".printf(FileAttribute.STANDARD_NAME, FileAttribute.STANDARD_TYPE), 0);
+			FileInfo file;
+			while ((file = enumerator.next_file ()) != null) {
+				
+				string name = file.get_name();
+				var type = file.get_file_type();
+
+				if (type == FileType.REGULAR){
+					if (full_path){
+						list.add(path_combine(path, name));
+					}
+					else{
+						list.add(name);
+					}
+				}
+				else if (type == FileType.DIRECTORY){
+					list = dir_list_files_recursive(path_combine(path, name), full_path, list);
+				}
+			}
+		}
+		catch (Error e) {
+			log_error (e.message);
+		}
+
+		//sort the list
+		CompareDataFunc<string> entry_compare = (a, b) => {
+			return strcmp(a,b);
+		};
+		list.sort((owned) entry_compare);
+
+		return list;
+	}
 	
 	public bool dir_tar (string src_dir, string tar_file, bool recursion = true){
 		if (dir_exists(src_dir)) {

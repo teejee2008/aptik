@@ -63,10 +63,6 @@ public class DconfManager : BackupManager {
 
 	public void dump_info_backup(){
 
-		init_backup_path(false);
-		
-		init_backup_path(false);
-
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
@@ -121,15 +117,13 @@ public class DconfManager : BackupManager {
 	
 	public bool backup_dconf_settings( string userlist){
 
-		init_backup_path(false);
-		
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_DCONF));
 		log_msg(string.nfill(70,'-'));
 		
-		init_backup_path(false);
+		init_backup_path();
 
 		read_selections();
 		
@@ -196,16 +190,12 @@ public class DconfManager : BackupManager {
 	
 	public bool restore_dconf_settings( string userlist){
 
-		init_backup_path(false);
-		
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_DCONF));
 		log_msg(string.nfill(70,'-'));
-		
-		
-		
+
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);

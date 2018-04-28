@@ -62,12 +62,7 @@ public class UserHomeDataManager : BackupManager {
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string _basepath){
-
-		init_backup_path(false);
-		
-		
-		
+	public void dump_info_backup(){
 
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
@@ -107,23 +102,18 @@ public class UserHomeDataManager : BackupManager {
 
 	// backup ----------------------
 	
-	public bool backup_home(string _basepath, string userlist, bool exclude_hidden, bool _use_xz,
-		string exclude_from_file, bool _apply_selections){
+	public bool backup_home(string userlist, bool exclude_hidden, bool _use_xz,
+		string exclude_from_file){
 
-		init_backup_path(false);
-
-		use_xz = _use_xz;
-
-		string backup_path = path_combine(basepath, "home");
-
-		if (redist){ dir_delete(backup_path); } // delete existing backups
-		
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_HOME));
 		log_msg(string.nfill(70,'-'));
+
+		use_xz = _use_xz;
+
+		init_backup_path();
+
+		if (redist){ dir_delete(backup_path); } // delete existing backups
 
 		bool status = true;
 
@@ -466,15 +456,13 @@ public class UserHomeDataManager : BackupManager {
 
 	// restore -----------------------------
 	
-	public bool restore_home(string _basepath, string userlist, bool _apply_selections){
+	public bool restore_home(string userlist){
 
-		init_backup_path(false);
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_HOME));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "home");
+		init_backup_path();
 
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);

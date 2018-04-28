@@ -230,8 +230,6 @@ public class GroupManager : BackupManager {
 
 	public void dump_info_backup(){
 
-		init_backup_path(false);
-
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
@@ -288,7 +286,7 @@ public class GroupManager : BackupManager {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_GROUPS));
 		log_msg(string.nfill(70,'-'));
 
-		init_backup_path(false);
+		init_backup_path();
 		
 		read_selections();
 		

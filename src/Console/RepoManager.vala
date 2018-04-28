@@ -426,10 +426,8 @@ public class RepoManager : BackupManager {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
 
-		init_backup_path(false);
-
-		init_backup_path(false);
-
+		init_backup_path();
+		
 		read_selections();
 
 		string backup_file = path_combine(backup_path, "CODENAME");
@@ -579,20 +577,14 @@ public class RepoManager : BackupManager {
 
 	// restore ---------------------------
 
-	public bool restore_repos(string _basepath, bool _apply_selections){
+	public bool restore_repos(){
 
-		init_backup_path(false);
-
-		apply_selections = _apply_selections;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
 
 		check_repos();
 
-		
-		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);

@@ -99,8 +99,6 @@ public class ThemeManager : BackupManager {
 
 	public void save_exclude_list(){
 
-		init_backup_path(false);
-		
 		string exclude_list = path_combine(backup_path, "exclude.list");
 		
 		string txt = "";
@@ -156,14 +154,11 @@ public class ThemeManager : BackupManager {
 		}
 	}
 
-	public void check_archived_themes(string _basepath) {
-
-		init_backup_path(false);
+	public void check_archived_themes() {
 
 		//log_msg("Checking archived themes...");
-
-		string backup_path = "%s/%s".printf(basepath, type);
-		add_archived_themes_from_path(backup_path + "/files");
+		
+		add_archived_themes_from_path(files_path);
 
 		load_index_file(backup_path);
 
@@ -285,12 +280,7 @@ public class ThemeManager : BackupManager {
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string _basepath){
-
-		init_backup_path(false);
-		
-		
-		
+	public void dump_info_backup(){
 
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
@@ -328,17 +318,13 @@ public class ThemeManager : BackupManager {
 	
 	// save ---------------------------------------
 
-	public bool save_themes(string _basepath, bool use_xz, bool _apply_selections){
+	public bool save_themes(bool use_xz){
 
-		init_backup_path(false);
-
-		apply_selections = _apply_selections;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
 
-		init_backup_path(false);
+		init_backup_path();
 
 		read_selections();
 
@@ -383,18 +369,12 @@ public class ThemeManager : BackupManager {
 
 	// restore -------------------------
 	
-	public bool restore_themes(string _basepath, bool _apply_selections){
+	public bool restore_themes(){
 
-		init_backup_path(false);
-
-		apply_selections = _apply_selections;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
 
-		
-		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);

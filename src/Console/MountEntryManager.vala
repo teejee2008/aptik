@@ -325,12 +325,7 @@ public class MountEntryManager : BackupManager {
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string _basepath){
-
-		init_backup_path(false);
-		
-		
-		
+	public void dump_info_backup(){
 
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
@@ -448,22 +443,13 @@ public class MountEntryManager : BackupManager {
 
 	// backup ----------------------------------
 	
-	public bool backup_mount_entries(string _basepath, bool _apply_selections){
+	public bool backup_mount_entries(){
 
-		init_backup_path(false);
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_MOUNTS));
 		log_msg(string.nfill(70,'-'));
 		
-		
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
-
-		
-		dir_delete(files_path);
-		dir_create(files_path);
-		chmod(files_path, "a+rwx");
+		init_backup_path();
 
 		read_selections();
 		
@@ -523,19 +509,11 @@ public class MountEntryManager : BackupManager {
 
 	// restore -------------------------------
 	
-	public bool restore_mount_entries(string _basepath, bool _apply_selections){
+	public bool restore_mount_entries(){
 
-		init_backup_path(false);
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_MOUNTS));
 		log_msg(string.nfill(70,'-'));
-		
-		
-		chmod(backup_path, "a+rwx");
-
-		
-		chmod(files_path, "a+rwx");
 		
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);

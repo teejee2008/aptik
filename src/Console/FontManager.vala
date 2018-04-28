@@ -113,8 +113,6 @@ public class FontManager : BackupManager {
 
 	public void dump_info_backup(){
 
-		init_backup_path(false);
-		
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
@@ -157,8 +155,6 @@ public class FontManager : BackupManager {
 
 	public bool backup_fonts(){
 
-		init_backup_path(false);
-
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_FONTS));
 		log_msg(string.nfill(70,'-'));
@@ -167,7 +163,7 @@ public class FontManager : BackupManager {
 		
 		string system_path = "/usr/share/fonts";
 		
-		init_backup_path(false);
+		init_backup_path();
 
 		read_selections();
 
@@ -294,8 +290,6 @@ public class FontManager : BackupManager {
 	// restore ---------------------------------------
 	
 	public bool restore_fonts(){
-
-		init_backup_path(false);
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_FONTS));

@@ -141,7 +141,7 @@ public class CronTaskManager : BackupManager {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_CRON));
 		log_msg(string.nfill(70,'-'));
 		
-		init_backup_path(false);
+		init_backup_path();
 		
 		read_selections();
 

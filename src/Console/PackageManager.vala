@@ -786,7 +786,7 @@ public class PackageManager : BackupManager {
 		
 		bool ok, status = true;
 
-		init_backup_path(false);
+		init_backup_path();
 
 		read_selections();
 

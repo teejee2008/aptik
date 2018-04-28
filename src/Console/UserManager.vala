@@ -290,12 +290,7 @@ public class UserManager : BackupManager {
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string _basepath){
-
-		init_backup_path(false);
-		
-		
-		
+	public void dump_info_backup(){
 
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
@@ -346,13 +341,13 @@ public class UserManager : BackupManager {
 
 	// backup ------------------------------
 	
-	public bool backup_users(string _basepath, bool _apply_selections){
+	public bool backup_users(){
 
-		init_backup_path(false);
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
+
+		init_backup_path();
 
 		read_selections();
 		
@@ -393,14 +388,12 @@ public class UserManager : BackupManager {
 
 	// restore ----------------------------------
 	
-	public bool restore_users(string _basepath, bool _apply_selections){
+	public bool restore_users(){
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
 		
-		init_backup_path(false);
-
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);

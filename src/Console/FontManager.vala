@@ -30,27 +30,15 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public class FontManager : GLib.Object {
+public class FontManager : BackupManager {
 	
-	public LinuxDistro distro;
-	public bool dry_run = false;
-	private string basepath = "";
+	public Gee.HashMap<string,Font> fonts = new Gee.HashMap<string, Font>();
 	
-	public Gee.HashMap<string,Font> fonts;
+	public FontManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
-	
-	public FontManager(LinuxDistro _distro, bool _dry_run){
-
-		distro = _distro;
-
-		dry_run = _dry_run;
-
-		fonts = new Gee.HashMap<string, Font>();
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "fonts");
 	}
-
+	
 	public void list_fonts(){
 
 		string cmd = "fc-list : family style";
@@ -87,18 +75,89 @@ public class FontManager : GLib.Object {
 		}
 	}
 
-	public string get_backup_path(){
+	// list --------------------------------
+
+	public void dump_info(){
+
+		var list = dir_list_files_recursive("/usr/share/fonts", true, null);
+
+		list.sort();
 		
-		return path_combine(basepath, "fonts");
+		string txt = "";
+		
+		foreach(var font_file in list){
+
+			if (!font_file.has_suffix(".ttf") && !font_file.has_suffix(".otf")){ continue; }
+
+			txt += "NAME='%s'".printf(font_file);
+
+			bool is_dist = false;
+			foreach(string file_path in App.dist_files){
+				if (file_path.has_prefix("/usr/share/fonts/") && (font_file == file_path)){
+					is_dist = true;
+					break;
+				}
+			}
+			
+			txt += ",DIST='%s'".printf(is_dist ? "1" : "0");
+			
+			txt += ",ACT='%s'".printf(is_dist ? "0" : "1");
+			
+			txt += ",SENS='%s'".printf("1"); // always sensitive
+			
+			txt += "\n";
+		}
+		
+		log_msg(txt);
 	}
-	
+
+	public void dump_info_backup(){
+
+		init_backup_path(false);
+		
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
+			log_error(msg);
+			return;
+		}
+		
+		var list_sys = dir_list_files_recursive("/usr/share/fonts", true, null);
+		list_sys.sort();
+
+		var list_bkup = dir_list_files_recursive(files_path, true, null);
+		list_bkup.sort();
+		
+		string txt = "";
+		
+		foreach(var font_file in list_bkup){
+
+			txt += "NAME='%s'".printf(font_file);
+
+			bool is_installed = false;
+			foreach(string file_path in list_sys){
+				if (file_path.has_prefix("/usr/share/fonts/") && (font_file == file_path)){
+					is_installed = true;
+					break;
+				}
+			}
+			
+			txt += ",INST='%s'".printf(is_installed ? "1" : "0");
+
+			txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
+			
+			txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
+			
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
 	// save -------------------------------------------
 
-	public bool backup_fonts(string _basepath, PackageManager mgr_pkg, bool _apply_selections){
+	public bool backup_fonts(){
 
-		basepath = _basepath;
-
-		apply_selections = _apply_selections;
+		init_backup_path(false);
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_FONTS));
@@ -108,12 +167,9 @@ public class FontManager : GLib.Object {
 		
 		string system_path = "/usr/share/fonts";
 		
-		string backup_path = init_backup_path();
-
-		string backup_path_files = path_combine(backup_path, "files");
-		dir_delete(backup_path_files);
-		dir_create(backup_path_files);
-		chmod(backup_path_files, "a+rwx");
+		init_backup_path(false);
+		
+		init_files_path(false);
 
 		read_selections();
 
@@ -162,11 +218,11 @@ public class FontManager : GLib.Object {
 
 		// system fonts --------------------------
 
-		backup_fonts_from_path(system_path, backup_path);
+		backup_fonts_from_path(system_path);
 
 		// users' fonts -------------------------
 		
-		var mgr = new UserManager();
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.query_users(false);
 		
 		foreach(var user in mgr.users.values){
@@ -177,25 +233,25 @@ public class FontManager : GLib.Object {
 			var list = dir_list_names(path, true);
 			if (list.size > 0){
 				log_msg(string.nfill(70,'-'));
-				backup_fonts_from_path(path, backup_path);
+				backup_fonts_from_path(path);
 			}
 			
 			path = "%s/.local/share/fonts".printf(user.home_path);
 			list = dir_list_names(path, true);
 			if (list.size > 0){
 				log_msg(string.nfill(70,'-'));
-				backup_fonts_from_path(path, backup_path);
+				backup_fonts_from_path(path);
 			}
 		}
 
-		update_permissions_for_backup_files(backup_path, dry_run);
+		update_permissions_for_backup_files();
 
 		log_msg(Messages.BACKUP_OK);
 
 		return true;
 	}
 	
-	public bool backup_fonts_from_path(string system_path, string backup_path){
+	public bool backup_fonts_from_path(string system_path){
 
 		if (!dir_exists(system_path)){ return false; }
 
@@ -237,82 +293,16 @@ public class FontManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_backup_files(string path, bool dry_run) {
-
-		if (dry_run){ return true; }
-		
-		bool ok = true;
-		bool status = true;
-
-		ok = chmod(path, "a+rwx");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "d", "a+rwx");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "f", "a+rw");
-		if (!ok){ status = false; }
-
-		//ok = chown(path, "root", "root");
-		//if (!ok){ status = false; }
-		
-		return status;
-	}
-
-	public string init_backup_path(){
-		
-		string backup_path = get_backup_path();
-		
-		if (!dir_exists(backup_path)){
-			dir_create(backup_path);
-			chmod(backup_path, "a+rwx");
-		}
-
-		string files_path = path_combine(backup_path, "files");
-		dir_delete(files_path);
-		dir_create(files_path);
-		chmod(files_path, "a+rwx");
-		
-		return backup_path;
-	}
-
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
-	
 	// restore ---------------------------------------
 	
-	public bool restore_fonts(string _basepath, bool _apply_selections){
+	public bool restore_fonts(){
 
-		basepath = _basepath;
+		init_backup_path(false);
 
-		apply_selections = _apply_selections;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_FONTS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = get_backup_path();
-
 		string system_path = "/usr/share/fonts";
 		
 		if (!dir_exists(backup_path)){
@@ -344,7 +334,7 @@ public class FontManager : GLib.Object {
 		
 		log_msg(string.nfill(70,'-'));
 
-		update_permissions_for_restored_files(system_path, dry_run);
+		update_permissions_for_restored_files(system_path);
 
 		update_font_cache();
 
@@ -382,28 +372,6 @@ public class FontManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_restored_files(string path, bool dry_run) {
-
-		if (dry_run){ return true; }
-		
-		bool ok = true;
-		bool status = true;
-
-		ok = chmod(path, "755");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "d", "755");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "f", "644");
-		if (!ok){ status = false; }
-
-		ok = chown(path, "root", "root");
-		if (!ok){ status = false; }
-		
-		return status;
-	}
-	
 	// static ----------------------
 
 	public static Gee.ArrayList<Font> get_sorted_array(Gee.HashMap<string,Font> dict){

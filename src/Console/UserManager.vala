@@ -26,29 +26,15 @@ using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
 using TeeJee.System;
 
-public class UserManager : GLib.Object {
+public class UserManager : BackupManager {
 	
-	public Gee.HashMap<string,User> users;
+	public Gee.HashMap<string,User> users = new Gee.HashMap<string,User>();
 
-	public bool dry_run = false;
-	public string basepath = "";
+	public UserManager(LinuxDistro? _distro, User? _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
-
-	public UserManager(bool _dry_run = false){
-
-		dry_run = _dry_run;
-
-		users = new Gee.HashMap<string,User>();
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "users");
 
 		//query_users(query_passwords);
-	}
-
-	public string get_backup_path(){
-		
-		return path_combine(basepath, "users");
 	}
 
 	// query ---------------------------------------------
@@ -279,7 +265,74 @@ public class UserManager : GLib.Object {
 	}
 
 	// list, backup, restore ----------------------
-	
+
+	public void dump_info(){
+		
+		string txt = "";
+
+		query_users(false);
+		
+		foreach(var user in users_sorted){
+			
+			if (user.is_system) { continue; }
+			
+			txt += "NAME='%s'".printf(user.name);
+			
+			txt += ",DESC='%s'".printf(user.full_name);
+
+			txt += ",ACT='%s'".printf("1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
+	public void dump_info_backup(string _basepath){
+
+		init_backup_path(false);
+		
+		
+		
+
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
+			log_error(msg);
+			return;
+		}
+
+		string txt = "";
+
+		query_users(false);
+
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.read_users_from_folder(files_path);
+
+		foreach(var user in mgr.users_sorted){
+			
+			bool is_installed = false;
+			
+			if (users.has_key(user.name)){
+				
+				is_installed = true;
+			}
+
+			txt += "NAME='%s'".printf(user.name);
+			
+			txt += ",DESC='%s'".printf(user.full_name);
+
+			txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
+			
+			txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
+			
+			txt += "\n";
+		}
+
+		log_msg(txt);
+	}
+
 	public void list_users(bool all){
 		
 		foreach(var user in users_sorted){
@@ -291,17 +344,17 @@ public class UserManager : GLib.Object {
 		}
 	}
 
+	// backup ------------------------------
+	
 	public bool backup_users(string _basepath, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
-		
-		string backup_path = path_combine(basepath, "users");
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+
+		init_files_path(false);
 
 		read_selections();
 		
@@ -313,14 +366,14 @@ public class UserManager : GLib.Object {
 
 			if (exclude_list.contains(user.name)){ continue; }
 	
-			string backup_file = path_combine(backup_path, "%s.passwd".printf(user.name));
+			string backup_file = path_combine(files_path, "%s.passwd".printf(user.name));
 			bool ok = file_write(backup_file, user.get_passwd_line());
 			chmod(backup_file, "a+rw");
 			
 			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath"))); }
 			else{ status = false; }
 
-			backup_file = path_combine(backup_path, "%s.shadow".printf(user.name));
+			backup_file = path_combine(files_path, "%s.shadow".printf(user.name));
 			ok = file_write(backup_file, user.get_shadow_line());
 			chmod(backup_file, "a+rw");
 			
@@ -340,41 +393,22 @@ public class UserManager : GLib.Object {
 		return status;
 	}
 
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
+	// restore ----------------------------------
 	
 	public bool restore_users(string _basepath, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = path_combine(basepath, "users");
+		init_backup_path(false);
 		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+		init_files_path(false);
+		
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
 			return false;
 		}
@@ -383,33 +417,25 @@ public class UserManager : GLib.Object {
 		
 		bool status = true, ok;
 		
-		ok = add_missing_users_from_backup(basepath);
+		ok = add_missing_users_from_backup(files_path);
 		if (!ok){ status = false; }
 		
-		ok = update_users_from_backup(basepath);
+		ok = update_users_from_backup(files_path);
 		if (!ok){ status = false; }
 
 		return status;
 	}
 	
-	private bool add_missing_users_from_backup(string basepath){
+	private bool add_missing_users_from_backup(string files_path){
 
 		log_debug("add_missing_users_from_backup()");
-
-		string backup_path = path_combine(basepath, "users");
-		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
-			log_error(msg);
-			return false;
-		}
 
 		bool status = true, ok;
 		
 		query_users(true);
 		
-		var mgr = new UserManager(dry_run);
-		mgr.read_users_from_folder(backup_path);
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.read_users_from_folder(files_path);
 
 		foreach(var user in mgr.users_sorted){
 			
@@ -432,24 +458,16 @@ public class UserManager : GLib.Object {
 		return status;
 	}
 
-	private bool update_users_from_backup(string basepath){
+	private bool update_users_from_backup(string files_path){
 
 		log_debug("update_users_from_backup()");
-
-		string backup_path = path_combine(basepath, "users");
-		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
-			log_error(msg);
-			return false;
-		}
 
 		bool status = true;
 		
 		query_users(true);
 
-		var mgr = new UserManager(dry_run);
-		mgr.read_users_from_folder(backup_path);
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.read_users_from_folder(files_path);
 		
 		foreach(var old_user in mgr.users_sorted){
 

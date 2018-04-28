@@ -30,38 +30,21 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public class ThemeManager : GLib.Object {
+public class ThemeManager : BackupManager {
 
-	public Gee.HashMap<string,Theme> themes;
 	public string type = "themes";
-
-	public Gee.HashMap<string,string> subtypes;
-
-	public LinuxDistro distro;
-	public bool dry_run = false;
-	public string basepath = "";
-
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
 	
-	public ThemeManager(LinuxDistro _distro, bool _dry_run, string _type){
-	
-		distro = _distro;
+	public Gee.HashMap<string,Theme> themes = new Gee.HashMap<string,Theme>();
 
-		dry_run = _dry_run;
+	public Gee.HashMap<string,string> subtypes = new Gee.HashMap<string,string>();
+
+	public ThemeManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections, string _type){
+
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, _type);
 
 		type = _type;
-
-		themes = new Gee.HashMap<string,Theme>();
-		subtypes = new Gee.HashMap<string,string>();
 	}
 
-	public string get_backup_path(){
-		
-		return path_combine(basepath, type);
-	}
-	
 	// check -------------------------------------------
 
 	public void check_installed_themes(){
@@ -77,7 +60,7 @@ public class ThemeManager : GLib.Object {
 
 		// user's themes -------------------------
 		
-		var mgr = new UserManager();
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.query_users(false);
 		
 		/*foreach(var user in mgr.users.values){
@@ -116,7 +99,7 @@ public class ThemeManager : GLib.Object {
 
 	public void save_exclude_list(){
 
-		string backup_path = init_backup_path();
+		init_backup_path(false);
 		
 		string exclude_list = path_combine(backup_path, "exclude.list");
 		
@@ -173,7 +156,9 @@ public class ThemeManager : GLib.Object {
 		}
 	}
 
-	public void check_archived_themes(string basepath) {
+	public void check_archived_themes(string _basepath) {
+
+		init_backup_path(false);
 
 		//log_msg("Checking archived themes...");
 
@@ -224,10 +209,16 @@ public class ThemeManager : GLib.Object {
 
 	private void load_index_file(string basepath){
 
-		string backup_path = get_backup_path();
+		//log_debug("load_index_file()");
+
+		
 		string index_file = path_combine(backup_path, "index.list");
+
+		//log_debug("index_file: %s".printf(index_file));
 		
 		if (!file_exists(index_file)){ return; }
+
+		//log_debug("0");
 
 		string txt = file_read(index_file);
 		
@@ -279,19 +270,30 @@ public class ThemeManager : GLib.Object {
 			if (!theme.is_installed){ continue; }
 			
 			txt += "NAME='%s',DESC='%s'".printf(theme.name, theme.subtypes_desc);
-			txt += ",D='%s'".printf(theme.is_dist ? "1" : "0");
+			
+			txt += ",INST='%s'".printf("1");
+			
+			txt += ",DIST='%s'".printf(theme.is_dist ? "1" : "0");
+
+			txt += ",ACT='%s'".printf(theme.is_dist ? "0" : "1");
+			
+			txt += ",SENS='%s'".printf("1"); // always sensitive
+			
 			txt += "\n";
 		}
 		
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string basepath){
+	public void dump_info_backup(string _basepath){
 
-		string backup_path = get_backup_path();
+		init_backup_path(false);
 		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+		
+		
+
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
 			return;
 		}
@@ -300,8 +302,16 @@ public class ThemeManager : GLib.Object {
 
 		foreach(var theme in themes_sorted){
 			
-			txt += "NAME='%s',DESC='%s'".printf(theme.name, theme.subtypes_desc);
-			txt += ",I='%s'".printf(theme.is_installed ? "1" : "0");
+			txt += "NAME='%s'".printf(theme.name);
+
+			txt += ",DESC='%s'".printf(theme.subtypes_desc);
+			
+			txt += ",INST='%s'".printf(theme.is_installed ? "1" : "0");
+
+			txt += ",ACT='%s'".printf(theme.is_installed ? "0" : "1");
+			
+			txt += ",SENS='%s'".printf(theme.is_installed ? "0" : "1");
+			
 			txt += "\n";
 		}
 		
@@ -320,7 +330,7 @@ public class ThemeManager : GLib.Object {
 
 	public bool save_themes(string _basepath, bool use_xz, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 
 		apply_selections = _apply_selections;
 		
@@ -328,7 +338,7 @@ public class ThemeManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_path = init_backup_path();
+		init_backup_path(false);
 
 		read_selections();
 
@@ -371,51 +381,11 @@ public class ThemeManager : GLib.Object {
 		file_write(index_file, txt);
 	}
 
-	public string init_backup_path(){
-		
-		string backup_path = get_backup_path();
-		
-		if (!dir_exists(backup_path)){
-			dir_create(backup_path);
-			chmod(backup_path, "a+rwx");
-		}
-
-		string files_path = path_combine(backup_path, "files");
-		dir_delete(files_path);
-		dir_create(files_path);
-		chmod(files_path, "a+rwx");
-		
-		return backup_path;
-	}
-
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
-
 	// restore -------------------------
 	
 	public bool restore_themes(string _basepath, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 
 		apply_selections = _apply_selections;
 		
@@ -423,7 +393,7 @@ public class ThemeManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Restore"), (type == "themes") ? Messages.TASK_THEMES : Messages.TASK_ICONS));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_path = get_backup_path();
+		
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
@@ -449,7 +419,7 @@ public class ThemeManager : GLib.Object {
 				sleep(500);
 			}
 
-			theme.update_permissions_for_restored_files(theme.theme_path, dry_run);
+			update_permissions_for_restored_files(theme.theme_path);
 		}
 
 		//Theme.fix_nested_folders(); // Not needed
@@ -774,30 +744,6 @@ public class Theme : GLib.Object{
 		return (status == 0);
 	}
 	
-	//permissions -------------
-	
-	public bool update_permissions_for_restored_files(string path, bool dry_run) {
-
-		if (dry_run){ return true; }
-		
-		bool ok = true;
-		bool status = true;
-
-		ok = chmod(path, "755");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "d", "755");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "f", "644");
-		if (!ok){ status = false; }
-
-		ok = chown(path, "root", "root");
-		if (!ok){ status = false; }
-		
-		return status;
-	}
-
 	//enums and helpers ------------------
 	
 	public static Gee.HashMap<ThemeType, string> theme_type_map;

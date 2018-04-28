@@ -26,33 +26,17 @@ using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
 using TeeJee.Misc;
 
-public class MountEntryManager : GLib.Object {
+public class MountEntryManager : BackupManager {
 
-	public Gee.ArrayList<FsTabEntry> fstab;
-	public Gee.ArrayList<CryptTabEntry> crypttab;
-
-	public string basepath = "";
-	public bool dry_run = false;
-	public bool redist = false;
-
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
+	public Gee.ArrayList<FsTabEntry> fstab = new Gee.ArrayList<FsTabEntry>();
 	
-	public MountEntryManager(bool _dry_run, bool _redist){
+	public Gee.ArrayList<CryptTabEntry> crypttab = new Gee.ArrayList<CryptTabEntry>();
 
-		dry_run = _dry_run;
-		redist = _redist;
-		
-		fstab = new Gee.ArrayList<FsTabEntry>();
-		crypttab = new Gee.ArrayList<CryptTabEntry>();
+	public MountEntryManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
+
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "mounts");
 	}
 
-	public string get_backup_path(){
-		
-		return path_combine(basepath, "mounts");
-	}
-	
 	// query -----------------------------------
 	
 	public void query_mount_entries(){
@@ -294,8 +278,117 @@ public class MountEntryManager : GLib.Object {
 		return ok;
 	}
 
-	// backup and restore ----------------------
-	
+	// list ----------------------
+
+	public void dump_info(){
+
+		string txt = "";
+
+		foreach(var entry in fstab){
+
+			bool is_system = false;
+			
+			switch (entry.mount_point){
+			case "/":
+			case "/home":
+			case "/boot":
+			case "/boot/efi":
+				is_system = true;
+				break;
+			}
+
+			txt += "NAME='%s'".printf(entry.mount_point);
+			txt += ",DEV='%s'".printf(entry.device);
+			txt += ",MPATH='%s'".printf(entry.mount_point);
+			txt += ",FS='%s'".printf(entry.fs_type);
+			txt += ",OPT='%s'".printf(entry.options);
+			txt += ",DUMP='%s'".printf(entry.dump);
+			txt += ",PASS='%s'".printf(entry.pass);
+			txt += ",ACT='%s'".printf(is_system ? "0" : "1");
+			txt += ",SENS='%s'".printf(is_system ? "0" : "1");
+			txt += ",TYPE='%s'".printf("fstab");
+			txt += "\n";
+		}
+
+		foreach(var entry in crypttab){
+
+			txt += "NAME='%s'".printf(entry.name);
+			txt += ",DEV='%s'".printf(entry.device);
+			txt += ",PASSWORD='%s'".printf(entry.password);
+			txt += ",OPT='%s'".printf(entry.options);
+			txt += ",ACT='%s'".printf("1");
+			txt += ",SENS='%s'".printf("1");
+			txt += ",TYPE='%s'".printf("crypttab");
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
+	public void dump_info_backup(string _basepath){
+
+		init_backup_path(false);
+		
+		
+		
+
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
+			log_error(msg);
+			return;
+		}
+
+		this.query_mount_entries();
+
+		var mgr = new MountEntryManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.read_mount_entries_from_folder(files_path);
+		
+		var fstab_bkup = mgr.fstab;
+		var crypttab_bkup = mgr.crypttab;
+		
+		string txt = "";
+
+		foreach(var entry in fstab_bkup){
+
+			bool is_system = false;
+			
+			switch (entry.mount_point){
+			case "/":
+			case "/home":
+			case "/boot":
+			case "/boot/efi":
+				is_system = true;
+				break;
+			}
+
+			txt += "NAME='%s'".printf(entry.mount_point);
+			txt += ",DEV='%s'".printf(entry.device);
+			txt += ",MPATH='%s'".printf(entry.mount_point);
+			txt += ",FS='%s'".printf(entry.fs_type);
+			txt += ",OPT='%s'".printf(entry.options);
+			txt += ",DUMP='%s'".printf(entry.dump);
+			txt += ",PASS='%s'".printf(entry.pass);
+			txt += ",ACT='%s'".printf(is_system ? "0" : "1");
+			txt += ",SENS='%s'".printf(is_system ? "0" : "1");
+			txt += ",TYPE='%s'".printf("fstab");
+			txt += "\n";
+		}
+
+		foreach(var entry in crypttab_bkup){
+
+			txt += "NAME='%s'".printf(entry.name);
+			txt += ",DEV='%s'".printf(entry.device);
+			txt += ",PASSWORD='%s'".printf(entry.password);
+			txt += ",OPT='%s'".printf(entry.options);
+			txt += ",ACT='%s'".printf("1");
+			txt += ",SENS='%s'".printf("1");
+			txt += ",TYPE='%s'".printf("crypttab");
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
 	public void list_mount_entries(){
 
 		log_msg("/etc/fstab :\n");
@@ -353,18 +446,24 @@ public class MountEntryManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 	}
 
+	// backup ----------------------------------
+	
 	public bool backup_mount_entries(string _basepath, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_MOUNTS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = get_backup_path();
-		dir_delete(backup_path);
+		
 		dir_create(backup_path);
 		chmod(backup_path, "a+rwx");
+
+		
+		dir_delete(files_path);
+		dir_create(files_path);
+		chmod(files_path, "a+rwx");
 
 		read_selections();
 		
@@ -387,7 +486,7 @@ public class MountEntryManager : GLib.Object {
 			}
 
 			//string backup_file = path_combine(backup_path, "%s %s.fstab".printf(entry.device.replace("/","╱"), entry.mount_point.replace("/","╱")));
-			string backup_file = path_combine(backup_path, "%s.fstab".printf(entry.mount_point.replace("/","_")));
+			string backup_file = path_combine(files_path, "%s.fstab".printf(entry.mount_point.replace("/","_")));
 			bool ok = file_write(backup_file, entry.get_line());
 			chmod(backup_file, "a+rw");
 			
@@ -404,7 +503,7 @@ public class MountEntryManager : GLib.Object {
 			if (exclude_list.contains(entry.name)){ continue; }
 			
 			//string backup_file = path_combine(backup_path, "%s %s.crypttab".printf(entry.name.replace("/","╱"), entry.device.replace("/","╱")));
-			string backup_file = path_combine(backup_path, "%s.crypttab".printf(entry.name.replace("/","_")));
+			string backup_file = path_combine(files_path, "%s.crypttab".printf(entry.name.replace("/","_")));
 			bool ok = file_write(backup_file, entry.get_line());
 			chmod(backup_file, "a+rw");
 			
@@ -422,43 +521,23 @@ public class MountEntryManager : GLib.Object {
 		return status;
 	}
 
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
-
 	// restore -------------------------------
 	
 	public bool restore_mount_entries(string _basepath, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_MOUNTS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = get_backup_path();
-		chmod(backup_path, "a+rwx");
 		
-		if (!dir_exists(backup_path)) {
+		chmod(backup_path, "a+rwx");
+
+		
+		chmod(files_path, "a+rwx");
+		
+		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
 			return false;
@@ -470,8 +549,8 @@ public class MountEntryManager : GLib.Object {
 
 		this.query_mount_entries();
 
-		var mgr = new MountEntryManager(dry_run, redist);
-		mgr.read_mount_entries_from_folder(backup_path);
+		var mgr = new MountEntryManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.read_mount_entries_from_folder(files_path);
 
 		ok = this.restore_mount_entries_fstab(mgr.fstab);
 		if (!ok){ status = false; }

@@ -30,32 +30,17 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public class RepoManager : GLib.Object {
+public class RepoManager : BackupManager {
 
-	public Gee.HashMap<string,Repo> repos;
+	public Gee.HashMap<string,Repo> repos = new Gee.HashMap<string,Repo>();
 
-	public LinuxDistro distro;
-	public bool dry_run = false;	
-	public string basepath = "";
-	
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
+	public RepoManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-	public RepoManager(LinuxDistro _distro, bool _dry_run){
-
-		distro = _distro;
-
-		dry_run = _dry_run;
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "repos");
 
 		check_repos();
 	}
 
-	public string get_backup_path(){
-		
-		return path_combine(basepath, "repos");
-	}
-	
 	// check -------------------------------------------
 
 	public void check_repos(){
@@ -293,26 +278,36 @@ public class RepoManager : GLib.Object {
 			
 			if (!repo.is_installed){ continue; }
 			
-			txt += "NAME='%s',DESC='%s'".printf(repo.name, repo.description);
+			txt += "NAME='%s'".printf(repo.name);
+
+			txt += ",DESC='%s'".printf(repo.description);
+			
+			txt += ",ACT='%s'".printf(repo.is_disabled ? "0" : "1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
 			txt += "\n";
 		}
 		
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string basepath){
+	public void dump_info_backup(string _basepath){
 
-		string backup_path = get_backup_path();
+		init_backup_path(false);
 		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+		
+		
+
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
 			return;
 		}
 
 		string txt = "";
 
-		var list = dir_list_names(backup_path, true);
+		var list = dir_list_names(files_path, true);
 		
 		foreach(string file_path in list) {
 
@@ -322,7 +317,8 @@ public class RepoManager : GLib.Object {
 
 			string name = file_basename(file_path);
 			string desc = "";
-
+			bool disabled = false;
+			
 			if (name == "CODENAME"){ continue; }
 
 			if (name == "apt.keys"){ continue; }
@@ -345,7 +341,7 @@ public class RepoManager : GLib.Object {
 						name = line.strip();
 					}
 
-					txt += get_dump_line(name, desc);
+					txt += get_dump_line(name, desc, false);
 				}
 			}
 			else {
@@ -357,15 +353,24 @@ public class RepoManager : GLib.Object {
 						desc = line.split("# aptik-desc:")[1].strip();
 					}
 				}
+
+				bool has_lines = false;
+				foreach(var line in ftext.split("\n")){
+					if ((line.strip().length > 0) && !line.strip().has_prefix("#")){
+						has_lines = true;
+						break;
+					}
+				}
+				disabled = !has_lines;
 			}
 
-			txt += get_dump_line(name, desc);
+			txt += get_dump_line(name, desc, disabled);
 		}
 		
 		log_msg(txt);
 	}
 
-	private string get_dump_line(string name, string desc){
+	private string get_dump_line(string name, string desc, bool disabled){
 
 		string txt = "";
 		
@@ -377,8 +382,18 @@ public class RepoManager : GLib.Object {
 			is_installed = repos[name].is_installed;
 		}
 
-		txt += "NAME='%s',DESC='%s'".printf(name, desc);
-		txt += ",I='%s'".printf(is_installed ? "1" : "0");
+		txt += "NAME='%s'".printf(name);
+
+		txt += ",DESC='%s'".printf(desc);
+		
+		txt += ",INST='%s'".printf(is_installed ? "1" : "0");
+
+		txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
+			
+		txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
+
+		txt += ",DIS='%s'".printf(disabled ? "1" : "0");
+			
 		txt += "\n";
 
 		return txt;
@@ -408,58 +423,11 @@ public class RepoManager : GLib.Object {
 		return true;
 	}
 
-	public string init_backup_path(){
-		
-		string backup_path = get_backup_path();
-		
-		if (dir_exists(backup_path)){
-
-			var files = dir_list_names(backup_path, true);
-
-			foreach(var file in files){
-				
-				if (file_basename(file) != "exclude.list"){
-					
-					file_delete(file);
-				}
-			}
-		}
-		else{
-			dir_create(backup_path);
-			chmod(backup_path, "a+rwx");
-		}
-
-		return backup_path;
-	}
-
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
-	
 	// save ---------------------------------------
 
 	public bool save_repos(string _basepath, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 
 		apply_selections = _apply_selections;
 		
@@ -467,7 +435,7 @@ public class RepoManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_path = init_backup_path();
+		init_backup_path(false);
 
 		read_selections();
 
@@ -476,11 +444,11 @@ public class RepoManager : GLib.Object {
 		
 		switch(distro.dist_type){
 		case "fedora":
-			return save_repos_fedora(backup_path);
+			return save_repos_fedora(backup_path + "/files");
 		case "arch":
-			return save_repos_arch(backup_path);
+			return save_repos_arch(backup_path + "/files");
 		case "debian":
-			return save_repos_debian(backup_path);
+			return save_repos_debian(backup_path + "/files");
 		default:
 			log_msg(_("Nothing to save"));
 			return false;
@@ -620,7 +588,7 @@ public class RepoManager : GLib.Object {
 
 	public bool restore_repos(string _basepath, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 
 		apply_selections = _apply_selections;
 		
@@ -630,7 +598,7 @@ public class RepoManager : GLib.Object {
 
 		check_repos();
 
-		string backup_path = get_backup_path();
+		
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
@@ -642,11 +610,11 @@ public class RepoManager : GLib.Object {
 
 		switch(distro.dist_type){
 		case "fedora":
-			return restore_repos_fedora(backup_path);
+			return restore_repos_fedora(backup_path + "/files");
 		case "arch":
-			return restore_repos_arch(backup_path);
+			return restore_repos_arch(backup_path + "/files");
 		case "debian":
-			return restore_repos_debian(backup_path);
+			return restore_repos_debian(backup_path + "/files");
 		}
 
 		return false;
@@ -940,7 +908,7 @@ public class RepoManager : GLib.Object {
 
 	public bool import_keys(string basepath){
 
-		string backup_path = get_backup_path();
+		
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);

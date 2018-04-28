@@ -30,28 +30,13 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public class PackageCacheManager : GLib.Object {
+public class PackageCacheManager : BackupManager {
 	
-	public LinuxDistro distro;
-	public bool dry_run = false;
-	public string basepath = "";
+	public PackageCacheManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
-	
-	public PackageCacheManager(LinuxDistro _distro, bool _dry_run){
-
-		distro = _distro;
-
-		dry_run = _dry_run;
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "cache");
 	}
 
-	public string get_backup_path(){
-		
-		return path_combine(basepath, "cache");
-	}
-	
 	public void dump_info(){
 
 		string txt = "";
@@ -97,10 +82,8 @@ public class PackageCacheManager : GLib.Object {
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string basepath){
+	public void dump_info_backup(){
 
-		string backup_path = path_combine(basepath, "packages");
-		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
 			log_error(msg);
@@ -112,6 +95,9 @@ public class PackageCacheManager : GLib.Object {
 		string backup_path_dist = path_combine(backup_path, distro.dist_type);
 
 		var list = dir_list_names(backup_path_dist, false);
+
+		//log_debug("backup_path_dist: %s".printf(backup_path_dist));
+		//log_debug("count: %d".printf(list.size));
 		
 		foreach(var name in list){
 			
@@ -132,9 +118,7 @@ public class PackageCacheManager : GLib.Object {
 	
 	// save -------------------------------------------
 
-	public bool backup_cache(string _basepath, bool copyback, bool _apply_selections){
-
-		basepath = _basepath;
+	public bool backup_cache(bool copyback){
 
 		if (copyback){
 			log_msg(string.nfill(70,'-'));
@@ -147,7 +131,7 @@ public class PackageCacheManager : GLib.Object {
 			log_msg(string.nfill(70,'-'));
 		}
 		
-		string backup_path = init_backup_path();
+		init_backup_path(false);
 		
 		string backup_path_distro = path_combine(backup_path, distro.dist_type);
 		dir_create(backup_path_distro);
@@ -204,7 +188,7 @@ public class PackageCacheManager : GLib.Object {
 
 		log_msg("");
 		
-		update_permissions_for_backup_files(backup_path, dry_run);
+		update_permissions_for_backup_files();
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg(Messages.BACKUP_OK);
@@ -212,74 +196,15 @@ public class PackageCacheManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_backup_files(string path, bool dry_run) {
-
-		if (dry_run){ return true; }
-		
-		bool ok = true;
-		bool status = true;
-
-		ok = chmod(path, "a+rwx");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "d", "a+rwx");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "f", "a+rw");
-		if (!ok){ status = false; }
-
-		//ok = chown(path, "root", "root");
-		//if (!ok){ status = false; }
-		
-		return status;
-	}
-
-	public string init_backup_path(){
-		
-		string backup_path = get_backup_path();
-
-		if (!dir_exists(backup_path)){
-			dir_create(backup_path);
-			chmod(backup_path, "a+rwx");
-		}
-		
-		return backup_path;
-	}
-
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
-	
 	// restore ---------------------------------------
 	
-	public bool restore_cache(string _basepath, bool _apply_selections){
+	public bool restore_cache(){
 
-		basepath = _basepath;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_CACHE));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_cache = get_backup_path() + "/%s".printf(distro.dist_type);
+		string backup_cache = path_combine(backup_path, distro.dist_type);
 
 		if (!dir_exists(backup_cache)){
 			log_error("%s: %s".printf(_("Directory not found"), backup_cache));
@@ -333,34 +258,12 @@ public class PackageCacheManager : GLib.Object {
 		}
 
 		log_msg("");
-		update_permissions_for_restored_files(system_cache, dry_run);
+		update_permissions_for_restored_files(system_cache);
 		
 		log_msg("");
 		log_msg(Messages.RESTORE_OK);
 
 		return (status == 0);
-	}
-
-	public bool update_permissions_for_restored_files(string path, bool dry_run) {
-
-		if (dry_run){ return true; }
-		
-		bool ok = true;
-		bool status = true;
-
-		ok = chmod(path, "755");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "d", "755");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "f", "644");
-		if (!ok){ status = false; }
-
-		ok = chown(path, "root", "root");
-		if (!ok){ status = false; }
-		
-		return status;
 	}
 
 	// clear -----------------------------------------

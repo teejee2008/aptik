@@ -26,29 +26,15 @@ using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
 using TeeJee.Misc;
 
-public class GroupManager : GLib.Object {
+public class GroupManager : BackupManager {
 
-	public Gee.HashMap<string,Group> groups;
+	public Gee.HashMap<string,Group> groups = new Gee.HashMap<string,Group>();
 
-	public bool dry_run = false;
-	public string basepath = "";
+	public GroupManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
-	
-	public GroupManager(bool _dry_run){
-
-		dry_run = _dry_run;
-		
-		this.groups = new Gee.HashMap<string,Group>();
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "groups");
 	}
 
-	public string get_backup_path(){
-		
-		return path_combine(basepath, "groups");
-	}
-	
 	// query -----------------------
 	
 	public void query_groups(bool query_passwords){
@@ -107,9 +93,9 @@ public class GroupManager : GLib.Object {
 		log_debug("read_groups_from_file(): %d".printf(groups.size));
 	}
 
-	public void read_groups_from_folder(string backup_path){
+	public void read_groups_from_folder(string path){
 
-		var list = dir_list_names(backup_path, true);
+		var list = dir_list_names(path, true);
 		
 		foreach(string backup_file in list){
 
@@ -218,8 +204,70 @@ public class GroupManager : GLib.Object {
 		return status;
 	}
 
-	// backup and restore ----------------------
+	// list ----------------------
+
+	public void dump_info(){
+
+		string txt = "";
+		
+		foreach(var group in groups_sorted){
+			
+			if (group.is_system) { continue; }
+			
+			txt += "NAME='%s'".printf(group.name);
+			
+			//txt += ",DESC='%s'".printf("");
+
+			txt += ",ACT='%s'".printf("1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
+	public void dump_info_backup(){
+
+		init_backup_path(false);
+
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
+			log_error(msg);
+			return;
+		}
+		
+		string txt = "";
+
+		query_groups(false);
+		
+		var mgr = new GroupManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.read_groups_from_folder(files_path);
 	
+		foreach(var group in mgr.groups_sorted){
+			
+			bool is_installed = false;
+			
+			if (groups.has_key(group.name)){
+				
+				is_installed = true;
+			}
+
+			txt += "NAME='%s'".printf(group.name);
+			
+			//txt += ",DESC='%s'".printf("");
+
+			txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
+			
+			txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
+			
+			txt += "\n";
+		}
+
+		log_msg(txt);
+	}
+
 	public void list_groups(bool all){
 		
 		foreach(var group in groups_sorted){
@@ -232,17 +280,17 @@ public class GroupManager : GLib.Object {
 		}
 	}
 
-	public bool backup_groups(string _basepath, bool _apply_selections){
+	// backup ------------------
+	
+	public bool backup_groups(){
 
-		basepath = _basepath;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_GROUPS));
 		log_msg(string.nfill(70,'-'));
 
-		string backup_path = get_backup_path();
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+		init_backup_path(false);
+		
+		init_files_path(false);
 
 		read_selections();
 		
@@ -254,14 +302,14 @@ public class GroupManager : GLib.Object {
 
 			if (exclude_list.contains(group.name)){ continue; }
 	
-			string backup_file = path_combine(backup_path, "%s.group".printf(group.name));
+			string backup_file = path_combine(files_path, "%s.group".printf(group.name));
 			bool ok = file_write(backup_file, group.get_group_line());
 			chmod(backup_file, "a+rw");
 
 			if (ok){ log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath"))); }
 			else{ status = false; }
 
-			backup_file = path_combine(backup_path, "%s.gshadow".printf(group.name));
+			backup_file = path_combine(files_path, "%s.gshadow".printf(group.name));
 			ok = file_write(backup_file, group.get_gshadow_line());
 			chmod(backup_file, "a+rw");
 
@@ -269,7 +317,7 @@ public class GroupManager : GLib.Object {
 			else{ status = false; }
 		}
 
-		bool ok = backup_memberships(backup_path, apply_selections);
+		bool ok = backup_memberships(files_path);
 		if (!ok){ status = false; }
 		
 		if (status){
@@ -284,9 +332,9 @@ public class GroupManager : GLib.Object {
 		return status;
 	}
 
-	private bool backup_memberships(string backup_path, bool _apply_selections){
-
-		string backup_file = path_combine(backup_path, "memberships.list");
+	private bool backup_memberships(string path){
+		
+		string backup_file = path_combine(path, "memberships.list");
 		
 		string txt = "";
 		
@@ -295,6 +343,7 @@ public class GroupManager : GLib.Object {
 		}
 
 		bool ok = file_write(backup_file, txt);
+		
 		if (ok){
 			chmod(backup_file, "a+rw");
 			log_msg("%s: %s".printf(_("Saved"), backup_file.replace(basepath, "$basepath")));
@@ -303,41 +352,16 @@ public class GroupManager : GLib.Object {
 		return ok;
 	}
 
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
+	// restore ---------------------
 	
-	public bool restore_groups(string _basepath, bool _apply_selections){
+	public bool restore_groups(){
 
-		basepath = _basepath;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_GROUPS));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = get_backup_path();
-		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
 			return false;
 		}
@@ -346,36 +370,28 @@ public class GroupManager : GLib.Object {
 		
 		bool status = true, ok;
 		
-		ok = add_missing_groups_from_backup(basepath);
+		ok = add_missing_groups_from_backup();
 		if (!ok){ status = false; }
 		
-		ok = update_groups_from_backup(basepath);
+		ok = update_groups_from_backup();
 		if (!ok){ status = false; }
 
-		ok = add_missing_members_from_backup(basepath);
+		ok = add_missing_members_from_backup();
 		if (!ok){ status = false; }
 		
 		return status;
 	}
 
-	private bool add_missing_groups_from_backup(string basepath){
+	private bool add_missing_groups_from_backup(){
 
 		log_debug("add_missing_groups_from_backup()");
 
-		string backup_path = get_backup_path();
-		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
-			log_error(msg);
-			return false;
-		}
-		
 		bool status = true;
 		
 		query_groups(true);
 		
-		var mgr = new GroupManager(dry_run);
-		mgr.read_groups_from_folder(backup_path);
+		var mgr = new GroupManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.read_groups_from_folder(files_path);
 	
 		foreach(var group in mgr.groups_sorted){
 			
@@ -397,26 +413,18 @@ public class GroupManager : GLib.Object {
 		return status;
 	}
 
-	private bool update_groups_from_backup(string basepath){
+	private bool update_groups_from_backup(){
 
 		log_debug("update_groups_from_backup()");
 
-		string backup_path = get_backup_path();
-		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
-			log_error(msg);
-			return false;
-		}
-		
 		bool status = true;
 		
 		query_groups(true);
 
-		var grp_mgr = new GroupManager(dry_run);
-		grp_mgr.read_groups_from_folder(backup_path);
+		var grp_mgr = new GroupManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		grp_mgr.read_groups_from_folder(files_path);
 
-		var usr_mgr = new UserManager(dry_run);
+		var usr_mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		usr_mgr.query_users(false);
 		var current_user_names = usr_mgr.user_names_sorted;
 		
@@ -453,19 +461,17 @@ public class GroupManager : GLib.Object {
 		return status;
 	}
 
-	private bool add_missing_members_from_backup(string basepath){
+	private bool add_missing_members_from_backup(){
 
 		log_debug("add_missing_members_from_backup()");
-
-		string backup_path = get_backup_path();
 		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
 			return false;
 		}
 
-		string backup_file = path_combine(backup_path, "memberships.list");
+		string backup_file = path_combine(files_path, "memberships.list");
 
 		if (!file_exists(backup_file)) {
 			string msg = "%s: %s".printf(Messages.FILE_MISSING, backup_file);
@@ -475,7 +481,7 @@ public class GroupManager : GLib.Object {
 
 		bool status = true;
 
-		var usr_mgr = new UserManager(dry_run);
+		var usr_mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		usr_mgr.query_users(false);
 		var current_user_names = usr_mgr.user_names_sorted;
 		

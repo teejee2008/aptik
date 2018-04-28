@@ -30,9 +30,9 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public class PackageManager : GLib.Object {
+public class PackageManager : BackupManager {
 
-	public Gee.HashMap<string,Package> packages;
+	public Gee.HashMap<string,Package> packages = new Gee.HashMap<string,Package>();
 
 	public bool dist_installed_known = false;
 	public bool auto_installed_known = false;
@@ -42,30 +42,13 @@ public class PackageManager : GLib.Object {
 	public static string DEF_PKG_LIST_UNPACKED = "/var/log/installer/initial-status";
 	public bool default_list_missing = false;
 
-	public LinuxDistro distro;
-	public bool dry_run = false;
-	public bool list_only = false;
+	public PackageManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-	public string basepath = "";
-
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
-	
-	public PackageManager(LinuxDistro _distro, bool _dry_run){
-
-		distro = _distro;
-
-		dry_run = _dry_run;
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "packages");
 		
 		check_packages();
 	}
 
-	public string get_backup_path(){
-		
-		return path_combine(basepath, "packages");
-	}
-	
 	// check --------------------------------
 	
 	private void check_packages(){
@@ -527,38 +510,55 @@ public class PackageManager : GLib.Object {
 
 	// list --------------------------
 
-	public void dump_info(){
+	public void dump_info(bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
 
 		string txt = "";
 		
 		foreach(var pkg in packages_sorted){
-			
+
 			if (!pkg.is_installed){ continue; }
+
+			if (pkg.name.has_prefix("linux-headers")){ continue; }
+			if (pkg.name.has_prefix("linux-signed")){ continue; }
+			if (pkg.name.has_prefix("linux-tools")){ continue; }
+			if (pkg.name.has_prefix("linux-image")){ continue; }
+
+			bool selected = true;
+
+			if (auto_installed_known && pkg.is_auto){ selected = false; }
+			if (dist_installed_known && pkg.is_dist){ selected = false; }
+
+			if (!include_foreign && pkg.is_foreign){ selected = false; }
+			if (exclude_icons && pkg.name.contains("-icon-theme")){ selected = false; }
+			if (exclude_themes && pkg.name.contains("-theme") && !pkg.name.contains("-icon-theme")){ selected = false; }
+			if (exclude_fonts && pkg.name.has_prefix("fonts-")){ selected = false; }
 			
-			txt += "NAME='%s',ARCH='%s',DESC='%s'".printf(pkg.name, pkg.arch, pkg.description);
-			txt += ",I='%s'".printf(pkg.is_installed ? "1" : "0");
-			txt += ",D='%s'".printf(pkg.is_dist ? "1" : "0");
-			txt += ",A='%s'".printf(pkg.is_auto ? "1" : "0");
-			txt += ",U='%s'".printf((pkg.is_user || (!pkg.is_dist && !pkg.is_auto)) ? "1" : "0");
-			txt += ",F='%s'".printf(pkg.is_foreign ? "1" : "0");
-			txt += ",M='%s'".printf(pkg.is_manual ? "1" : "0");
+			txt += "NAME='%s'".printf(pkg.name);
+			txt += ",ARCH='%s'".printf(pkg.arch);
+			txt += ",DESC='%s'".printf(pkg.description);
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
+			txt += ",SENS='%s'".printf(true ? "1" : "0");
+			txt += ",INST='%s'".printf(pkg.is_installed ? "1" : "0");
+			txt += ",DIST='%s'".printf(pkg.is_dist ? "1" : "0");
+			txt += ",AUTO='%s'".printf(pkg.is_auto ? "1" : "0");
+			txt += ",USER='%s'".printf((pkg.is_user || (!pkg.is_dist && !pkg.is_auto)) ? "1" : "0");
+			txt += ",FOR='%s'".printf(pkg.is_foreign ? "1" : "0");
+			txt += ",MAN='%s'".printf(pkg.is_manual ? "1" : "0");
 			txt += "\n";
 		}
 		
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string basepath){
+	public void dump_info_backup(){
 
-		string backup_path = path_combine(basepath, "packages");
-		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
 			return;
 		}
 
-		string backup_file = path_combine(backup_path, "selected.list");
+		string backup_file = path_combine(files_path, "selected.list");
 
 		if (!file_exists(backup_file)) {
 			string msg = "%s: %s".printf(Messages.FILE_MISSING, backup_file);
@@ -567,7 +567,7 @@ public class PackageManager : GLib.Object {
 		}
 		
 		string txt = "";
-		
+
 		foreach(string line in file_read(backup_file).split("\n")) {
 
 			if (line.strip().length == 0) { continue; }
@@ -584,9 +584,12 @@ public class PackageManager : GLib.Object {
 				is_installed = packages[name].is_installed;
 			}
 
-			txt += "NAME='%s',DESC='%s'".printf(name, desc);
-			txt += ",A='%s'".printf(is_available ? "1" : "0");
-			txt += ",I='%s'".printf(is_installed ? "1" : "0");
+			txt += "NAME='%s'".printf(name);
+			txt += ",DESC='%s'".printf(desc);
+			txt += ",ACT='%s'".printf((is_available && !is_installed) ? "1" : "0");
+			txt += ",SENS='%s'".printf((is_available && !is_installed) ? "1" : "0");
+			txt += ",AVAIL='%s'".printf(is_available ? "1" : "0");
+			txt += ",INST='%s'".printf(is_installed ? "1" : "0");
 			txt += "\n";
 		}
 		
@@ -773,55 +776,13 @@ public class PackageManager : GLib.Object {
 		log_msg(txt);
 	}
 
-	public string init_backup_path(){
-		
-		string backup_path = path_combine(basepath, "packages");
-		
-		if (dir_exists(backup_path)){
-
-			var files = dir_list_names(backup_path, true);
-
-			foreach(var file in files){
-				
-				if (file_basename(file) != "exclude.list"){
-					
-					file_delete(file);
-				}
-			}
-		}
-		else{
-			dir_create(backup_path);
-			chmod(backup_path, "a+rwx");
-		}
-
-		return backup_path;
-	}
-
-	public void read_selections(){
-
-		string backup_path = path_combine(basepath, "cache");
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				include_list.add(name[2:name.length]);
-			}
-		}
-	}
-	
 	// save --------------------------
 	
-	public bool save_package_list(string _basepath, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts, bool _apply_selections){
+	public bool save_package_list(bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 
-		apply_selections = _apply_selections;
+		
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_PACKAGES));
@@ -829,7 +790,7 @@ public class PackageManager : GLib.Object {
 		
 		bool ok, status = true;
 
-		string backup_path = init_backup_path();
+		init_backup_path(false);
 
 		read_selections();
 
@@ -978,10 +939,8 @@ public class PackageManager : GLib.Object {
 
 	public bool restore_packages(string _basepath, bool no_prompt, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 
-		apply_selections = _apply_selections;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_PACKAGES));
 		log_msg(string.nfill(70,'-'));

@@ -27,30 +27,78 @@ using TeeJee.ProcessHelper;
 using TeeJee.System;
 using TeeJee.Misc;
 
-public class DconfManager : GLib.Object {
+public class DconfManager : BackupManager {
 
-	private bool dry_run = false;
-	private string basepath = "";
-	private bool redist = false;
-	private User current_user;
+	public DconfManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
-	
-	public DconfManager(bool _dry_run, bool _redist, User _current_user){
-
-		dry_run = _dry_run;
-		redist = _redist;
-		current_user = _current_user;
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "dconf");
 	}
 
-	public string get_backup_path(){
+	// list ----------------------
+
+	public void dump_info(){
+
+		string txt = "";
+
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.query_users(false);
 		
-		return path_combine(basepath, "dconf");
+		foreach(var user in mgr.users_sorted){
+			
+			if (user.is_system) { continue; }
+			
+			txt += "NAME='%s'".printf(user.name);
+			
+			txt += ",DESC='%s'".printf(user.full_name);
+
+			txt += ",ACT='%s'".printf("1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
+			txt += "\n";
+		}
+
+		log_msg(txt);
 	}
-	
-	// backup and restore ----------------------
+
+	public void dump_info_backup(){
+
+		init_backup_path(false);
+		
+		init_backup_path(false);
+
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
+			log_error(msg);
+			return;
+		}
+
+		string txt = "";
+
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.query_users(false);
+		
+		foreach(var user in mgr.users_sorted){
+			
+			if (user.is_system) { continue; }
+
+			string bkup_file = path_combine(files_path, "%s.dconf-settings".printf(user.name));
+
+			if (!file_exists(bkup_file)){ continue; }
+			
+			txt += "NAME='%s'".printf(user.name);
+			
+			txt += ",DESC='%s'".printf(user.full_name);
+
+			txt += ",ACT='%s'".printf("1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
+			txt += "\n";
+		}
+
+		log_msg(txt);
+	}
 	
 	public void list_dconf_settings(string userlist){
 
@@ -68,10 +116,12 @@ public class DconfManager : GLib.Object {
 			log_msg(string.nfill(70,'-'));
 		}
 	}
-	
-	public bool backup_dconf_settings(string _basepath, string userlist, bool _apply_selections){
 
-		basepath = _basepath;
+	// backup ----------------------
+	
+	public bool backup_dconf_settings( string userlist){
+
+		init_backup_path(false);
 		
 		bool status = true;
 
@@ -79,9 +129,8 @@ public class DconfManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_DCONF));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = get_backup_path();
-		dir_create(backup_path);
-		chmod(backup_path, "a+rwx");
+		init_backup_path(false);
+		init_files_path(false);
 
 		read_selections();
 		
@@ -93,11 +142,11 @@ public class DconfManager : GLib.Object {
 
 			if (exclude_list.contains(user.name)){ continue; }
 
-			bool ok = backup_dconf_settings_for_user(backup_path, user);
+			bool ok = backup_dconf_settings_for_user(files_path, user);
 			if (!ok){ status = false; }
 		}
 
-		update_permissions_for_backup_files(backup_path, dry_run);
+		update_permissions_for_backup_files();
 
 		if (status){
 			log_msg(Messages.BACKUP_OK);
@@ -144,56 +193,11 @@ public class DconfManager : GLib.Object {
 		return status;
 	}
 
-	public bool update_permissions_for_backup_files(string path, bool dry_run) {
-
-		if (dry_run){ return true; }
-		
-		bool ok = true;
-		bool status = true;
-
-		ok = chmod(path, "a+rwx");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "d", "a+rwx");
-		if (!ok){ status = false; }
-		
-		ok = chmod_dir_contents(path, "f", "a+rw");
-		if (!ok){ status = false; }
-
-		//ok = chown(path, "root", "root");
-		//if (!ok){ status = false; }
-		
-		return status;
-	}
-
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
-
 	// restore ------------
 	
-	public bool restore_dconf_settings(string _basepath, string userlist, bool _apply_selections){
+	public bool restore_dconf_settings( string userlist){
 
-		basepath = _basepath;
+		init_backup_path(false);
 		
 		bool status = true;
 
@@ -201,7 +205,7 @@ public class DconfManager : GLib.Object {
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_DCONF));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = get_backup_path();
+		
 		
 		if (!dir_exists(backup_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
@@ -270,7 +274,7 @@ public class DconfManager : GLib.Object {
 
 	public Gee.ArrayList<User> get_users(string userlist, bool is_backup){
 
-		var mgr = new UserManager();
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.query_users(false);
 		
 		var users = new Gee.ArrayList<User>();

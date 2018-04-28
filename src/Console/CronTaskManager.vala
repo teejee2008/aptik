@@ -26,30 +26,74 @@ using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
 using TeeJee.Misc;
 
-public class CronTaskManager : GLib.Object {
+public class CronTaskManager : BackupManager {
 
-	private bool dry_run = false;
-	private bool redist = false;
-	private string basepath = "";
-	private User current_user;
+	public CronTaskManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
-	
-	public CronTaskManager(bool _dry_run, bool _redist, User _current_user){
-
-		dry_run = _dry_run;
-		redist = _redist;
-		current_user = _current_user;
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "cron");
 	}
 
-	public string get_backup_path(){
+	// list ----------------------
+
+	public void dump_info(){
+
+		string txt = "";
+
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.query_users(false);
 		
-		return path_combine(basepath, "cron");
+		foreach(var user in mgr.users_sorted){
+			
+			if (user.is_system) { continue; }
+			
+			txt += "NAME='%s'".printf(user.name);
+			
+			txt += ",DESC='%s'".printf(user.full_name);
+
+			txt += ",ACT='%s'".printf("1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
+			txt += "\n";
+		}
+
+		log_msg(txt);
 	}
-	
-	// backup and restore ----------------------
+
+	public void dump_info_backup(){
+
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
+			log_error(msg);
+			return;
+		}
+
+		string txt = "";
+
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.query_users(false);
+		
+		foreach(var user in mgr.users_sorted){
+			
+			if (user.is_system) { continue; }
+
+			string bkup_file = path_combine(files_path, "%s.crontab".printf(user.name));
+
+			if (!file_exists(bkup_file)){ continue; }
+			
+			txt += "NAME='%s'".printf(user.name);
+			
+			txt += ",DESC='%s'".printf(user.full_name);
+
+			txt += ",ACT='%s'".printf("1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
+			txt += "\n";
+		}
+
+		log_msg(txt);
+	}
 	
 	public void list_cron_tasks(string userlist){
 
@@ -87,19 +131,19 @@ public class CronTaskManager : GLib.Object {
 		log_msg(string.nfill(70,'-'));
 	}
 
-	public bool backup_cron_tasks(string _basepath, string userlist, PackageManager mgr_pkg, bool _apply_selections){
+	// backup ---------------------------
+	
+	public bool backup_cron_tasks(string userlist){
 
-		basepath = _basepath;
-
-		apply_selections = _apply_selections;
-		
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_CRON));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = init_backup_path();
+		init_backup_path(false);
+		
+		init_files_path(false);
 
 		read_selections();
 
@@ -111,7 +155,7 @@ public class CronTaskManager : GLib.Object {
 
 			if (exclude_list.contains(user.name)){ continue; }
 
-			bool ok = backup_cron_tasks_for_user(backup_path + "/files", user);
+			bool ok = backup_cron_tasks_for_user(user);
 			if (!ok){ status = false; }
 		}
 		
@@ -119,9 +163,9 @@ public class CronTaskManager : GLib.Object {
 
 		// backup system ------------------
 
-		string exclude_list = save_exclude_list(backup_path);
+		string exclude_list = save_exclude_list();
 		
-		bool ok = rsync_copy("/etc", backup_path + "/files", exclude_list);
+		bool ok = rsync_copy("/etc", files_path, exclude_list);
 
 		if (!ok){
 			status = false;
@@ -129,7 +173,7 @@ public class CronTaskManager : GLib.Object {
 		
 		log_msg(string.nfill(70,'-'));
 
-		update_permissions_for_backup_files(backup_path, dry_run);
+		update_permissions_for_backup_files();
 		
 		if (status){
 			log_msg(Messages.BACKUP_OK);
@@ -143,11 +187,11 @@ public class CronTaskManager : GLib.Object {
 		return status;
 	}
 
-	public bool backup_cron_tasks_for_user(string backup_path, User user){
+	public bool backup_cron_tasks_for_user(User user){
 
 		string fname = redist ? "user" : user.name;
 		
-		string backup_file = path_combine(backup_path, "%s.crontab".printf(fname));
+		string backup_file = path_combine(files_path, "%s.crontab".printf(fname));
 		
 		file_delete(backup_file);
 		
@@ -173,57 +217,7 @@ public class CronTaskManager : GLib.Object {
 		return (status == 0);
 	}
 
-	public bool update_permissions_for_backup_files(string path, bool dry_run) {
-
-		string cmd = "";
-
-		int status = 0;
-
-		// dirs -------------
-		
-		cmd = "find '%s' -type d -exec chmod a+rwx '{}' ';'".printf(path);
-
-		log_debug("$ %s".printf(cmd));
-
-		//log_msg("%s (0%s): (dirs) %s".printf(_("set permissions"), "a+rwx", path));
-		
-		if (!dry_run){
-			status = Posix.system(cmd);
-		}
-
-		// files -------------
-		
-		cmd = "find '%s' -type f -exec chmod a+rw '{}' ';'".printf(path);
-
-		log_debug("$ %s".printf(cmd));
-
-		//log_msg("%s (0%s): (files) %s".printf(_("set permissions"), "a+rwx", path));
-		
-		if (!dry_run){
-			status = Posix.system(cmd);
-		}
-
-		return (status == 0);
-	}
-
-	public string init_backup_path(){
-		
-		string backup_path = get_backup_path();
-		
-		if (!dir_exists(backup_path)){
-			dir_create(backup_path);
-			chmod(backup_path, "a+rwx");
-		}
-
-		string files_path = path_combine(backup_path, "files");
-		dir_delete(files_path);
-		dir_create(files_path);
-		chmod(files_path, "a+rwx");
-		
-		return backup_path;
-	}
-
-	public string save_exclude_list(string backup_path){
+	public string save_exclude_list(){
 
 		string exclude_list = path_combine(backup_path, "exclude.list");
 		
@@ -268,47 +262,18 @@ public class CronTaskManager : GLib.Object {
 		return exclude_list;
 	}
 
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
-	
 	// restore ----------------
 	
-	public bool restore_cron_tasks(string _basepath, string userlist, bool _apply_selections){
+	public bool restore_cron_tasks(string userlist){
 
-		basepath = _basepath;
-
-		apply_selections = _apply_selections;
-		
 		bool status = true;
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_CRON));
 		log_msg(string.nfill(70,'-'));
 		
-		string backup_path = get_backup_path();
-		
-		if (!dir_exists(backup_path)) {
-			string msg = "%s: %s".printf(Messages.DIR_MISSING, backup_path);
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);
 			return false;
 		}
@@ -323,7 +288,7 @@ public class CronTaskManager : GLib.Object {
 
 			if (exclude_list.contains(user.name)){ continue; }
 
-			bool ok = restore_cron_tasks_for_user(backup_path + "/files", user);
+			bool ok = restore_cron_tasks_for_user(user);
 			if (!ok){ status = false; }
 		}
 		
@@ -331,9 +296,9 @@ public class CronTaskManager : GLib.Object {
 
 		// restore system ------------------
 
-		string exclude_list = save_exclude_list(backup_path);
+		string exclude_list = save_exclude_list();
 		
-		bool ok = rsync_copy(backup_path + "/files", "/etc", exclude_list);
+		bool ok = rsync_copy(files_path, "/etc", exclude_list);
 		if (!ok){ status = false; }
 
 		log_msg(string.nfill(70,'-'));
@@ -357,11 +322,11 @@ public class CronTaskManager : GLib.Object {
 		return status;
 	}
 
-	public bool restore_cron_tasks_for_user(string backup_path, User user){
+	public bool restore_cron_tasks_for_user(User user){
 
 		string fname = redist ? "user" : user.name;
 		
-		string backup_file = path_combine(backup_path, "%s.crontab".printf(fname));
+		string backup_file = path_combine(files_path, "%s.crontab".printf(fname));
 
 		if (!file_exists(backup_file)) {
 			return true; // not an error
@@ -479,7 +444,7 @@ public class CronTaskManager : GLib.Object {
 
 	public Gee.ArrayList<User> get_users(string userlist, bool is_backup){
 
-		var mgr = new UserManager();
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.query_users(false);
 		
 		var users = new Gee.ArrayList<User>();

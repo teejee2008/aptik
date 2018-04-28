@@ -26,36 +26,91 @@ using TeeJee.FileSystem;
 using TeeJee.ProcessHelper;
 using TeeJee.System;
 
-public class UserHomeDataManager : GLib.Object {
+public class UserHomeDataManager : BackupManager {
 	
-	private bool dry_run = false;
-	private string basepath = "";
 	private bool use_xz = false;
-	private bool redist = false;
-	private User current_user;
 
-	private bool apply_selections = false;
-	private Gee.ArrayList<string> exclude_list = new Gee.ArrayList<string>();
-	private Gee.ArrayList<string> include_list = new Gee.ArrayList<string>();
-	
-	public UserHomeDataManager(bool _dry_run, bool _redist, User _current_user){
+	public UserHomeDataManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
-		dry_run = _dry_run;
-		redist = _redist;
-		current_user = _current_user;
+		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "home");
 	}
 
-	public string get_backup_path(){
+	public void dump_info(){
+
+		string txt = "";
 		
-		return path_combine(basepath, "home");
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.query_users(false);
+		
+		foreach(var user in mgr.users_sorted){
+			
+			if (user.is_system) { continue; }
+			
+			txt += "NAME='%s'".printf(user.name);
+			
+			txt += ",DESC='%s'".printf(user.home_path);
+			
+			txt += ",ENC='%s'".printf(user.has_encrypted_home ? "1" : "0");
+
+			txt += ",ACT='%s'".printf(user.has_encrypted_home ? "0" : "1");
+			
+			txt += ",SENS='%s'".printf(user.has_encrypted_home ? "0" : "1");
+			
+			txt += "\n";
+		}
+		
+		log_msg(txt);
 	}
-	
+
+	public void dump_info_backup(string _basepath){
+
+		init_backup_path(false);
+		
+		
+		
+
+		if (!dir_exists(files_path)) {
+			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
+			log_error(msg);
+			return;
+		}
+
+		string txt = "";
+
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		mgr.query_users(false);
+		
+		foreach(var user in mgr.users_sorted){
+			
+			if (user.is_system) { continue; }
+
+			string bkup_file1 = path_combine(backup_path, "%s/data.tar.gz".printf(user.name));
+			string bkup_file2 = path_combine(backup_path, "%s/data.tar.xz".printf(user.name));
+
+			if (!file_exists(bkup_file1) && !file_exists(bkup_file2)){ continue; }
+			
+			txt += "NAME='%s'".printf(user.name);
+			
+			txt += ",DESC='%s'".printf(user.full_name);
+
+			txt += ",ENC='%s'".printf(user.has_encrypted_home ? "1" : "0");
+
+			txt += ",ACT='%s'".printf(user.has_encrypted_home ? "0" : "1"); // check on target system
+			
+			txt += ",SENS='%s'".printf(user.has_encrypted_home ? "0" : "1"); // check on target system
+			
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+	}
+
 	// backup ----------------------
 	
 	public bool backup_home(string _basepath, string userlist, bool exclude_hidden, bool _use_xz,
 		string exclude_from_file, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 
 		use_xz = _use_xz;
 
@@ -409,34 +464,11 @@ public class UserHomeDataManager : GLib.Object {
 		return txt;
 	}
 
-	public void read_selections(){
-
-		include_list.clear();
-		exclude_list.clear();
-		
-		if (!apply_selections){ return; }
-
-		string backup_path = get_backup_path();
-
-		string selections_list = path_combine(backup_path, "selections.list");
-
-		if (!file_exists(selections_list)){ return; }
-
-		foreach(string name in file_read(selections_list).split("\n")){
-			if (name.has_prefix("+ ")){
-				include_list.add(name[2:name.length]);
-			}
-			else if (name.has_prefix("- ")){
-				exclude_list.add(name[2:name.length]);
-			}
-		}
-	}
-	
 	// restore -----------------------------
 	
 	public bool restore_home(string _basepath, string userlist, bool _apply_selections){
 
-		basepath = _basepath;
+		init_backup_path(false);
 		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_HOME));
@@ -476,7 +508,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		bool status = true;
 
-		var grpmgr = new GroupManager(dry_run);
+		var grpmgr = new GroupManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		grpmgr.query_groups(false);
 
 		string backup_path_user = "";
@@ -652,7 +684,7 @@ public class UserHomeDataManager : GLib.Object {
 		
 		bool status = true;
 
-		var grpmgr = new GroupManager(dry_run);
+		var grpmgr = new GroupManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		grpmgr.query_groups(false);
 		
 		foreach(var user in users){
@@ -734,7 +766,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		// build user list -----------------------
 		
-		var usmgr = new UserManager();
+		var usmgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		usmgr.query_users(false);
 
 		var users = new Gee.ArrayList<User>();
@@ -757,7 +789,7 @@ public class UserHomeDataManager : GLib.Object {
 
 		bool ok = true;
 
-		var grpmgr = new GroupManager(dry_run);
+		var grpmgr = new GroupManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		grpmgr.query_groups(false);
 		
 		foreach(var user in users){
@@ -808,7 +840,7 @@ public class UserHomeDataManager : GLib.Object {
 
 	public Gee.ArrayList<User> get_users(string userlist, bool is_backup){
 
-		var mgr = new UserManager();
+		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.query_users(false);
 
 		var users = new Gee.ArrayList<User>();

@@ -778,12 +778,8 @@ public class PackageManager : BackupManager {
 
 	// save --------------------------
 	
-	public bool save_package_list(bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts, bool _apply_selections){
+	public bool save_package_list(bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
 
-		init_backup_path(false);
-
-		
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_PACKAGES));
 		log_msg(string.nfill(70,'-'));
@@ -794,10 +790,10 @@ public class PackageManager : BackupManager {
 
 		read_selections();
 
-		ok = save_package_list_installed(backup_path);
+		ok = save_package_list_installed();
 		if (!ok){ status = false; }
 		
-		ok = save_package_list_selected(backup_path, include_foreign, exclude_icons, exclude_themes, exclude_fonts);
+		ok = save_package_list_selected(include_foreign, exclude_icons, exclude_themes, exclude_fonts);
 		if (!ok){ status = false; }
 
 		switch(distro.dist_type){
@@ -829,7 +825,7 @@ public class PackageManager : BackupManager {
 		return status;
 	}
 
-	public bool save_package_list_installed(string backup_path) {
+	public bool save_package_list_installed() {
 
 		string backup_file = path_combine(backup_path, "installed.list");
 
@@ -862,7 +858,7 @@ public class PackageManager : BackupManager {
 		return ok;
 	}
 
-	public bool save_package_list_selected(string backup_path, bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts) {
+	public bool save_package_list_selected(bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts) {
 
 		string backup_file = path_combine(backup_path, "selected.list");
 
@@ -937,9 +933,7 @@ public class PackageManager : BackupManager {
 
 	// restore ---------------------
 
-	public bool restore_packages(string _basepath, bool no_prompt, bool _apply_selections){
-
-		init_backup_path(false);
+	public bool restore_packages(bool no_prompt){
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_PACKAGES));
@@ -973,7 +967,7 @@ public class PackageManager : BackupManager {
 		string list_missing, list_install;
 		read_package_list_from_backup_file(backup_file, out list_missing, out list_install);
 
-		bool ok = install_packages(basepath, list_install, list_missing, no_prompt);
+		bool ok = install_packages(list_install, list_missing, no_prompt);
 
 		if (ok){
 			log_msg(Messages.RESTORE_OK);
@@ -1029,7 +1023,7 @@ public class PackageManager : BackupManager {
 		log_msg(string.nfill(70,'-'));
 	}
 
-	private bool install_packages(string basepath, string list_install, string list_missing, bool no_prompt){
+	private bool install_packages(string list_install, string list_missing, bool no_prompt){
 
 		if (dry_run){
 			
@@ -1056,7 +1050,7 @@ public class PackageManager : BackupManager {
 		case "arch":
 			return install_packages_arch(list_install, no_prompt);
 		case "debian":
-			return install_packages_debian(basepath, list_install, no_prompt);
+			return install_packages_debian(list_install, no_prompt);
 		}
 
 		return false;
@@ -1134,7 +1128,7 @@ public class PackageManager : BackupManager {
 		return (status == 0);
 	}
 
-	private bool install_packages_debian(string basepath, string list_install, bool no_prompt){
+	private bool install_packages_debian(string list_install, bool no_prompt){
 
 		log_debug("install_packages_debian()");
 
@@ -1142,13 +1136,13 @@ public class PackageManager : BackupManager {
 
 		if (list_install.length > 0){
 			
-			ok = install_packages_apt(basepath, list_install, no_prompt);
+			ok = install_packages_apt(list_install, no_prompt);
 			if (!ok){ status = false; }
 
 			log_msg(string.nfill(70,'-'));
 		}
 		
-		ok = install_packages_deb(basepath);
+		ok = install_packages_deb();
 		if (!ok){ status = false; }
 
 		log_msg(Messages.RESTORE_OK);
@@ -1156,7 +1150,7 @@ public class PackageManager : BackupManager {
 		return status;
 	}
 
-	private bool install_packages_apt(string basepath, string list_install, bool no_prompt, bool try_resolve = true){
+	private bool install_packages_apt(string list_install, bool no_prompt, bool try_resolve = true){
 		
 		if (list_install.length == 0){ return true; }
 
@@ -1221,7 +1215,7 @@ public class PackageManager : BackupManager {
 			}
 
 			if (list.strip().length != list_install.strip().length){
-				return install_packages_apt(basepath, list, no_prompt, false);
+				return install_packages_apt(list, no_prompt, false);
 			}
 		}
 		else if ((status != 0) && !try_resolve){
@@ -1231,7 +1225,7 @@ public class PackageManager : BackupManager {
 		return (status == 0);
 	}
 
-	private bool install_packages_deb(string basepath){
+	private bool install_packages_deb(){
 
 		log_debug("install_packages_deb()");
 

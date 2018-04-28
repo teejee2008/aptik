@@ -1487,7 +1487,7 @@ public class AptikConsole : GLib.Object {
 		//check_admin_access();
 		
 		var mgr = new PackageManager(distro, current_user, basepath, dry_run, redist, apply_selections);
-		mgr.dump_info_backup(basepath);
+		mgr.dump_info_backup();
 		return true;
 	}
 	
@@ -1554,7 +1554,7 @@ public class AptikConsole : GLib.Object {
 		copy_binary();
 		
 		mgr_pkg = new PackageManager(distro, current_user, basepath, dry_run, redist, apply_selections);
-		return mgr_pkg.save_package_list(basepath, include_foreign, exclude_icons, exclude_themes, exclude_fonts, apply_selections);
+		return mgr_pkg.save_package_list(include_foreign, exclude_icons, exclude_themes, exclude_fonts);
 	}
 
 	public bool restore_packages(){
@@ -1565,7 +1565,7 @@ public class AptikConsole : GLib.Object {
 		if (!check_backup_dir_exists(BackupType.PACKAGES)) { return false; }
 		
 		var mgr = new PackageManager(distro, current_user, basepath, dry_run, redist, apply_selections);
-		bool ok = mgr.restore_packages(basepath, no_prompt, apply_selections);
+		bool ok = mgr.restore_packages(no_prompt);
 
 		if (ok && !dry_run){
 			

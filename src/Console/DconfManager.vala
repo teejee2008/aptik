@@ -130,7 +130,6 @@ public class DconfManager : BackupManager {
 		log_msg(string.nfill(70,'-'));
 		
 		init_backup_path(false);
-		init_files_path(false);
 
 		read_selections();
 		

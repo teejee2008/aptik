@@ -79,12 +79,7 @@ public class BackupManager : GLib.Object {
 			dir_create(backup_path);
 			chmod(backup_path, "a+rwx");
 		}
-	}
 
-	public void init_files_path(bool restore){
-		
-		init_backup_path(restore);
-		
 		if (!restore){
 			dir_delete(files_path);
 		}
@@ -94,7 +89,7 @@ public class BackupManager : GLib.Object {
 			chmod(files_path, "a+rwx");
 		}
 	}
-	
+
 	public void read_selections(){
 
 		include_list.clear();

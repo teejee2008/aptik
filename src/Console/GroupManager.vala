@@ -290,8 +290,6 @@ public class GroupManager : BackupManager {
 
 		init_backup_path(false);
 		
-		init_files_path(false);
-
 		read_selections();
 		
 		bool status = true;

@@ -143,8 +143,6 @@ public class CronTaskManager : BackupManager {
 		
 		init_backup_path(false);
 		
-		init_files_path(false);
-
 		read_selections();
 
 		// backup users -----------------------------------

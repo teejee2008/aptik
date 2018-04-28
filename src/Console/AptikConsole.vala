@@ -1383,7 +1383,7 @@ public class AptikConsole : GLib.Object {
 		//check_admin_access();
 		
 		var mgr = new RepoManager(distro, current_user, basepath, dry_run, redist, apply_selections);
-		mgr.dump_info_backup(basepath);
+		mgr.dump_info_backup();
 		return true;
 	}
 	
@@ -1404,7 +1404,7 @@ public class AptikConsole : GLib.Object {
 		copy_binary();
 		
 		var mgr = new RepoManager(distro, current_user, basepath, dry_run, redist, apply_selections);
-		return mgr.save_repos(basepath, apply_selections);
+		return mgr.save_repos();
 	}
 
 	public bool restore_repos(){

@@ -168,8 +168,6 @@ public class FontManager : BackupManager {
 		string system_path = "/usr/share/fonts";
 		
 		init_backup_path(false);
-		
-		init_files_path(false);
 
 		read_selections();
 

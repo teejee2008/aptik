@@ -292,12 +292,7 @@ public class RepoManager : BackupManager {
 		log_msg(txt);
 	}
 
-	public void dump_info_backup(string _basepath){
-
-		init_backup_path(false);
-		
-		
-		
+	public void dump_info_backup(){
 
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
@@ -425,15 +420,13 @@ public class RepoManager : BackupManager {
 
 	// save ---------------------------------------
 
-	public bool save_repos(string _basepath, bool _apply_selections){
+	public bool save_repos(){
 
-		init_backup_path(false);
-
-		apply_selections = _apply_selections;
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_REPOS));
 		log_msg(string.nfill(70,'-'));
+
+		init_backup_path(false);
 
 		init_backup_path(false);
 

@@ -354,8 +354,6 @@ public class UserManager : BackupManager {
 		log_msg("%s: %s".printf(_("Backup"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
 
-		init_files_path(false);
-
 		read_selections();
 		
 		bool status = true;
@@ -397,16 +395,12 @@ public class UserManager : BackupManager {
 	
 	public bool restore_users(string _basepath, bool _apply_selections){
 
-		init_backup_path(false);
-		
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s: %s".printf(_("Restore"), Messages.TASK_USERS));
 		log_msg(string.nfill(70,'-'));
 		
 		init_backup_path(false);
-		
-		init_files_path(false);
-		
+
 		if (!dir_exists(files_path)) {
 			string msg = "%s: %s".printf(Messages.DIR_MISSING, files_path);
 			log_error(msg);

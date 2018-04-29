@@ -92,8 +92,8 @@ public class FontManager : BackupManager {
 			txt += "NAME='%s'".printf(font_file);
 
 			bool is_dist = false;
-			foreach(string file_path in App.dist_files){
-				if (file_path.has_prefix("/usr/share/fonts/") && (font_file == file_path)){
+			foreach(string dist_file in App.dist_files_fonts){
+				if (font_file == dist_file){
 					is_dist = true;
 					break;
 				}
@@ -171,11 +171,11 @@ public class FontManager : BackupManager {
 
 		string list_file = path_combine(backup_path, "exclude.list");
 		
-		if (App.dist_files.size > 0){
+		if (App.dist_files_fonts.size > 0){
 
 			string txt = "";
 			
-			foreach(string path in App.dist_files){
+			foreach(string path in App.dist_files_fonts){
 				
 				if (path.has_prefix("/usr/share/fonts/")){
 					

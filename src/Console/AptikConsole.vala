@@ -91,7 +91,11 @@ public class AptikConsole : GLib.Object {
 
 	public uint64 config_size_limit = 0;
 
-	public Gee.ArrayList<string> dist_files = new Gee.ArrayList<string>();
+	//public Gee.ArrayList<string> dist_files = new Gee.ArrayList<string>();
+	public Gee.ArrayList<string> dist_files_fonts = new Gee.ArrayList<string>();
+	public Gee.ArrayList<string> dist_files_icons = new Gee.ArrayList<string>();
+	public Gee.ArrayList<string> dist_files_themes = new Gee.ArrayList<string>();
+	public Gee.ArrayList<string> dist_files_cron = new Gee.ArrayList<string>();
 	
 	public static int main (string[] args) {
 		
@@ -176,18 +180,38 @@ public class AptikConsole : GLib.Object {
 
 	public void read_distfiles(){
 
-		string list_file = path_combine(current_user.home_path, ".config/aptik/initial-files.list");
+		//stdout.printf("read_distfiles()\n");
+		
+		//string list_file = path_combine(current_user.home_path, ".config/aptik/initial-files.list");
+		string list_file_fonts = path_combine(current_user.home_path, ".config/aptik/initial-files-fonts.list");
+		string list_file_icons = path_combine(current_user.home_path, ".config/aptik/initial-files-icons.list");
+		string list_file_themes = path_combine(current_user.home_path, ".config/aptik/initial-files-themes.list");
+		string list_file_cron = path_combine(current_user.home_path, ".config/aptik/initial-files-cron.list");
 
-		dist_files.clear();
+		dist_files_fonts = load_distfile(list_file_fonts);
+		dist_files_icons = load_distfile(list_file_icons);
+		dist_files_themes = load_distfile(list_file_themes);
+		dist_files_cron = load_distfile(list_file_cron);
+
+		//stdout.printf("read_distfiles(): done\n");
+	}
+
+	private Gee.ArrayList<string> load_distfile(string list_file){
+
+		var list = new Gee.ArrayList<string>();
 		
 		if (file_exists(list_file)){
+			
 			foreach(string line in file_read(list_file).split("\n")){
-				dist_files.add(line);
+				
+				list.add(line);
 			}
 		}
 		else{
 			log_debug("not_found: %s".printf(list_file));
 		}
+
+		return list;
 	}
 	
 	public void install_dependencies(){

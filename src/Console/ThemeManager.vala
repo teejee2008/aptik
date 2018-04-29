@@ -82,11 +82,13 @@ public class ThemeManager : BackupManager {
 		
 		// exclude list ---------------
 
-		if (App.dist_files.size > 0){
+		var dist_files = (type == "themes") ? App.dist_files_themes : App.dist_files_icons;
+
+		if (dist_files.size > 0){
 			
 			foreach(var theme in themes.values){
 				
-				if (App.dist_files.contains(theme.theme_path)){
+				if (dist_files.contains(theme.theme_path)){
 					
 					theme.is_dist = true;
 				}

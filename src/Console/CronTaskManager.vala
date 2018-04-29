@@ -223,20 +223,15 @@ public class CronTaskManager : BackupManager {
 
 		var exlist = new Gee.ArrayList<string>();
 		
-		if (App.dist_files.size > 0){
+		if (App.dist_files_cron.size > 0){
 
-			foreach(string path in App.dist_files){
+			foreach(string path in App.dist_files_cron){
+			
+				string relpath = path["/etc/".length: path.length];
 				
-				if (path.has_prefix("/etc/cron.d/") || path.has_prefix("/etc/cron.hourly/")
-				|| path.has_prefix("/etc/cron.daily/") || path.has_prefix("/etc/cron.weekly/")
-				|| path.has_prefix("/etc/cron.monthly/")){
+				txt += relpath + "\n";
 
-					string relpath = path["/etc/".length: path.length];
-					
-					txt += relpath + "\n";
-
-					exlist.add(relpath);
-				}
+				exlist.add(relpath);
 			}
 		}
 

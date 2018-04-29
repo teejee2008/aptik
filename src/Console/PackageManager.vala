@@ -467,6 +467,10 @@ public class PackageManager : BackupManager {
 	private void save_dist_file_list(){
 
 		string list_file = path_combine(App.current_user.home_path, ".config/aptik/initial-files.list");
+		string list_file_fonts = path_combine(App.current_user.home_path, ".config/aptik/initial-files-fonts.list");
+		string list_file_icons = path_combine(App.current_user.home_path, ".config/aptik/initial-files-icons.list");
+		string list_file_themes = path_combine(App.current_user.home_path, ".config/aptik/initial-files-themes.list");
+		string list_file_cron = path_combine(App.current_user.home_path, ".config/aptik/initial-files-cron.list");
 
 		if (!file_exists(list_file)){
 			
@@ -486,10 +490,43 @@ public class PackageManager : BackupManager {
 			
 			chmod(list_file, "a+rw");
 
+			string txt_fonts = "";
+			string txt_icons = "";
+			string txt_themes = "";
+			string txt_cron = "";
+			
+			foreach(string line in file_read(list_file).split("\n")){
+	
+				if (line.has_prefix("/usr/share/fonts/")){
+					txt_fonts += line + "\n";
+				}
+				else if (line.has_prefix("/usr/share/themes/")){
+					txt_themes += line + "\n";
+				}
+				else if (line.has_prefix("/usr/share/icons/")){
+					txt_icons += line + "\n";
+				}
+				else if (line.has_prefix("/etc/cron")){
+					txt_cron += line + "\n";
+				}
+			}
+
+			file_write(list_file_fonts, txt_fonts);
+			chmod(list_file_fonts, "a+rw");
+
+			file_write(list_file_icons, txt_icons);
+			chmod(list_file_icons, "a+rw");
+
+			file_write(list_file_themes, txt_themes);
+			chmod(list_file_themes, "a+rw");
+
+			file_write(list_file_cron, txt_cron);
+			chmod(list_file_cron, "a+rw");
+
 			App.read_distfiles();
 		}
 
-		log_debug("dist_files: %d".printf(App.dist_files.size));
+		//log_debug("dist_files: %d".printf(App.dist_files.size));
 	}
 
 	public void add_files_from_package_to_list(string pkgname, Gee.ArrayList<string> list){
@@ -537,7 +574,7 @@ public class PackageManager : BackupManager {
 			txt += ",ARCH='%s'".printf(pkg.arch);
 			txt += ",DESC='%s'".printf(pkg.description);
 			txt += ",ACT='%s'".printf(selected ? "1" : "0");
-			txt += ",SENS='%s'".printf(true ? "1" : "0");
+			txt += ",SENS='%s'".printf("1");
 			txt += ",INST='%s'".printf(pkg.is_installed ? "1" : "0");
 			txt += ",DIST='%s'".printf(pkg.is_dist ? "1" : "0");
 			txt += ",AUTO='%s'".printf(pkg.is_auto ? "1" : "0");

@@ -353,7 +353,7 @@ namespace TeeJee.Misc {
 
 		var sizes = new Gee.ArrayList<int>();
 
-		foreach(var col in items[0]){
+		for(int i=0; i < items[0].size; i++){
 			sizes.add(0);
 		}
 

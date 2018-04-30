@@ -550,6 +550,8 @@ public class PackageManager : BackupManager {
 	public void dump_info(bool include_foreign, bool exclude_icons, bool exclude_themes, bool exclude_fonts){
 
 		string txt = "";
+
+		log_msg("O:icon:%s".printf(exclude_icons.to_string()));
 		
 		foreach(var pkg in packages_sorted){
 
@@ -842,11 +844,20 @@ public class PackageManager : BackupManager {
 			break;
 		case "debian":
 			string deb_dir = path_combine(basepath, "debs");
-			string deb_readme = path_combine(deb_dir, "README");
-			string msg = _("DEB files placed in this directory will be installed on restore");
+			string deb_files = path_combine(deb_dir, "files");
+			
 			dir_create(deb_dir);
 			chmod(deb_dir, "a+rwx");
+
+			dir_create(deb_files);
+			chmod(deb_files, "a+rwx");
+
+			string deb_readme = path_combine(deb_dir, "README");
+			string msg = _("DEB files placed in this directory will be installed on restore");
+			
 			file_write(deb_readme, msg);
+			chmod(deb_readme, "a+rw");
+			
 			break;
 		}
 
@@ -1264,7 +1275,7 @@ public class PackageManager : BackupManager {
 
 		log_debug("install_packages_deb()");
 
-		string deb_path = path_combine(basepath, "debs");
+		string deb_path = path_combine(basepath, "debs/files");
 		
 		if (!dir_exists(deb_path)){ return true; }
 		

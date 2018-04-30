@@ -230,7 +230,7 @@ public class DconfManager : BackupManager {
 
 		string fname = redist ? "user" : user.name;
 		
-		string backup_file = path_combine(backup_path, "%s.dconf-settings".printf(fname));
+		string backup_file = path_combine(files_path, "%s.dconf-settings".printf(fname));
 
 		if (!file_exists(backup_file)) {
 			string msg = "%s: %s".printf(Messages.FILE_MISSING, backup_file);
@@ -247,18 +247,19 @@ public class DconfManager : BackupManager {
 		file_copy(backup_file, temp_file, false);
 		chown(temp_file, user.name, user.name);
 
-		var startup = new StartupEntry(user.name, "aptik", "restore-dconf", 10);
+		var startup = new StartupEntry(user.name, "aptik", "restore-dconf", 5);
 		
 		string cmd = "#!/bin/bash\n";
+		cmd += "cd '%s'\n".printf(escape_single_quote(temp_dir));
 		cmd += "dconf reset -f /\n";
-		cmd += "dconf load / < '%s'\n".printf(escape_single_quote(temp_file));
+		cmd += "dconf load / < dconf.settings\n";
 		cmd += "rm -vf '%s'\n".printf(escape_single_quote(startup.STARTUP_DESKTOP_FILE));
 		
 		startup.create(cmd, true);
 		
 		log_msg("%s: (%s) %s".printf(_("Restored"), user.name, _("Created autostart script for next user login")));
 
-		return  true;
+		return true;
 	}
 
 	public Gee.ArrayList<User> get_users(string userlist, bool is_backup){

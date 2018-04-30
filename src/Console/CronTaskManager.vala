@@ -226,6 +226,8 @@ public class CronTaskManager : BackupManager {
 		if (App.dist_files_cron.size > 0){
 
 			foreach(string path in App.dist_files_cron){
+
+				if (dir_exists(path)) { continue; }
 			
 				string relpath = path["/etc/".length: path.length];
 				
@@ -249,6 +251,8 @@ public class CronTaskManager : BackupManager {
 		log_msg("");
 		
 		file_write(exclude_list, txt);
+		chmod(exclude_list, "a+rw");
+		
 		log_msg("%s: %s".printf(_("saved"), exclude_list.replace(basepath, "$basepath")));
 		log_msg("");
 		

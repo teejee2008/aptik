@@ -430,8 +430,9 @@ public class RepoManager : BackupManager {
 		
 		read_selections();
 
-		string backup_file = path_combine(backup_path, "CODENAME");
+		string backup_file = path_combine(backup_path, "codename");
 		file_write(backup_file, distro.codename);
+		chmod(backup_file, "a+rw");
 		
 		switch(distro.dist_type){
 		case "fedora":
@@ -809,9 +810,9 @@ public class RepoManager : BackupManager {
 		bool status = true, ok;
 
 		string codename = "";
-		string codename_file = path_combine(backup_path, "CODENAME");
+		string codename_file = path_combine(backup_path, "codename");
 		if (file_exists(codename_file)){
-			codename = file_read(codename_file);
+			codename = file_read(codename_file).strip();
 		}
 
 		var list = dir_list_names(backup_path, true);
@@ -834,8 +835,10 @@ public class RepoManager : BackupManager {
 
 			string txt = file_read(backup_file);
 
-			if (name.contains(codename) || txt.contains(codename)){
+			if ((codename.length > 0) && (name.contains(codename) || txt.contains(codename))){
+				
 				if ((distro.codename.length == 0) || (codename != distro.codename)){
+					
 					log_msg("%s: %s\n".printf(_("Repo"), name)); 
 					log_error("%s: %s".printf(_("Skipping File"), backup_file));
 					log_error(_("This repo is meant for another OS release and cannot be added to this system"));

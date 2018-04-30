@@ -32,7 +32,7 @@ using TeeJee.Misc;
 
 public const string AppName = "Aptik";
 public const string AppShortName = "aptik";
-public const string AppVersion = "18.04";
+public const string AppVersion = "18.5";
 public const string AppAuthor = "Tony George";
 public const string AppAuthorEmail = "teejeetech@gmail.com";
 
@@ -1507,7 +1507,7 @@ public class AptikConsole : GLib.Object {
 	public bool dump_packages(){
 		
 		//check_admin_access();
-		
+
 		var mgr = new PackageManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.dump_info(include_foreign, exclude_icons, exclude_themes, exclude_fonts);
 		return true;
@@ -1664,7 +1664,7 @@ public class AptikConsole : GLib.Object {
 		check_basepath();
 		if (!check_backup_dir_exists(BackupType.THEMES)) { return false; }
 		
-		var mgr = new ThemeManager(distro, current_user, basepath, dry_run, redist, apply_selections, "icons");
+		var mgr = new ThemeManager(distro, current_user, basepath, dry_run, redist, apply_selections, "themes");
 		mgr.check_archived_themes();
 		return mgr.restore_themes();
 	}

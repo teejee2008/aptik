@@ -32,7 +32,7 @@ using TeeJee.Misc;
 
 public const string AppName = "Aptik";
 public const string AppShortName = "aptik";
-public const string AppVersion = "18.4";
+public const string AppVersion = "18.04";
 public const string AppAuthor = "Tony George";
 public const string AppAuthorEmail = "teejeetech@gmail.com";
 
@@ -113,7 +113,6 @@ public class AptikConsole : GLib.Object {
 		App = console;
 		
 		bool is_success = console.parse_arguments(args);
-		log_msg("");
 		return (is_success) ? 0 : 1;
 	}
 
@@ -344,7 +343,7 @@ public class AptikConsole : GLib.Object {
 		//msg += fmt.printf("--full", _("Do full backup with duplicity"));
 		//msg += fmt.printf("", _("default: incremental if backup exists, else full"));
 		//msg += "\n";
-		msg += fmt.printf("--exclude-hidden", _("Exclude hidden files and directories (app configs)"));
+		msg += fmt.printf("--exclude-home-hidden", _("Exclude hidden files and directories (app configs)"));
 		msg += fmt.printf("", _("(default: include)"));
 		msg += fmt.printf("--exclude-from <file>", _("Exclude files which match patterns in specified file"));
 		msg += "\n";
@@ -455,6 +454,7 @@ public class AptikConsole : GLib.Object {
 		msg += fmt.printf("--basepath <dir>", _("Backup directory (default: current directory)"));
 		msg += fmt.printf("--scripted", _("Run in non-interactive mode"));
 		msg += fmt.printf("--dry-run", _("Simulate actions for --restore commands"));
+		msg += fmt.printf("--version", _("Show version and exit"));
 		msg += fmt.printf("--help", _("Show all options"));
 		msg += "\n";
 		
@@ -527,7 +527,7 @@ public class AptikConsole : GLib.Object {
 				use_xz = true;
 				break;
 
-			case "--exclude-hidden":
+			case "--exclude-home-hidden":
 				exclude_hidden = true;
 				break;
 
@@ -718,6 +718,7 @@ public class AptikConsole : GLib.Object {
 			case "--restore-all":
 			case "--remove-all":
 			case "--sysinfo":
+			case "--version":
 
 				command = args[k].down();
 				break;
@@ -1069,6 +1070,10 @@ public class AptikConsole : GLib.Object {
 
 		case "--sysinfo":
 			distro.print_system_info();
+			return true;
+
+		case "--version":
+			log_msg(AppVersion);
 			return true;
 		}
 

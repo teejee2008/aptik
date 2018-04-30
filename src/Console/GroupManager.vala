@@ -259,6 +259,8 @@ public class GroupManager : BackupManager {
 			txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
 			
 			txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
+
+			txt += ",INST='%s'".printf(is_installed ? "1" : "0");
 			
 			txt += "\n";
 		}

@@ -76,6 +76,11 @@ public class PackageCacheManager : BackupManager {
 			}
 			
 			txt += "NAME='%s'".printf(name);
+
+			txt += ",ACT='%s'".printf("1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
 			txt += "\n";
 		}
 		
@@ -110,6 +115,11 @@ public class PackageCacheManager : BackupManager {
 			}
 			
 			txt += "NAME='%s'".printf(name);
+
+			txt += ",ACT='%s'".printf("1");
+			
+			txt += ",SENS='%s'".printf("1");
+			
 			txt += "\n";
 		}
 		

@@ -32,30 +32,35 @@ using TeeJee.Misc;
 
 public class FontManager : BackupManager {
 	
-	public Gee.HashMap<string,Font> fonts = new Gee.HashMap<string, Font>();
+	//public Gee.HashMap<string,Font> fonts = new Gee.HashMap<string, Font>();
+
+	public Gee.HashMap<string,Font> fonts = new Gee.HashMap<string,Font>();
 	
 	public FontManager(LinuxDistro _distro, User _current_user, string _basepath, bool _dry_run, bool _redist, bool _apply_selections){
 
 		base(_distro, _current_user, _basepath, _dry_run, _redist, _apply_selections, "fonts");
+
+		query();
 	}
 	
-	public void list_fonts(){
+	public void list_fonts2(){
 
-		string cmd = "fc-list : family style";
+		string cmd = "fc-list : file family style";
 		string std_out, std_err;
 		exec_sync(cmd, out std_out, out std_err);
 		
 		foreach (string line in std_out.split("\n")){
 			
-			var match = regex_match("""(.*):style=(.*)""", line);
+			var match = regex_match("""(.*):(.*):style=(.*)""", line);
 			
 			if (match != null){
-				
-				string family = match.fetch(1);
-				string style = match.fetch(2);
+
+				string file = match.fetch(1);
+				string family = match.fetch(2);
+				string style = match.fetch(3);
 
 				if (!fonts.has_key(family)){
-					fonts[family] = new Font(family);
+					//fonts[family] = new Font(family);
 				}
 				
 				var font = fonts[family];
@@ -64,12 +69,32 @@ public class FontManager : BackupManager {
 		}
 
 		foreach(var font in fonts_sorted){
-			log_msg("%s -- %s".printf(font.family, font.style));
+			//log_msg("%s -- %s".printf(font.family, font.style));
 			//log_msg("%s".printf(font.family));
 		}
 	}
 
-	public Gee.ArrayList<Font> fonts_sorted {
+	public void query(){
+
+		var list = dir_list_files_recursive("/usr/share/fonts/", true);
+
+		foreach(var file in list){
+
+			if (!is_font_file(file)){ continue; }
+			
+			fonts[file] = new Font(file, "", "");
+		}
+	}
+
+	public void list_fonts(){
+
+		foreach(var font_file in fonts_sorted){
+			
+			log_msg("%s".printf(font_file));
+		}
+	}
+
+	public Gee.ArrayList<string> fonts_sorted {
 		owned get{
 			return get_sorted_array(fonts);
 		}
@@ -79,17 +104,13 @@ public class FontManager : BackupManager {
 
 	public void dump_info(){
 
-		var list = dir_list_files_recursive("/usr/share/fonts", true, null);
-
-		list.sort();
-		
 		string txt = "";
 		
-		foreach(var font_file in list){
+		foreach(var font_file in fonts_sorted){
 
-			if (!font_file.has_suffix(".ttf") && !font_file.has_suffix(".otf")){ continue; }
+			if (!is_font_file(font_file)){ continue; }
 
-			txt += "NAME='%s'".printf(font_file);
+			txt += "NAME='%s'".printf(font_file.replace("/usr/share/fonts/",""));
 
 			bool is_dist = false;
 			foreach(string dist_file in App.dist_files_fonts){
@@ -127,13 +148,13 @@ public class FontManager : BackupManager {
 		
 		string txt = "";
 		
-		foreach(var font_file in list_bkup){
+		foreach(var font_file_bkup in list_bkup){
 
-			txt += "NAME='%s'".printf(font_file);
+			txt += "NAME='%s'".printf(font_file_bkup.replace(files_path + "/",""));
 
 			bool is_installed = false;
-			foreach(string file_path in list_sys){
-				if (file_path.has_prefix("/usr/share/fonts/") && (font_file == file_path)){
+			foreach(string font_file in list_sys){
+				if (font_file.replace("/usr/share/fonts/","") == font_file_bkup.replace(files_path + "/","")){
 					is_installed = true;
 					break;
 				}
@@ -169,46 +190,7 @@ public class FontManager : BackupManager {
 
 		// exclude list for rsync ---------------------------------------
 
-		string list_file = path_combine(backup_path, "exclude.list");
-		
-		if (App.dist_files_fonts.size > 0){
-
-			string txt = "";
-			
-			foreach(string path in App.dist_files_fonts){
-				
-				if (path.has_prefix("/usr/share/fonts/")){
-					
-					txt += path["/usr/share/fonts/".length: path.length] + "\n";
-				}
-			}
-
-			foreach(string path in exclude_list){
-				
-				if (path.has_prefix("/usr/share/fonts/")){
-					
-					txt += path["/usr/share/fonts/".length: path.length] + "\n";
-				}
-			}
-			
-			file_write(list_file, txt);
-			log_msg("%s: %s".printf(_("saved"), list_file.replace(basepath, "$basepath")));
-		}
-
-		// print items ------------------------
-		
-		if (file_exists(list_file)){
-			
-			foreach(string path in file_read(list_file).split("\n")){
-				
-				if (path.has_suffix(".ttf") || path.has_suffix(".otf")){
-					
-					log_msg("%s: %s".printf(_("exclude"), path));
-				}
-			}
-
-			log_msg("");
-		}
+		save_exclude_list();
 
 		// system fonts --------------------------
 
@@ -216,7 +198,7 @@ public class FontManager : BackupManager {
 
 		// users' fonts -------------------------
 		
-		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
+		/*var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.query_users(false);
 		
 		foreach(var user in mgr.users.values){
@@ -236,7 +218,7 @@ public class FontManager : BackupManager {
 				log_msg(string.nfill(70,'-'));
 				backup_fonts_from_path(path);
 			}
-		}
+		}*/
 
 		update_permissions_for_backup_files();
 
@@ -259,13 +241,15 @@ public class FontManager : BackupManager {
 		if (dry_run){
 			cmd += " --dry-run";
 		}
+
+		cmd += " --prune-empty-dirs";
 		
 		cmd += " --exclude=cmap/ --exclude=type1/ --exclude=X11/";
 
-		string exclude_list = path_combine(backup_path, "exclude.list");
+		string list_file = path_combine(backup_path, "exclude.list");
 		
-		if (file_exists(exclude_list)){
-			cmd += " --exclude-from='%s'".printf(escape_single_quote(exclude_list));
+		if (file_exists(list_file)){
+			cmd += " --exclude-from='%s'".printf(escape_single_quote(list_file));
 		}
 
 		cmd += " '%s/'".printf(escape_single_quote(system_path));
@@ -287,6 +271,55 @@ public class FontManager : BackupManager {
 		return (status == 0);
 	}
 
+	private string save_exclude_list(){
+		
+		string list_file = path_combine(backup_path, "exclude.list");
+
+		string txt = "";
+		
+		if (App.dist_files_fonts.size > 0){
+
+			foreach(string path in App.dist_files_fonts){
+				
+				if (path.has_prefix("/usr/share/fonts/") && !dir_exists(path)){
+					
+					txt += path["/usr/share/fonts/".length: path.length] + "\n";
+				}
+			}
+		}
+
+		foreach(string path in exclude_list){
+			
+			txt += path + "\n";
+		}
+		
+		file_write(list_file, txt);
+		log_msg("%s: %s".printf(_("saved"), list_file.replace(basepath, "$basepath")));
+
+		if (file_exists(list_file)){
+			
+			foreach(string path in file_read(list_file).split("\n")){
+				
+				if (is_font_file(path)){
+					
+					log_msg("%s: %s".printf(_("exclude"), path));
+				}
+			}
+
+			log_msg("");
+		}
+
+		return list_file;
+	}
+
+	private bool is_font_file(string path){
+		
+		return path.has_suffix(".ttf") || path.has_suffix(".ttc")
+			|| path.has_suffix(".otf")
+			|| path.has_suffix(".pfa") || path.has_suffix(".afm")  // linux   - font file and metric file
+			|| path.has_suffix(".pfb") || path.has_suffix(".pfm"); // windows - font file and metric file
+	}
+	
 	// restore ---------------------------------------
 	
 	public bool restore_fonts(){
@@ -302,6 +335,8 @@ public class FontManager : BackupManager {
 			return false;
 		}
 
+		string list_file = save_exclude_list();
+
 		string cmd = "rsync -avh";
 
 		cmd += " --ignore-existing";
@@ -311,7 +346,13 @@ public class FontManager : BackupManager {
 		}
 		
 		cmd += " --exclude=cmap/ --exclude=type1/ --exclude=X11/";
+
+		if (file_exists(list_file)){
+			cmd += " --exclude-from='%s'".printf(escape_single_quote(list_file));
+		}
+		
 		cmd += " '%s/files/'".printf(escape_single_quote(backup_path));
+		
 		cmd += " '%s/'".printf(escape_single_quote(system_path));
 
 		int status = 0;
@@ -365,17 +406,17 @@ public class FontManager : BackupManager {
 	}
 
 	// static ----------------------
+	
+	public static Gee.ArrayList<string> get_sorted_array(Gee.HashMap<string,Font> dict){
 
-	public static Gee.ArrayList<Font> get_sorted_array(Gee.HashMap<string,Font> dict){
-
-		var list = new Gee.ArrayList<Font>();
+		var list = new Gee.ArrayList<string>();
 		
-		foreach(var pkg in dict.values) {
-			list.add(pkg);
+		foreach(var item in dict.values) {
+			list.add(item.file);
 		}
 
 		list.sort((a, b) => {
-			return strcmp(a.family.down(), b.family.down());
+			return strcmp(a.down(), b.down());
 		});
 
 		return list;
@@ -384,12 +425,15 @@ public class FontManager : BackupManager {
 }
 
 public class Font : GLib.Object {
-	
+
+	public string file = "";
 	public string family = "";
 	public string style = "";
 
-	public Font(string _family){
+	public Font(string _file, string _family, string _style){
+		file = _file;
 		family = _family;
+		style = _style;
 	}
 
 	public void add_style(string _style){

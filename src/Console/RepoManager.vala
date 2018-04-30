@@ -750,6 +750,15 @@ public class RepoManager : BackupManager {
 			// the installed.list file should be empty. Return error and exit method.
 		}
 
+		bool use_n_switch = false;
+		
+		string std_out, std_err;
+		exec_sync("add-apt-repository --help", out std_out, out std_err);
+
+		if (std_out.contains("-n,")){
+			use_n_switch = true;
+		}
+
 		var added_list = new Gee.ArrayList<string>();
 		
 		foreach(string line in file_read(backup_file).split("\n")){
@@ -768,8 +777,15 @@ public class RepoManager : BackupManager {
 
 			added_list.add(name);
 
-			log_msg("%s: %s\n".printf(_("Repo"), name)); 
-			string cmd = "add-apt-repository -y ppa:%s".printf(name);
+			log_msg("%s: %s\n".printf(_("Repo"), name));
+			
+			string cmd = "add-apt-repository -y";
+
+			if (use_n_switch){
+				cmd += " -n";
+			}
+			
+			cmd += " ppa:%s".printf(name);
 
 			int retval = 0;
 		

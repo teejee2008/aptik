@@ -79,8 +79,8 @@ public class UserHomeDataManager : BackupManager {
 			
 			if (user.is_system) { continue; }
 
-			string bkup_file1 = path_combine(backup_path, "%s/data.tar.gz".printf(user.name));
-			string bkup_file2 = path_combine(backup_path, "%s/data.tar.xz".printf(user.name));
+			string bkup_file1 = path_combine(files_path, "%s/data.tar.gz".printf(user.name));
+			string bkup_file2 = path_combine(files_path, "%s/data.tar.xz".printf(user.name));
 
 			if (!file_exists(bkup_file1) && !file_exists(bkup_file2)){ continue; }
 			

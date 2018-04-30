@@ -356,6 +356,14 @@ public class MountEntryManager : BackupManager {
 				break;
 			}
 
+			bool is_installed = false;
+			foreach(var ent in fstab){
+				if (ent.mount_point == entry.mount_point){
+					is_installed = true;
+					break;
+				}
+			}
+
 			txt += "NAME='%s'".printf(entry.mount_point);
 			txt += ",DEV='%s'".printf(entry.device);
 			txt += ",MPATH='%s'".printf(entry.mount_point);
@@ -363,20 +371,30 @@ public class MountEntryManager : BackupManager {
 			txt += ",OPT='%s'".printf(entry.options);
 			txt += ",DUMP='%s'".printf(entry.dump);
 			txt += ",PASS='%s'".printf(entry.pass);
-			txt += ",ACT='%s'".printf(is_system ? "0" : "1");
-			txt += ",SENS='%s'".printf(is_system ? "0" : "1");
+			txt += ",ACT='%s'".printf((is_system || is_installed) ? "0" : "1");
+			txt += ",SENS='%s'".printf((is_system || is_installed) ? "0" : "1");
+			txt += ",INST='%s'".printf(is_installed ? "1" : "0");
 			txt += ",TYPE='%s'".printf("fstab");
 			txt += "\n";
 		}
 
 		foreach(var entry in crypttab_bkup){
 
+			bool is_installed = false;
+			foreach(var ent in crypttab){
+				if (ent.name == entry.name){
+					is_installed = true;
+					break;
+				}
+			}
+			
 			txt += "NAME='%s'".printf(entry.name);
 			txt += ",DEV='%s'".printf(entry.device);
 			txt += ",PASSWORD='%s'".printf(entry.password);
 			txt += ",OPT='%s'".printf(entry.options);
-			txt += ",ACT='%s'".printf("1");
-			txt += ",SENS='%s'".printf("1");
+			txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
+			txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
+			txt += ",INST='%s'".printf(is_installed ? "1" : "0");
 			txt += ",TYPE='%s'".printf("crypttab");
 			txt += "\n";
 		}

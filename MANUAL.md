@@ -1,7 +1,7 @@
 ## Aptik User Manual
 
 ```
-Aptik v18.4 by Tony George (teejeetech@gmail.com)
+Aptik v18.5 by Tony George (teejeetech@gmail.com)
 
 Usage: aptik <command> [options]
 
@@ -72,7 +72,7 @@ Options:
   --users <usr1,usr2,..>         Users to backup and restore
                                  (default: all users)
 
-  --exclude-hidden               Exclude hidden files and directories (app configs)
+  --exclude-home-hidden          Exclude hidden files and directories (app configs)
                                  (default: include)
   --exclude-from <file>          Exclude files which match patterns in specified file
 
@@ -169,12 +169,13 @@ Common Options -----------------------------------
   --basepath <dir>               Backup directory (default: current directory)
   --scripted                     Run in non-interactive mode
   --dry-run                      Simulate actions for --restore commands
+  --version                      Show version and exit
   --help                         Show all options
 ```
 
 ### Backup & Restore All Items
 
-`aptik --backup-all` and `aptik --restore-all` are one-line commands for taking a backup of your system and restoring it on a new system. You can safely use these 2 commands and skip the rest of this document, if you are not interested in knowing the details of each step.
+`sudo aptik --backup-all` and `sudo aptik --restore-all` are one-line commands for taking a backup of your system and restoring it on a new system. You can safely use these 2 commands and skip the rest of this document, if you are not interested in knowing the details of each step.
 
 #### Backup
 

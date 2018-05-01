@@ -31,13 +31,6 @@ Available commands and options are documented in the [User Manual](MANUAL.md)
 - **Donation Feature** - A complimentary feature is available for users who donate or contribute to this project. An option will be enabled to generate a single-file, stand-alone installer which can be executed on the new system for restoring the backups. This installer can be used as a stand-alone deployment package, which when executed on a new Linux installation, will transform it to the original system. 
 
 
-
-## Screenshots
-
-
-
-
-
 ## Installation
 
 PPA and DEB files are available for Ubuntu and Ubuntu-based distributions. Binary installers are available for all Linux distributions.
@@ -46,11 +39,11 @@ PPA and DEB files are available for Ubuntu and Ubuntu-based distributions. Binar
 
 ## Donate
 
-Aptik includes a few extra plugins for people who have contributed to the project through donations, translations, etc. You can make a donation for $10 or more via PayPal to receive the plugins by email. Your contributions will help keep the project alive and support future development.
+*Aptik* is a non-commercial application. I work on it during my free time based on my requirements and interest. If you wish to support this project, you can make a donation for $10 or more via PayPal. Your contributions will help keep the project alive and support future development.
 
 **PayPal** ~ If you find this application useful and wish to say thanks, you can buy me a coffee by making a one-time donation with Paypal. 
 
-[![](https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg)](https://www.paypal.com/cgi-bin/webscr?business=teejeetech@gmail.com&cmd=_xclick&currency_code=USD&amount=10&item_name=Polo%20Donation)  
+[![](https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg)](https://www.paypal.com/cgi-bin/webscr?business=teejeetech@gmail.com&cmd=_xclick&currency_code=USD&amount=10&item_name=Aptik%20Donation)  
 
 **Patreon** ~ You can also sign up as a sponsor on Patreon.com. As a patron you will get access to beta releases of new applications that I'm working on. You will also get news and updates about new features that are not published elsewhere.
 

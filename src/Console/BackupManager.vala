@@ -73,14 +73,16 @@ public class BackupManager : GLib.Object {
 		}
 	}
 
-	public void init_backup_path(){
+	public void init_backup_path(bool keep_files = false){
 		
 		if (!dir_exists(backup_path)){
 			dir_create(backup_path);
 			chmod(backup_path, "a+rwx");
 		}
 
-		dir_delete(files_path);
+		if (!keep_files){
+			dir_delete(files_path);
+		}
 		
 		if (!dir_exists(files_path)){
 			dir_create(files_path);

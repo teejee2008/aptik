@@ -294,6 +294,8 @@ public class FontManager : BackupManager {
 		}
 		
 		file_write(list_file, txt);
+		chmod(list_file, "a+rw");
+		
 		log_msg("%s: %s".printf(_("saved"), list_file.replace(basepath, "$basepath")));
 
 		if (file_exists(list_file)){

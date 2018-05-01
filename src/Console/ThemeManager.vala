@@ -116,6 +116,8 @@ public class ThemeManager : BackupManager {
 		}
 
 		file_write(exclude_list, txt);
+		chmod(exclude_list, "a+rw");
+		
 		log_msg("%s: %s".printf(_("saved"), exclude_list.replace(basepath, "$basepath")));
 		log_msg("");
 	}
@@ -366,7 +368,10 @@ public class ThemeManager : BackupManager {
 		}
 
 		file_delete(index_file);
+		
 		file_write(index_file, txt);
+		
+		chmod(index_file, "a+rw");
 	}
 
 	// restore -------------------------

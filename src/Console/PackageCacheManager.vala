@@ -141,7 +141,7 @@ public class PackageCacheManager : BackupManager {
 			log_msg(string.nfill(70,'-'));
 		}
 		
-		init_backup_path();
+		init_backup_path(true);
 		
 		string backup_path_distro = path_combine(files_path, distro.dist_type);
 		dir_create(backup_path_distro);

@@ -172,6 +172,10 @@ public class AptikConsole : GLib.Object {
 		mgr.query_users(false);
 		current_user = mgr.get_current_user();
 
+		string home_config_aptik = path_combine(current_user.home_path, ".config/aptik");
+		dir_create(home_config_aptik);
+		chown(home_config_aptik, current_user.name, current_user.name);
+
 		install_dependencies();
 
 		read_distfiles();
@@ -207,7 +211,7 @@ public class AptikConsole : GLib.Object {
 			}
 		}
 		else{
-			log_debug("not_found: %s".printf(list_file));
+			log_error("not_found: %s".printf(list_file));
 		}
 
 		return list;

@@ -63,7 +63,7 @@ namespace TeeJee.ProcessHelper{
 
 		try {
 			int status;
-			Process.spawn_command_line_sync(cmd, out std_out, out std_err, out status);
+			Process.spawn_command_line_sync("LANG=C " + cmd, out std_out, out std_err, out status);
 	        return status;
 		}
 		catch (Error e){

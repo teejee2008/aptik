@@ -387,32 +387,33 @@ public class PackageManager : BackupManager {
 
 		int count = 0;
 
-		string DEF_PKG_LIST = "/var/log/installer/initial-status.gz";
+		string file_initial_status_gz = "/var/log/installer/initial-status.gz";
 
-		string list_file = path_combine(App.current_user.home_path, ".config/aptik/initial-status.list");
+		string file_initial_status_list = path_combine(App.current_user.home_path, ".config/aptik/initial-status.list");
 		
 		log_debug("check_packages_apt_default()");
 
-		if (!file_exists(DEF_PKG_LIST)) {
-			log_error("%s: %s".printf(Messages.FILE_MISSING, DEF_PKG_LIST_UNPACKED));
+		if (!file_exists(file_initial_status_gz)) {
+			log_error("%s: %s".printf(Messages.FILE_MISSING, file_initial_status_gz));
 			return;
 		}
 
 		var tmr = timer_start();
 
-		if (!file_exists(list_file)){
+		if (!file_exists(file_initial_status_list)){
 			string std_out, std_err;
-			string cmd = "gzip -dc '%s' > '%s'".printf(DEF_PKG_LIST, list_file);
+			string cmd = "gzip -dc '%s' > '%s'".printf(file_initial_status_gz, file_initial_status_list);
 			log_debug(cmd);
 			exec_script_sync(cmd, out std_out, out std_err);
-			chmod(list_file, "a+rw");
+			chmod(file_initial_status_list, "a+rw");
 		}
 
-		if (!file_exists(list_file)){
+		if (!file_exists(file_initial_status_list)){
+			log_error("%s: %s".printf(Messages.FILE_MISSING, file_initial_status_list));
 			return;
 		}
 		
-		foreach(string line in file_read(list_file).split("\n")){
+		foreach(string line in file_read(file_initial_status_list).split("\n")){
 
 			if (line.strip().length == 0) { continue; }
 			if (line.index_of(":") == -1) { continue; }
@@ -461,7 +462,7 @@ public class PackageManager : BackupManager {
 
 		dist_installed_known = true;
 
-		log_debug("dist_packages: %'6d".printf(count));
+		log_debug("dist_packages: %d".printf(count));
 	}
 
 	private void save_dist_file_list(){
@@ -472,59 +473,63 @@ public class PackageManager : BackupManager {
 		string list_file_themes = path_combine(App.current_user.home_path, ".config/aptik/initial-files-themes.list");
 		string list_file_cron = path_combine(App.current_user.home_path, ".config/aptik/initial-files-cron.list");
 
-		if (!file_exists(list_file)){
-			
-			string pkgs = "";
-			foreach(var pkg in packages.values){
-				if (pkg.is_dist){
-					pkgs += " " + pkg.name;
-				}
+		if (file_exists(list_file)){ return; }
+		
+		string pkgs = "";
+		foreach(var pkg in packages.values){
+			if (pkg.is_dist){
+				pkgs += " " + pkg.name;
 			}
-
-			string cmd = "dpkg-query -L %s > '%s'".printf(pkgs, escape_single_quote(list_file));
-
-			//log_debug("$ " + cmd);
-
-			string std_out, std_err;
-			exec_script_sync(cmd, out std_out, out std_err);
-			
-			chmod(list_file, "a+rw");
-
-			string txt_fonts = "";
-			string txt_icons = "";
-			string txt_themes = "";
-			string txt_cron = "";
-			
-			foreach(string line in file_read(list_file).split("\n")){
-	
-				if (line.has_prefix("/usr/share/fonts/")){
-					txt_fonts += line + "\n";
-				}
-				else if (line.has_prefix("/usr/share/themes/")){
-					txt_themes += line + "\n";
-				}
-				else if (line.has_prefix("/usr/share/icons/")){
-					txt_icons += line + "\n";
-				}
-				else if (line.has_prefix("/etc/cron")){
-					txt_cron += line + "\n";
-				}
-			}
-
-			file_write(list_file_fonts, txt_fonts);
-			chmod(list_file_fonts, "a+rw");
-
-			file_write(list_file_icons, txt_icons);
-			chmod(list_file_icons, "a+rw");
-
-			file_write(list_file_themes, txt_themes);
-			chmod(list_file_themes, "a+rw");
-
-			file_write(list_file_cron, txt_cron);
-			chmod(list_file_cron, "a+rw");
-
-			App.read_distfiles();
 		}
+
+		string cmd = "dpkg-query -L %s > '%s'".printf(pkgs, escape_single_quote(list_file));
+
+		//log_debug("$ " + cmd);
+
+		string std_out, std_err;
+		exec_script_sync(cmd, out std_out, out std_err);
+
+		chmod(list_file, "a+rw");
+
+		if (!file_exists(list_file)){
+			log_error("%s: %s".printf(Messages.FILE_MISSING, list_file));
+			return;
+		}
+
+		string txt_fonts = "";
+		string txt_icons = "";
+		string txt_themes = "";
+		string txt_cron = "";
+		
+		foreach(string line in file_read(list_file).split("\n")){
+
+			if (line.has_prefix("/usr/share/fonts/")){
+				txt_fonts += line + "\n";
+			}
+			else if (line.has_prefix("/usr/share/themes/")){
+				txt_themes += line + "\n";
+			}
+			else if (line.has_prefix("/usr/share/icons/")){
+				txt_icons += line + "\n";
+			}
+			else if (line.has_prefix("/etc/cron")){
+				txt_cron += line + "\n";
+			}
+		}
+
+		file_write(list_file_fonts, txt_fonts);
+		chmod(list_file_fonts, "a+rw");
+
+		file_write(list_file_icons, txt_icons);
+		chmod(list_file_icons, "a+rw");
+
+		file_write(list_file_themes, txt_themes);
+		chmod(list_file_themes, "a+rw");
+
+		file_write(list_file_cron, txt_cron);
+		chmod(list_file_cron, "a+rw");
+
+		App.read_distfiles();
 
 		//log_debug("dist_files: %d".printf(App.dist_files.size));
 	}

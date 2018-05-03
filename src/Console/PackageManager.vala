@@ -79,7 +79,7 @@ public class PackageManager : BackupManager {
 		string std_out, std_err;
 		string cmd = "%s list installed".printf(distro.package_manager);
 		log_debug(cmd);
-		exec_sync(cmd, out std_out, out std_err);
+		exec_script_sync(cmd, out std_out, out std_err);
 
 		foreach(string line in std_out.split("\n")){
 
@@ -107,7 +107,7 @@ public class PackageManager : BackupManager {
 
 		cmd = "%s list available".printf(distro.package_manager);
 		log_debug(cmd);
-		exec_sync(cmd, out std_out, out std_err);
+		exec_script_sync(cmd, out std_out, out std_err);
 		
 		foreach(string line in std_out.split("\n")){
 			
@@ -143,7 +143,7 @@ public class PackageManager : BackupManager {
 
 			cmd = "dnf history userinstalled";
 			log_debug(cmd);
-			exec_sync(cmd, out std_out, out std_err);
+			exec_script_sync(cmd, out std_out, out std_err);
 		
 			foreach(string line in std_out.split("\n")){
 				
@@ -165,7 +165,7 @@ public class PackageManager : BackupManager {
 		log_debug("check_packages_pacman()");
 
 		string std_out, std_err;
-		exec_sync("pacman -Qq", out std_out, out std_err);
+		exec_script_sync("pacman -Qq", out std_out, out std_err);
 		
 		foreach(string line in std_out.split("\n")){
 			
@@ -181,7 +181,7 @@ public class PackageManager : BackupManager {
 			packages[name].is_available = true;
 		}
 
-		exec_sync("pacman -Ssq", out std_out, out std_err);
+		exec_script_sync("pacman -Ssq", out std_out, out std_err);
 		
 		foreach(string line in std_out.split("\n")){
 			
@@ -201,7 +201,7 @@ public class PackageManager : BackupManager {
         // explicitly installed (-t)
         // not required directly by other packages (-tt)
         
-		exec_sync("pacman -Qqett", out std_out, out std_err);
+		exec_script_sync("pacman -Qqett", out std_out, out std_err);
 
 		foreach(string line in std_out.split("\n")){
 			
@@ -237,7 +237,7 @@ public class PackageManager : BackupManager {
 		log_debug("check_packages_apt()");
 
 		string std_out, std_err;
-		exec_sync("dpkg --get-selections", out std_out, out std_err);
+		exec_script_sync("dpkg --get-selections", out std_out, out std_err);
 		
 		foreach(string line in std_out.split("\n")){
 			
@@ -277,7 +277,7 @@ public class PackageManager : BackupManager {
 			packages[name].is_foreign = is_foreign;
 		}
 
-		exec_sync("apt-cache pkgnames", out std_out, out std_err);
+		exec_script_sync("apt-cache pkgnames", out std_out, out std_err);
 		
 		foreach(string line in std_out.split("\n")){
 			
@@ -319,7 +319,7 @@ public class PackageManager : BackupManager {
 		string temp_file = get_temp_file_path();
 
 		string std_out, std_err;
-		exec_sync("aptitude search --disable-columns -F '%p|%v|%C|%M|%d' '?true'", out std_out, out std_err);
+		exec_script_sync("aptitude search --disable-columns -F '%p|%v|%C|%M|%d' '?true'", out std_out, out std_err);
 		file_write(temp_file, std_out);
 
 		try {
@@ -537,7 +537,7 @@ public class PackageManager : BackupManager {
 	public void add_files_from_package_to_list(string pkgname, Gee.ArrayList<string> list){
 
 		string std_out, std_err;
-		exec_sync("dpkg-query -L %s".printf(pkgname), out std_out, out std_err);
+		exec_script_sync("dpkg-query -L %s".printf(pkgname), out std_out, out std_err);
 
 		foreach(string line in std_out.split("\n")){
 			list.add(line);

@@ -47,7 +47,7 @@ public class FontManager : BackupManager {
 
 		string cmd = "fc-list : file family style";
 		string std_out, std_err;
-		exec_sync(cmd, out std_out, out std_err);
+		exec_script_sync(cmd, out std_out, out std_err);
 		
 		foreach (string line in std_out.split("\n")){
 			

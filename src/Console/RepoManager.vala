@@ -754,7 +754,7 @@ public class RepoManager : BackupManager {
 		bool use_n_switch = false;
 		
 		string std_out, std_err;
-		exec_sync("add-apt-repository --help", out std_out, out std_err);
+		exec_script_sync("add-apt-repository --help", out std_out, out std_err);
 
 		if (std_out.contains("-n,")){
 			use_n_switch = true;

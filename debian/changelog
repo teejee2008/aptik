@@ -1,3 +1,10 @@
+aptik (18.5.1) xenial; urgency=medium
+
+  * Fixed: Empty package list on systems having non-english locale
+
+ -- Tony George <tony.george.kol@gmail.com>  Thu, 03 May 2018 10:00:00 +0530
+
+
 aptik (18.5) xenial; urgency=medium
 
   * Initial release

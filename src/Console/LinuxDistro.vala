@@ -246,7 +246,7 @@ public class LinuxDistro : GLib.Object{
 		if (cmd.length == 0){ return; }
 		
 		string std_out, std_err;
-		exec_sync(cmd, out std_out, out std_err);
+		exec_script_sync(cmd, out std_out, out std_err);
 		package_arch = std_out.strip();;
 	}
 

@@ -426,6 +426,7 @@ public class AptikConsole : GLib.Object {
 
 		msg += "%s:\n".printf(_("Commands"));
 		msg += fmt.printf("--list-scripts", _("List scripts from backup"));
+		msg += fmt.printf("--exec-scripts", _("Execute scripts from backup"));
 		msg += "\n";
 		
 		msg += fmt2.printf(_("All Items"));
@@ -729,6 +730,8 @@ public class AptikConsole : GLib.Object {
 			case "--dump-scripts":
 			case "--dump-scripts-backup":
 			case "--list-scripts":
+			case "--exec-scripts":
+			case "--restore-scripts":
 			
 			case "--backup-all":
 			case "--restore-all":
@@ -1084,6 +1087,11 @@ public class AptikConsole : GLib.Object {
 		case "--list-scripts":
 			log_msg("basepath='%s'".printf(basepath));
 			return list_scripts();
+
+		case "--exec-scripts":
+		case "--restore-scripts":
+			log_msg("basepath='%s'".printf(basepath));
+			return execute_scripts();
 
 		// all ---------------------------------------------
 
@@ -2486,7 +2494,7 @@ public class AptikConsole : GLib.Object {
 					scripts_found = true;
 					
 					chmod(file, "a+x");
-					log_msg("%s: %s\n".printf(_("Executed"), file));
+					log_msg("%s: %s\n".printf(_("Execute"), file_basename(file)));
 					Posix.system("sh '%s'".printf(escape_single_quote(file)));
 					log_msg(string.nfill(70,'-'));
 				}

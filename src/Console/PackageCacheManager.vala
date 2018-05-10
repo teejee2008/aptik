@@ -217,7 +217,7 @@ public class PackageCacheManager : BackupManager {
 		string backup_cache = path_combine(files_path, distro.dist_type);
 
 		if (!dir_exists(backup_cache)){
-			log_error("%s: %s".printf(_("Directory not found"), backup_cache));
+			log_error("%s: %s".printf(Messages.DIR_MISSING, backup_cache));
 			return false;
 		}
 

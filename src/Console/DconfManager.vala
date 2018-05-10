@@ -174,10 +174,13 @@ public class DconfManager : BackupManager {
 			if (ok){
 				log_msg("%s: (%s) %s".printf(_("Saved"), user.name, backup_file.replace(basepath, "$basepath")));
 			}
-			else {
-				status = false;
-				log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath")));
-			}
+
+			// ignore errrors (dconf db may be empty for some users) ----------
+			
+			//else {
+			//	status = false;
+			//	log_error("%s: (%s) %s".printf(_("Error"), user.name, backup_file.replace(basepath, "$basepath")));
+			//}
 		}
 		else{
 			log_error(std_err);

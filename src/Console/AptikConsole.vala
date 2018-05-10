@@ -32,7 +32,7 @@ using TeeJee.Misc;
 
 public const string AppName = "Aptik";
 public const string AppShortName = "aptik";
-public const string AppVersion = "18.5.1";
+public const string AppVersion = "18.5.2";
 public const string AppAuthor = "Tony George";
 public const string AppAuthorEmail = "teejeetech@gmail.com";
 
@@ -421,6 +421,12 @@ public class AptikConsole : GLib.Object {
 		msg += "%s:\n".printf(_("Options"));
 		msg += fmt.printf("--add <path>", _("Add file or directory to backups"));
 		msg += "\n";
+
+		msg += fmt2.printf(Messages.TASK_SCRIPTS);
+
+		msg += "%s:\n".printf(_("Commands"));
+		msg += fmt.printf("--list-scripts", _("List scripts from backup"));
+		msg += "\n";
 		
 		msg += fmt2.printf(_("All Items"));
 
@@ -714,10 +720,16 @@ public class AptikConsole : GLib.Object {
 			case "--backup-cron":
 			case "--restore-cron":
 
+			case "--dump-files":
+			case "--dump-files-backup":
 			case "--list-files":
 			case "--backup-files":
 			case "--restore-files":
 
+			case "--dump-scripts":
+			case "--dump-scripts-backup":
+			case "--list-scripts":
+			
 			case "--backup-all":
 			case "--restore-all":
 			case "--remove-all":
@@ -1003,7 +1015,7 @@ public class AptikConsole : GLib.Object {
 			log_msg("basepath='%s'".printf(basepath));
 			return restore_mount_entries();
 
-		// dconf settings -------------------------------------------
+		// dconf -------------------------------------------
 
 		case "--dump-dconf":
 			return dump_dconf();
@@ -1022,7 +1034,7 @@ public class AptikConsole : GLib.Object {
 			log_msg("basepath='%s'".printf(basepath));
 			return restore_dconf_settings();
 
-		// cron tasks -------------------------------------------
+		// cron -------------------------------------------
 
 		case "--dump-cron":
 			return dump_cron();
@@ -1041,8 +1053,14 @@ public class AptikConsole : GLib.Object {
 			log_msg("basepath='%s'".printf(basepath));
 			return restore_cron_tasks();
 
-		// file tasks -------------------------------------------
+		// files -------------------------------------------
 
+		case "--dump-files":
+			return dump_files();
+
+		case "--dump-files-backup":
+			return dump_files_backup();
+			
 		case "--list-files":
 			log_msg("basepath='%s'".printf(basepath));
 			return list_files();
@@ -1054,7 +1072,19 @@ public class AptikConsole : GLib.Object {
 		case "--restore-files":
 			log_msg("basepath='%s'".printf(basepath));
 			return restore_files();
-			
+
+		// scripts -------------------------------------------
+
+		case "--dump-scripts":
+			return dump_scripts();
+
+		case "--dump-scripts-backup":
+			return dump_scripts_backup();
+
+		case "--list-scripts":
+			log_msg("basepath='%s'".printf(basepath));
+			return list_scripts();
+
 		// all ---------------------------------------------
 
 		case "--backup-all":
@@ -1251,7 +1281,7 @@ public class AptikConsole : GLib.Object {
 	public void check_basepath(){
 		
 		if (!dir_exists(basepath)){
-			log_error(_("Backup directory not found") + ": '%s'".printf(basepath));
+			log_msg("%s: %s".printf(Messages.DIR_MISSING, basepath));
 			exit(1);
 		}
 	}
@@ -2040,7 +2070,7 @@ public class AptikConsole : GLib.Object {
 		return status;
 	}
 
-	// mounts -----------------------------
+	// dconf -----------------------------
 
 	public bool dump_dconf(){
 		
@@ -2102,7 +2132,7 @@ public class AptikConsole : GLib.Object {
 		return status;
 	}
 
-	// cron tasks -----------------------------
+	// cron -----------------------------
 
 	public bool dump_cron(){
 		
@@ -2167,6 +2197,43 @@ public class AptikConsole : GLib.Object {
 
 	// files ----------------
 
+	public bool dump_files(){
+		
+		return dump_files_backup();
+	}
+
+	public bool dump_files_backup(){
+
+		//check_admin_access();
+
+		string txt = "";
+		
+		var files_path = path_combine(basepath, "files");
+
+		var data_path = path_combine(files_path, "data");
+
+		var files = dir_list_names(data_path, true);
+		
+		foreach(string f in files){
+
+			txt += "NAME='%s'".printf(file_basename(f));
+
+			string sz = format_file_size(file_get_size(f));
+
+			txt += ",DESC='%s'".printf(sz);
+			
+			txt += ",ACT='%s'".printf("0");
+			
+			txt += ",SENS='%s'".printf("1");
+			
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+
+		return true;
+	}
+
 	public bool list_files(){
 
 		//check_admin_access();
@@ -2193,7 +2260,7 @@ public class AptikConsole : GLib.Object {
 			}
 		}
 		else{
-			log_msg("%s: %s".printf(_("directory not found"), data_path));
+			log_msg("%s: %s".printf(Messages.DIR_MISSING, data_path));
 			log_msg(string.nfill(70,'-'));
 		}
 
@@ -2235,9 +2302,11 @@ public class AptikConsole : GLib.Object {
 			string tar_file_name = src_path.replace("/","_") + ".tar." + (use_xz ? "xz" : "gz");
 
 			UserHomeDataManager.zip_archive(src_path, data_path, tar_file_name);
+			
+			log_msg(string.nfill(70,'-'));
 		}
 		else{
-			log_msg("%s: %s".printf(_("directory not found"), data_path));
+			log_msg("%s: %s".printf(Messages.DIR_MISSING, data_path));
 			log_msg(string.nfill(70,'-'));
 		}
 		
@@ -2270,7 +2339,7 @@ public class AptikConsole : GLib.Object {
 			}
 		}
 		else{
-			log_msg("%s: %s".printf(_("directory not found"), data_path));
+			log_msg("%s: %s".printf(Messages.DIR_MISSING, data_path));
 			//log_msg(string.nfill(70,'-'));
 		}
 
@@ -2298,17 +2367,110 @@ public class AptikConsole : GLib.Object {
 
 	// scripts --------------
 
+	public bool dump_scripts(){
+		
+		return dump_scripts_backup();
+	}
+
+	public bool dump_scripts_backup(){
+
+		//check_admin_access();
+
+		string txt = "";
+		
+		var scripts_path = path_combine(basepath, "scripts");
+		
+		var files_path = path_combine(scripts_path, "files");
+
+		var files = dir_list_names(files_path, true);
+		
+		foreach(string f in files){
+
+			txt += "NAME='%s'".printf(file_basename(f));
+
+			string desc = "";
+			foreach(var line in file_read(f).split("\n")){
+				if (line.strip().has_prefix("# aptik-desc:")){
+					desc = line.split("# aptik-desc:")[1].strip();
+				}
+			}
+
+			txt += ",DESC='%s'".printf(desc);
+			
+			txt += ",ACT='%s'".printf("0");
+			
+			txt += ",SENS='%s'".printf("1");
+			
+			txt += "\n";
+		}
+		
+		log_msg(txt);
+
+		return true;
+	}
+
+	public bool list_scripts(){
+
+		//check_admin_access();
+		
+		var scripts_path = path_combine(basepath, "scripts");
+		
+		var files_path = path_combine(scripts_path, "files");
+
+		if (dir_exists(files_path)){
+
+			var files = dir_list_names(files_path, true);
+			
+			if (files.size > 0){
+
+				log_msg(string.nfill(70,'-'));
+				
+				foreach(var file in files){
+
+					string desc = "";
+					foreach(var line in file_read(file).split("\n")){
+						if (line.strip().has_prefix("# aptik-desc:")){
+							desc = line.split("# aptik-desc:")[1].strip();
+						}
+					}
+
+					string txt = file_basename(file);
+
+					txt += file_basename(file).has_suffix("~") ? " (%s)".printf(_("disabled")) : "";
+
+					if (desc.length > 0){
+						txt += " -- %s".printf(desc);
+					}
+
+					log_msg(txt);
+				}
+			}
+			else{
+				log_msg(_("No scripts found"));
+				log_msg(string.nfill(70,'-'));
+			}
+		}
+		else{
+			log_msg("%s: %s".printf(Messages.DIR_MISSING, files_path));
+			log_msg(string.nfill(70,'-'));
+		}
+
+		return true;
+	}
+	
 	public bool execute_scripts(){
 
-		var scripts_path = path_combine(basepath,"scripts");
+		var scripts_path = path_combine(basepath, "scripts");
+
+		var files_path = path_combine(scripts_path, "files");
 
 		log_msg(string.nfill(70,'-'));
 		log_msg("%s:".printf(_("Execute Post-Restore Scripts")));
 		log_msg(string.nfill(70,'-'));
 				
-		if (dir_exists(scripts_path)){
+		if (dir_exists(files_path)){
 
-			var files = dir_list_names(scripts_path, true);
+			var files = dir_list_names(files_path, true);
 			files.sort();
 
 			if (files.size > 0){
@@ -2330,23 +2492,23 @@ public class AptikConsole : GLib.Object {
 				}
 
 				if (!scripts_found){
-					log_msg(_("no scripts found"));
+					log_msg(_("No scripts found"));
 				}
 			}
 			else{
-				log_msg(_("no scripts found"));
+				log_msg(_("No scripts found"));
 				//log_msg(string.nfill(70,'-'));
 			}
 		}
 		else{
-			log_msg(_("scripts directory not found"));
+			log_msg("%s: %s".printf(Messages.DIR_MISSING, files_path));
 			//log_msg(string.nfill(70,'-'));
 		}
 
 		return true;
 	}
 
-	public bool copy_scripts_for_dist(){
+	public bool copy_scripts_for_dist2(){
 
 		string src = path_combine(file_parent(basepath), "scripts");
 		string dst = path_combine(basepath, "scripts");
@@ -2359,7 +2521,7 @@ public class AptikConsole : GLib.Object {
 		
 		Posix.system(cmd);
 
-		log_msg(_("copied scripts to distribution directory"));
+		log_msg(_("Copied scripts to distribution directory"));
 		log_msg(string.nfill(70,'-'));
 
 		return true;

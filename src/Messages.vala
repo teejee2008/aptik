@@ -40,7 +40,7 @@ public class Messages : GLib.Object {
 	public const string DIR_CREATE_ERROR = _("Failed to create directory");
 
 	public const string DIR_EXISTS = _("Directory exists");
-	public const string DIR_MISSING = _("Directory missing");
+	public const string DIR_MISSING = _("Directory not found");
 
 	public const string USER_ADD_OK = _("User added");
 	public const string USER_ADD_ERROR = _("Failed to add user");

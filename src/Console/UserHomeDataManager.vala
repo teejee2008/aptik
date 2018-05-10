@@ -779,13 +779,15 @@ public class UserHomeDataManager : BackupManager {
 			dir_create(dst_path);
 		}
 
+		string comp_option = tar_file.has_suffix(".xz") ? "J" : "z";
+		
 		string cmd = "";
 
 		//cmd += "tar xzvf '%s' --directory='%s'".printf(tar_file, dst_path);
 
 		cmd += "pv '%s'".printf(escape_single_quote(tar_file));
 			
-		cmd += " | tar xaf -";
+		cmd += " | tar x%sf -".printf(comp_option);
 		
 		cmd += " -C '%s'".printf(escape_single_quote(dst_path));
 

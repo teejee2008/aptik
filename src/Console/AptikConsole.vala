@@ -211,7 +211,7 @@ public class AptikConsole : GLib.Object {
 			}
 		}
 		else{
-			log_error("not_found: %s".printf(list_file));
+			log_debug("not_found: %s".printf(list_file));
 		}
 
 		return list;

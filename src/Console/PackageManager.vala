@@ -1505,10 +1505,11 @@ public class PackageManager : BackupManager {
 		string? line = stdin.read_line();
 		counter.stop();
 
-		line = (line != null) ? line.strip() : "";
+		line = (line != null) ? line.strip().down() : "";
 
 		if (line != "y"){
 			log_msg("\nExiting. You can run same command again to continue restore.");
+			stdout.flush();
 			exit(1);
 		}
 	}

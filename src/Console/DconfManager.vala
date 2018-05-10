@@ -141,6 +141,8 @@ public class DconfManager : BackupManager {
 
 		update_permissions_for_backup_files();
 
+		log_msg("");
+		
 		if (status){
 			log_msg(Messages.BACKUP_OK);
 		}
@@ -186,7 +188,7 @@ public class DconfManager : BackupManager {
 			log_error(std_err);
 		}
 
-		return status;
+		return true;
 	}
 
 	// restore ------------

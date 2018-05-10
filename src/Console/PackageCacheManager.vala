@@ -200,7 +200,7 @@ public class PackageCacheManager : BackupManager {
 		
 		update_permissions_for_backup_files();
 		
-		log_msg(string.nfill(70,'-'));
+		//log_msg(string.nfill(70,'-'));
 		log_msg(Messages.BACKUP_OK);
 
 		return (status == 0);

@@ -351,6 +351,8 @@ public class ThemeManager : BackupManager {
 
 		save_index(backup_path);
 
+		log_msg("");
+
 		log_msg(Messages.BACKUP_OK);
 
 		return false;

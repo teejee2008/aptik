@@ -357,9 +357,9 @@ public class RepoManager : BackupManager {
 					}
 				}
 				disabled = !has_lines;
-			}
 
-			txt += get_dump_line(name, desc, disabled);
+				txt += get_dump_line(name, desc, disabled);
+			}
 		}
 		
 		log_msg(txt);

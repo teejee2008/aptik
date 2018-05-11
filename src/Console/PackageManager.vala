@@ -566,7 +566,10 @@ public class PackageManager : BackupManager {
 			if (pkg.name.has_prefix("linux-signed")){ continue; }
 			if (pkg.name.has_prefix("linux-tools")){ continue; }
 			if (pkg.name.has_prefix("linux-image")){ continue; }
-
+			if (pkg.name.has_prefix("linux-gcp-tools")){ continue; }
+			if (pkg.name.has_prefix("linux-oem-tools")){ continue; }
+			if (pkg.name.has_prefix("linux-hwe-edge-tools")){ continue; }
+			
 			bool selected = true;
 
 			if (auto_installed_known && pkg.is_auto){ selected = false; }
@@ -930,7 +933,10 @@ public class PackageManager : BackupManager {
 			if (pkg.name.has_prefix("linux-signed")){ continue; }
 			if (pkg.name.has_prefix("linux-tools")){ continue; }
 			if (pkg.name.has_prefix("linux-image")){ continue; }
-
+			if (pkg.name.has_prefix("linux-gcp-tools")){ continue; }
+			if (pkg.name.has_prefix("linux-oem-tools")){ continue; }
+			if (pkg.name.has_prefix("linux-hwe-edge-tools")){ continue; }
+			
 			if (exclude_list.contains(pkg.name)){ continue; }
 
 			if (!include_list.contains(pkg.name)){

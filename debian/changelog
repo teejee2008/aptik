@@ -1,10 +1,17 @@
 aptik (18.5.2) xenial; urgency=medium
 
+  * Added commands: --exec-scripts, --list-scripts, --list-files
+
   * Fixed: Do not report error if user's crontab is empty
 
   * Fixed: Do not report error if user's dconf db has no changes
 
+  * Fixed: Install package xz on Arch Linux instead of xz-utils
+
+  * Fixed: Repos are sometimes listed twice
+
  -- Tony George <tony.george.kol@gmail.com>  Sat, 12 May 2018 10:00:00 +0530
+
  
 aptik (18.5.1) xenial; urgency=medium
 

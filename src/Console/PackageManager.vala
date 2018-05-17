@@ -319,7 +319,7 @@ public class PackageManager : BackupManager {
 		string temp_file = get_temp_file_path();
 
 		string std_out, std_err;
-		exec_script_sync("aptitude search --disable-columns -F '%p|%v|%C|%M|%d' '?true'", out std_out, out std_err);
+		exec_script_sync("aptitude search --disable-columns -F '%p|%v|%C|%M|%d|%s' '?true'", out std_out, out std_err);
 		file_write(temp_file, std_out);
 
 		try {
@@ -335,7 +335,7 @@ public class PackageManager : BackupManager {
 			while ((line = dis.read_line (null)) != null) {
 				
 				string[] arr = line.split("|");
-				if (arr.length != 5) { continue; }
+				if (arr.length != 6) { continue; }
 
 				string name = arr[0].strip();
 				
@@ -360,6 +360,11 @@ public class PackageManager : BackupManager {
 				string state = arr[2].strip();
 				string auto = arr[3].strip();
 				string desc = arr[4].strip();
+				string section = arr[5].strip();
+
+				if (section.contains("/")){
+					section = section.split("/")[1];
+				}
 				
 				if (!packages.has_key(name)){
 					packages[name] = new Package(name);
@@ -373,6 +378,7 @@ public class PackageManager : BackupManager {
 				pkg.is_auto = (auto == "A");
 				pkg.is_foreign = is_foreign;
 				pkg.version_installed = version;
+				pkg.section = section;
 			}
 
 			auto_installed_known = true; // is_automatic flag is available
@@ -557,6 +563,8 @@ public class PackageManager : BackupManager {
 		string txt = "";
 
 		log_msg("O:icon:%s".printf(exclude_icons.to_string()));
+
+		read_selections();
 		
 		foreach(var pkg in packages_sorted){
 
@@ -575,10 +583,14 @@ public class PackageManager : BackupManager {
 			if (auto_installed_known && pkg.is_auto){ selected = false; }
 			if (dist_installed_known && pkg.is_dist){ selected = false; }
 
-			if (!include_foreign && pkg.is_foreign){ selected = false; }
-			if (exclude_icons && pkg.name.contains("-icon-theme")){ selected = false; }
-			if (exclude_themes && pkg.name.contains("-theme") && !pkg.name.contains("-icon-theme")){ selected = false; }
-			if (exclude_fonts && pkg.name.has_prefix("fonts-")){ selected = false; }
+			if (!include_list.contains(pkg.name)){ 
+				if (!include_foreign && pkg.is_foreign){ selected = false; }
+				if (exclude_icons && pkg.name.contains("-icon-theme")){ selected = false; }
+				if (exclude_themes && pkg.name.contains("-theme") && !pkg.name.contains("-icon-theme")){ selected = false; }
+				if (exclude_fonts && pkg.name.has_prefix("fonts-")){ selected = false; }
+			}
+
+			if (exclude_list.contains(pkg.name)){ selected = false; }
 			
 			txt += "NAME='%s'".printf(pkg.name);
 			txt += ",ARCH='%s'".printf(pkg.arch);
@@ -591,6 +603,7 @@ public class PackageManager : BackupManager {
 			txt += ",USER='%s'".printf((pkg.is_user || (!pkg.is_dist && !pkg.is_auto)) ? "1" : "0");
 			txt += ",FOR='%s'".printf(pkg.is_foreign ? "1" : "0");
 			txt += ",MAN='%s'".printf(pkg.is_manual ? "1" : "0");
+			txt += ",SEC='%s'".printf(pkg.section);
 			txt += "\n";
 		}
 		
@@ -612,6 +625,8 @@ public class PackageManager : BackupManager {
 			log_error(msg);
 			return;
 		}
+
+		read_selections();
 		
 		string txt = "";
 
@@ -625,18 +640,25 @@ public class PackageManager : BackupManager {
 			string desc = line.split("#",2)[1].strip();
 			bool is_available = false;
 			bool is_installed = false;
-			
+			bool selected = true;
+			string section = "";
+
 			if (packages.has_key(name)){
 				is_available = true;
 				is_installed = packages[name].is_installed;
+				section = packages[name].section;
 			}
+
+			selected = is_available && !is_installed;
+			if (exclude_list.contains(name)){ selected = false; }
 
 			txt += "NAME='%s'".printf(name);
 			txt += ",DESC='%s'".printf(desc);
-			txt += ",ACT='%s'".printf((is_available && !is_installed) ? "1" : "0");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			txt += ",SENS='%s'".printf((is_available && !is_installed) ? "1" : "0");
 			txt += ",AVAIL='%s'".printf(is_available ? "1" : "0");
 			txt += ",INST='%s'".printf(is_installed ? "1" : "0");
+			txt += ",SEC='%s'".printf(section);
 			txt += "\n";
 		}
 		

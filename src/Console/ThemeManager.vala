@@ -263,10 +263,15 @@ public class ThemeManager : BackupManager {
 	public void dump_info(){
 
 		string txt = "";
+
+		read_selections();
 		
 		foreach(var theme in themes_sorted){
 			
 			if (!theme.is_installed){ continue; }
+
+			bool selected = !theme.is_dist;
+			if (exclude_list.contains(theme.name)){ selected = false; }
 			
 			txt += "NAME='%s',DESC='%s'".printf(theme.name, theme.subtypes_desc);
 			
@@ -274,7 +279,7 @@ public class ThemeManager : BackupManager {
 			
 			txt += ",DIST='%s'".printf(theme.is_dist ? "1" : "0");
 
-			txt += ",ACT='%s'".printf(theme.is_dist ? "0" : "1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf("1"); // always sensitive
 			
@@ -294,7 +299,12 @@ public class ThemeManager : BackupManager {
 
 		string txt = "";
 
+		read_selections();
+		
 		foreach(var theme in themes_sorted){
+
+			bool selected = !theme.is_installed;
+			if (exclude_list.contains(theme.name)){ selected = false; }
 			
 			txt += "NAME='%s'".printf(theme.name);
 
@@ -302,7 +312,7 @@ public class ThemeManager : BackupManager {
 			
 			txt += ",INST='%s'".printf(theme.is_installed ? "1" : "0");
 
-			txt += ",ACT='%s'".printf(theme.is_installed ? "0" : "1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf(theme.is_installed ? "0" : "1");
 			

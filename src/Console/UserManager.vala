@@ -271,16 +271,21 @@ public class UserManager : BackupManager {
 		string txt = "";
 
 		query_users(false);
+
+		read_selections();
 		
 		foreach(var user in users_sorted){
 			
 			if (user.is_system) { continue; }
+
+			bool selected = true;
+			if (exclude_list.contains(user.name)){ selected = false; }
 			
 			txt += "NAME='%s'".printf(user.name);
 			
 			txt += ",DESC='%s'".printf(user.full_name);
 
-			txt += ",ACT='%s'".printf("1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf("1");
 			
@@ -305,6 +310,8 @@ public class UserManager : BackupManager {
 		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.read_users_from_folder(files_path);
 
+		read_selections();
+		
 		foreach(var user in mgr.users_sorted){
 			
 			bool is_installed = false;
@@ -314,11 +321,14 @@ public class UserManager : BackupManager {
 				is_installed = true;
 			}
 
+			bool selected = true; // true, even if installed
+			if (exclude_list.contains(user.name)){ selected = false; }
+
 			txt += "NAME='%s'".printf(user.name);
 			
 			txt += ",DESC='%s'".printf(user.full_name);
 
-			txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
 

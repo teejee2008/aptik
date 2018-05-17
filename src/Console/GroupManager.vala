@@ -209,16 +209,21 @@ public class GroupManager : BackupManager {
 	public void dump_info(){
 
 		string txt = "";
+
+		read_selections();
 		
 		foreach(var group in groups_sorted){
 			
 			if (group.is_system) { continue; }
+
+			bool selected = true;
+			if (exclude_list.contains(group.name)){ selected = false; }
 			
 			txt += "NAME='%s'".printf(group.name);
 			
 			//txt += ",DESC='%s'".printf("");
 
-			txt += ",ACT='%s'".printf("1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf("1");
 			
@@ -242,6 +247,8 @@ public class GroupManager : BackupManager {
 		
 		var mgr = new GroupManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.read_groups_from_folder(files_path);
+
+		read_selections();
 	
 		foreach(var group in mgr.groups_sorted){
 			
@@ -252,11 +259,14 @@ public class GroupManager : BackupManager {
 				is_installed = true;
 			}
 
+			bool selected = true; // true even if installed
+			if (exclude_list.contains(group.name)){ selected = false; }
+
 			txt += "NAME='%s'".printf(group.name);
 			
 			//txt += ",DESC='%s'".printf("");
 
-			txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
 

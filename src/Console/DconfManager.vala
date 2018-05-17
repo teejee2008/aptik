@@ -42,16 +42,21 @@ public class DconfManager : BackupManager {
 
 		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.query_users(false);
+
+		read_selections();
 		
 		foreach(var user in mgr.users_sorted){
 			
 			if (user.is_system) { continue; }
+
+			bool selected = true;
+			if (exclude_list.contains(user.name)){ selected = false; }
 			
 			txt += "NAME='%s'".printf(user.name);
 			
 			txt += ",DESC='%s'".printf(user.full_name);
 
-			txt += ",ACT='%s'".printf("1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf("1");
 			
@@ -73,10 +78,15 @@ public class DconfManager : BackupManager {
 
 		var mgr = new UserManager(distro, current_user, basepath, dry_run, redist, apply_selections);
 		mgr.query_users(false);
+
+		read_selections();
 		
 		foreach(var user in mgr.users_sorted){
 			
 			if (user.is_system) { continue; }
+
+			bool selected = true;
+			if (exclude_list.contains(user.name)){ selected = false; }
 
 			string bkup_file = path_combine(files_path, "%s.dconf-settings".printf(user.name));
 
@@ -86,7 +96,7 @@ public class DconfManager : BackupManager {
 			
 			txt += ",DESC='%s'".printf(user.full_name);
 
-			txt += ",ACT='%s'".printf("1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf("1");
 			

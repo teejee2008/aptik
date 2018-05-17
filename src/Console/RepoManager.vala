@@ -273,16 +273,21 @@ public class RepoManager : BackupManager {
 	public void dump_info(){
 
 		string txt = "";
+
+		read_selections();
 		
 		foreach(var repo in repos_sorted){
 			
 			if (!repo.is_installed){ continue; }
+
+			bool selected = !repo.is_disabled;
+			if (exclude_list.contains(repo.name)){ selected = false; }
 			
 			txt += "NAME='%s'".printf(repo.name);
 
 			txt += ",DESC='%s'".printf(repo.description);
 			
-			txt += ",ACT='%s'".printf(repo.is_disabled ? "0" : "1");
+			txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 			txt += ",SENS='%s'".printf("1");
 			
@@ -303,6 +308,8 @@ public class RepoManager : BackupManager {
 		string txt = "";
 
 		var list = dir_list_names(files_path, true);
+
+		read_selections();
 		
 		foreach(string file_path in list) {
 
@@ -313,7 +320,7 @@ public class RepoManager : BackupManager {
 			string name = file_basename(file_path);
 			string desc = "";
 			bool disabled = false;
-			
+
 			if (name == "CODENAME"){ continue; }
 
 			if (name == "apt.keys"){ continue; }
@@ -377,13 +384,16 @@ public class RepoManager : BackupManager {
 			is_installed = repos[name].is_installed;
 		}
 
+		bool selected = !is_installed && !disabled;
+		if (exclude_list.contains(name)){ selected = false; }
+
 		txt += "NAME='%s'".printf(name);
 
 		txt += ",DESC='%s'".printf(desc);
 		
 		txt += ",INST='%s'".printf(is_installed ? "1" : "0");
 
-		txt += ",ACT='%s'".printf(is_installed ? "0" : "1");
+		txt += ",ACT='%s'".printf(selected ? "1" : "0");
 			
 		txt += ",SENS='%s'".printf(is_installed ? "0" : "1");
 

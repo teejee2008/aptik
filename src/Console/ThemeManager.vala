@@ -610,6 +610,11 @@ public class Theme : GLib.Object{
 			if (subtypes_desc.length > 0){ subtypes_desc += ","; }
 			subtypes_desc += dir_name.down();
 			break;
+		case "openbox-3":
+			subtypes.add(ThemeType.OPENBOX3);
+			if (subtypes_desc.length > 0){ subtypes_desc += ","; }
+			subtypes_desc += dir_name.down();
+			break;
 		case "actions":
 		case "apps":
 		case "categories":
@@ -761,6 +766,7 @@ public class Theme : GLib.Object{
 		map[ThemeType.UNITY] = "unity";
 		map[ThemeType.XFCENOTIFY40] = "xfce-notify-4.0";
 		map[ThemeType.XFWM4] = "xfwm4";
+		map[ThemeType.OPENBOX3] = "openbox-3";
 		theme_type_map = map;
 	}
 
@@ -854,7 +860,8 @@ public enum ThemeType {
 	METACITY1,
 	UNITY,
 	XFCENOTIFY40,
-	XFWM4
+	XFWM4,
+	OPENBOX3
 }
 
 

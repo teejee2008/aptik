@@ -216,6 +216,24 @@ public class PackageManager : BackupManager {
 			var pkg = packages[name];
 			pkg.is_user = true;
 		}
+
+		exec_script_sync("pacman -Qgq base base-devel", out std_out, out std_err);
+
+		foreach(string line in std_out.split("\n")){
+			
+			string[] arr = line.split(" ");
+			if (arr.length == 0) { continue; }
+			string name = arr[0].strip();
+
+			if (!packages.has_key(name)){
+				packages[name] = new Package(name);
+			}
+
+			var pkg = packages[name];
+			pkg.is_dist = true;
+		}
+
+		dist_installed_known = true;
 	}
 
 	private void check_packages_debian(){

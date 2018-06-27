@@ -415,6 +415,7 @@ public abstract class AsyncTask : GLib.Object{
 	}
 
 	public string stat_time_remaining{
+		
 		owned get{
 			if (progress > 0){
 				long elapsed = (long) timer_elapsed(timer);

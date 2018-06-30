@@ -238,17 +238,6 @@ namespace TeeJee.FileSystem{
 		return true;
 	}
 
-	public bool file_shred(string file_path){
-
-		/* Check and delete file */
-
-		var file = File.new_for_path (file_path);
-		if (file.query_exists ()) {
-			Posix.system("shred -u '%s'".printf(escape_single_quote(file_path)));
-		}
-		return true;
-	}
-
 	public int64 file_line_count (string file_path){
 		/* Count number of lines in text file */
 		string cmd = "wc -l '%s'".printf(escape_single_quote(file_path));
@@ -374,30 +363,6 @@ namespace TeeJee.FileSystem{
 		}
 	}
 
-	public bool file_gzip (string src_file){
-		
-		string dst_file = src_file + ".gz";
-		file_delete(dst_file);
-		
-		string cmd = "gzip '%s'".printf(escape_single_quote(src_file));
-		string std_out, std_err;
-		exec_sync(cmd, out std_out, out std_err);
-		
-		return file_exists(dst_file);
-	}
-
-	public bool file_gunzip (string src_file){
-		
-		string dst_file = src_file;
-		file_delete(dst_file);
-		
-		string cmd = "gunzip '%s'".printf(escape_single_quote(src_file));
-		string std_out, std_err;
-		exec_sync(cmd, out std_out, out std_err);
-		
-		return file_exists(dst_file);
-	}
-
 	public string file_checksum(string file_path, GLib.ChecksumType checksum_type = ChecksumType.MD5){
 		
 		var checksum = new Checksum (ChecksumType.MD5);
@@ -515,77 +480,6 @@ namespace TeeJee.FileSystem{
 		return (status == 0);
 	}
 
-	public bool dir_move_to_trash (string dir_path){
-		return file_move_to_trash(dir_path);
-	}
-	
-	public bool dir_is_empty (string dir_path){
-
-		/* Check if directory is empty */
-
-		try{
-			bool is_empty = true;
-			var dir = File.parse_name (dir_path);
-			if (dir.query_exists()) {
-				FileInfo info;
-				var enu = dir.enumerate_children ("%s".printf(FileAttribute.STANDARD_NAME), 0);
-				while ((info = enu.next_file()) != null) {
-					is_empty = false;
-					break;
-				}
-			}
-			return is_empty;
-		}
-		catch (Error e) {
-			log_error (e.message);
-			return false;
-		}
-	}
-
-	public bool filesystem_supports_hardlinks(string path, out bool is_readonly){
-		bool supports_hardlinks = false;
-		is_readonly = false;
-		
-		var test_file = path_combine(path, random_string() + "~");
-		
-		if (file_write(test_file,"")){
-			
-			var test_file2 = path_combine(path, random_string() + "~");
-
-			var cmd = "ln '%s' '%s'".printf(
-				escape_single_quote(test_file),
-				escape_single_quote(test_file2));
-				
-			log_debug(cmd);
-
-			int status = exec_sync(cmd, null, null);
-
-			cmd = "stat --printf '%%h' '%s'".printf(
-				escape_single_quote(test_file));
-
-			log_debug(cmd);
-			
-			string std_out, std_err;
-			status = exec_sync(cmd, out std_out, out std_err);
-			log_debug("stdout: %s".printf(std_out));
-			
-			int64 count = 0;
-			if (int64.try_parse(std_out, out count)){
-				if (count > 1){
-					supports_hardlinks = true;
-				}
-			}
-			
-			file_delete(test_file2); // delete if exists
-			file_delete(test_file);
-		}
-		else{
-			is_readonly = true;
-		}
-
-		return supports_hardlinks;
-	}
-
 	public Gee.ArrayList<string> dir_list_names(string path, bool full_path){
 		
 		var list = new Gee.ArrayList<string>();
@@ -669,69 +563,6 @@ namespace TeeJee.FileSystem{
 		return list;
 	}
 	
-	public bool dir_tar (string src_dir, string tar_file, bool recursion = true){
-		if (dir_exists(src_dir)) {
-			
-			if (file_exists(tar_file)){
-				file_delete(tar_file);
-			}
-
-			var src_parent = file_parent(src_dir);
-			var src_name = file_basename(src_dir);
-			
-			string cmd = "tar cvf '%s' --overwrite --%srecursion -C '%s' '%s'\n".printf(
-				escape_single_quote(tar_file),
-				(recursion ? "" : "no-"),
-				escape_single_quote(src_parent),
-				escape_single_quote(src_name));
-
-			log_debug(cmd);
-			
-			string stdout, stderr;
-			int status = exec_script_sync(cmd, out stdout, out stderr);
-			if (status == 0){
-				return true;
-			}
-			else{
-				log_msg(stderr);
-			}
-		}
-		else{
-			log_error(_("Dir not found") + ": %s".printf(src_dir));
-		}
-
-		return false;
-	}
-
-	public bool dir_untar (string tar_file, string dst_dir){
-		if (file_exists(tar_file)) {
-
-			if (!dir_exists(dst_dir)){
-				dir_create(dst_dir);
-			}
-			
-			string cmd = "tar xvf '%s' --overwrite --same-permissions -C '%s'\n".printf(
-				escape_single_quote(tar_file),
-				escape_single_quote(dst_dir));
-
-			log_debug(cmd);
-			
-			string stdout, stderr;
-			int status = exec_script_sync(cmd, out stdout, out stderr);
-			if (status == 0){
-				return true;
-			}
-			else{
-				log_msg(stderr);
-			}
-		}
-		else{
-			log_error(_("File not found") + ": %s".printf(tar_file));
-		}
-		
-		return false;
-	}
-
 	public bool chown(string file_path, string username, string group){
 
 		// Note: chown is recursive, chmod is not. use chmod_dir_contents() for recursive chmod()
@@ -773,64 +604,9 @@ namespace TeeJee.FileSystem{
 		return (status == 0);
 	}
 	
-	// dir info -------------------
-	
-	// dep: find wc    TODO: rewrite
-	public long dir_count(string path){
-
-		/* Return total count of files and directories */
-
-		string cmd = "";
-		string std_out;
-		string std_err;
-		int ret_val;
-
-		cmd = "find '%s' | wc -l".printf(escape_single_quote(path));
-		ret_val = exec_script_sync(cmd, out std_out, out std_err);
-		return long.parse(std_out);
-	}
-
-	// dep: du
-	public long dir_size(string path){
-
-		/* Returns size of files and directories in KB*/
-
-		string cmd = "du -s -b '%s'".printf(escape_single_quote(path));
-		string std_out, std_err;
-		exec_sync(cmd, out std_out, out std_err);
-		return long.parse(std_out.split("\t")[0]);
-	}
-
-	// dep: du
-	public long dir_size_kb(string path){
-
-		/* Returns size of files and directories in KB*/
-
-		return (long)(dir_size(path) / 1024.0);
-	}
-
-	// hashing -----------
-	
-	public string hash_md5(string path){
-		Checksum checksum = new Checksum (ChecksumType.MD5);
-		FileStream stream = FileStream.open (path, "rb");
-
-		uint8 fbuf[100];
-		size_t size;
-		while ((size = stream.read (fbuf)) > 0){
-		  checksum.update (fbuf, size);
-		}
-		
-		unowned string digest = checksum.get_string();
-
-		return digest;
-	}
-
 	// misc --------------------
 
-	public string format_file_size (
-		uint64 size, bool binary_units = false,
-		string unit = "", bool show_units = true, int decimals = 1){
+	public string format_file_size (uint64 size, bool binary_units = false, string unit = "", bool show_units = true, int decimals = 1){
 			
 		int64 unit_k = binary_units ? 1024 : 1000;
 		int64 unit_m = binary_units ? 1024 * unit_k : 1000 * unit_k;
@@ -875,43 +651,5 @@ namespace TeeJee.FileSystem{
 
 	public string escape_single_quote(string file_path){
 		return file_path.replace("'","'\\''");
-	}
-
-	// dep: realpath
-	public string resolve_relative_path (string filePath){
-
-		/* Resolve the full path of given file using 'realpath' command */
-
-		string filePath2 = filePath;
-		if (filePath2.has_prefix ("~")){
-			filePath2 = Environment.get_home_dir () + "/" + filePath2[2:filePath2.length];
-		}
-
-		try {
-			string output = "";
-			string cmd = "realpath '%s'".printf(escape_single_quote(filePath2));
-			Process.spawn_command_line_sync(cmd, out output);
-			output = output.strip ();
-			if (FileUtils.test(output, GLib.FileTest.EXISTS)){
-				return output;
-			}
-		}
-		catch(Error e){
-	        log_error (e.message);
-	    }
-
-	    return filePath2;
-	}
-
-	public int rsync (string sourceDirectory, string destDirectory, bool updateExisting, bool deleteExtra){
-
-		/* Sync files with rsync */
-
-		string cmd = "rsync -avh";
-		cmd += updateExisting ? "" : " --ignore-existing";
-		cmd += deleteExtra ? " --delete" : "";
-		cmd += " '%s'".printf(escape_single_quote(sourceDirectory) + "//");
-		cmd += " '%s'".printf(escape_single_quote(destDirectory));
-		return exec_sync (cmd, null, null);
 	}
 }

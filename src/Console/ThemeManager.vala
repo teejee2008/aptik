@@ -771,6 +771,7 @@ public class Theme : GLib.Object{
 	}
 
 	public static void fix_nested_folders(){
+		
 		fix_nested_folders_in_path("/usr/share/themes");
 		fix_nested_folders_in_path("/usr/share/icons");
 		fix_nested_folders_in_path("/root/.themes");

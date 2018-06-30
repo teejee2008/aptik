@@ -17,7 +17,7 @@ all: aptik-console
 
 aptik-console:
 
-	valac -X -D'GETTEXT_PACKAGE="${app_name}"' --Xcc="-lm" --thread \
+	valac -X -D'GETTEXT_PACKAGE="${app_name}"' --Xcc="-lm" --Xcc="-Os" --thread \
 		*.vala Console/*.vala Utility/Console/*.vala \
 		-o ${app_name} \
 		--pkg glib-2.0 \

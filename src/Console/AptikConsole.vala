@@ -250,12 +250,6 @@ public class AptikConsole : GLib.Object {
 		}
 	}
 
-	public void print_backup_path(){
-		
-		log_msg("Backup path: %s".printf(basepath));
-		log_msg(string.nfill(70,'-'));
-	}
-
 	public string help_message() {
 
 		string fmt = "  %-30s %s\n";
@@ -644,7 +638,8 @@ public class AptikConsole : GLib.Object {
 			case "--backup-repos":
 			case "--restore-repos":
 			case "--import-missing-keys":
-			
+
+			case "--list-available":
 			case "--list-installed":
 			case "--list-installed-dist":
 			case "--list-installed-user":
@@ -821,6 +816,9 @@ public class AptikConsole : GLib.Object {
 			
 		case "--list-installed":
 			return list_packages_installed();
+
+		case "--list-available":
+			return list_packages_available();
 			
 		case "--list-installed-dist":
 			return list_packages_installed_dist();

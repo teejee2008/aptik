@@ -32,7 +32,8 @@ using TeeJee.Misc;
 
 public const string AppName = "Aptik";
 public const string AppShortName = "aptik";
-public const string AppVersion = "18.6";
+public const string AppVersion = "18.7";
+public const string AppVersionCLI = "18.07.0";
 public const string AppAuthor = "Tony George";
 public const string AppAuthorEmail = "teejeetech@gmail.com";
 
@@ -54,6 +55,12 @@ public class AptikConsole : GLib.Object {
 	public bool use_xz = false;
 	public bool redist = false;
 	public bool apply_selections = false;
+
+	public string ppa_name = "";
+	public string ppa_uri = "";
+	public string ppa_arch = "";
+	public string ppa_package = "";
+	public string ppa_package_type = "";
 	
 	public User current_user;
 	public PackageManager? mgr_pkg = null;
@@ -509,6 +516,26 @@ public class AptikConsole : GLib.Object {
 				password = args[k];
 				break;
 
+			case "--ppa":
+				k++;
+				ppa_name = args[k];
+				break;
+
+			case "--package":
+				k++;
+				ppa_package = args[k];
+				break;
+
+			case "--package-type":
+				k++;
+				ppa_package_type = args[k];
+				break;
+
+			case "--arch":
+				k++;
+				ppa_arch = args[k];
+				break;
+
 			case "--add":
 				k++;
 				add_path = args[k];
@@ -733,7 +760,10 @@ public class AptikConsole : GLib.Object {
 			case "--remove-all":
 			case "--sysinfo":
 			case "--version":
-
+			case "--version-cli":
+			case "--download-deb":
+			case "--unpack-ppa-theme":
+			case "--unpack-pdo-theme":
 				command = args[k].down();
 				break;
 				
@@ -1108,6 +1138,8 @@ public class AptikConsole : GLib.Object {
 			log_msg("basepath='%s'".printf(basepath));
 			return remove_all();
 
+		// other -----------------------------
+		
 		case "--sysinfo":
 			distro.print_system_info();
 			return true;
@@ -1115,6 +1147,22 @@ public class AptikConsole : GLib.Object {
 		case "--version":
 			log_msg(AppVersion);
 			return true;
+
+		case "--version-cli":
+			log_msg(AppVersionCLI);
+			return true;
+
+		case "--download-deb":
+			download_package_from_ppa();
+			break;
+			
+		case "--unpack-ppa-theme":
+			string deb_file = download_package_from_ppa();
+			return unpack_theme_package(deb_file);
+
+		case "--unpack-pdo-theme":
+			string deb_file = download_package_from_pkgs_dot_org();
+			return unpack_theme_package(deb_file);
 		}
 
 		return true;
@@ -2532,7 +2580,386 @@ public class AptikConsole : GLib.Object {
 
 		return true;
 	}
-	
+
+	// ppa helper -------------
+
+	public string download_package_from_ppa(){
+
+		if (ppa_name.length == 0){
+			log_error(_("Launchpad PPA name not specified"));
+			exit(1);
+		}
+
+		if (ppa_package.length == 0){
+			log_error(_("Package name not specified"));
+			exit(1);
+		}
+
+		if (ppa_arch.length == 0){
+			ppa_arch = distro.package_arch;
+		}
+
+		if (ppa_arch.length == 0){
+			log_error(_("Package architecture not specified"));
+			exit(1);
+		}
+
+		if (ppa_name.split("/").length != 2){
+			log_error(_("Invalid PPA name. Expected format: <user-name>/<ppa-name>"));
+			exit(1);
+		}
+
+		string[] ppa_parts = ppa_name.split("/");
+
+		string page_uri = "https://launchpad.net/~%s/+archive/ubuntu/%s/+packages".printf(ppa_parts[0],ppa_parts[1]);
+
+		page_uri += "?field.name_filter=%s&field.status_filter=published".printf(ppa_package);
+
+		// fetch page -------------------------------------------------------------------------
+		
+		string page_path = get_temp_file_path(false);
+		
+		string cmd = "wget -O '%s' '%s'".printf(escape_single_quote(page_path), escape_single_quote(page_uri));
+
+		log_debug("Fetching: " + page_path);
+		
+		//string std_out, std_err;
+		Posix.system(cmd);
+
+		if (file_exists(page_path)){
+			log_debug("Found: " + page_path);
+		}
+		else{
+			log_error("Failed to download: %s".printf(page_path));
+			exit(1);
+		}
+
+		// parse page -------------------------------------------------------------------------
+		
+		string html = file_read(page_path);
+
+		//https://launchpad.net/~inkscape.dev/+archive/ubuntu/stable/+sourcepub/8878361/+listing-archive-extra
+		var match = regex_match("""(\+sourcepub\/[0-9]+\/\+listing-archive-extra)""", html);
+		 
+		if (match == null){
+			log_error("Could not determine URI");
+			exit(1);
+		}
+
+		string uri2 = match.fetch(1);
+
+		page_uri = "https://launchpad.net/~%s/+archive/ubuntu/%s/%s".printf(ppa_parts[0], ppa_parts[1], uri2);
+
+		//log_msg("Matched: " + uri2);
+		//log_msg("Page URI: " + page_uri);
+
+		// fetch page -------------------------------------------------------------------------
+
+		page_path = get_temp_file_path(false);
+
+		cmd = "wget -O '%s' '%s'".printf(escape_single_quote(page_path), escape_single_quote(page_uri));
+
+		log_debug("Fetching: " + page_path);
+		
+		Posix.system(cmd);
+
+		if (file_exists(page_path)){
+			log_debug("Found: " + page_path);
+		}
+		else{
+			log_error("Failed to download: %s".printf(page_path));
+			exit(1);
+		}
+
+		// parse page -------------------------------------------------------------------------
+		
+		html = file_read(page_path);
+
+		string deb_uri = "";
+		
+		//https://launchpad.net/~inkscape.dev/+archive/ubuntu/stable/+files/inkscape_0.92.3+68~ubuntu18.04.1_amd64.deb
+		//(\+files\/[0-9A-Za-z+\-_.~]+_amd64.deb)
+		match = regex_match("""(\+files\/[0-9A-Za-z+\-_.~]+_""" + ppa_arch.down() + """.deb)""", html);
+
+		if (match != null){
+
+			uri2 = match.fetch(1);
+
+			deb_uri = "https://launchpad.net/~%s/+archive/ubuntu/%s/%s".printf(ppa_parts[0], ppa_parts[1], uri2);
+		}
+		else{
+
+			//https://launchpad.net/~inkscape.dev/+archive/ubuntu/stable/+files/inkscape_0.92.3+68~ubuntu18.04.1_all.deb
+			//(\+files\/[0-9A-Za-z+\-_.~]+_all.deb)
+			match = regex_match("""(\+files\/[0-9A-Za-z+\-_.~]+_""" + "all" + """.deb)""", html);
+
+			if (match != null){
+
+				uri2 = match.fetch(1);
+
+				deb_uri = "https://launchpad.net/~%s/+archive/ubuntu/%s/%s".printf(ppa_parts[0], ppa_parts[1], uri2);
+			}
+		
+		}
+		
+		if (deb_uri.length == 0){
+			log_error("Could not determine package URI");
+			exit(1);
+		}
+
+		uri2 = match.fetch(1);
+
+		deb_uri = "https://launchpad.net/~%s/+archive/ubuntu/%s/%s".printf(ppa_parts[0], ppa_parts[1], uri2);
+
+		//log_msg("Matched: " + uri2);
+		//log_msg("DEB URI: " + deb_uri);
+
+		// fetch DEB -------------------------------------------------------------------
+		
+		string file_name = file_basename(deb_uri);
+		string deb_path = "/tmp/" + file_name;
+
+		cmd = "wget -O '%s' '%s'".printf(escape_single_quote(deb_path), escape_single_quote(deb_uri));
+
+		log_debug("Fetching: " + deb_path);
+		
+		Posix.system(cmd);
+
+		if (file_exists(deb_path)){
+			//log_debug("Found: " + deb_path);
+			log_msg("DEB_PATH:" + deb_path);
+			return deb_path;
+		}
+		else{
+			log_error("Failed to download: %s".printf(deb_path));
+			exit(1);
+		}
+
+		return "";
+	}
+
+	public string download_package_from_pkgs_dot_org(){
+
+		if (ppa_package.length == 0){
+			log_error(_("Package name not specified"));
+			exit(1);
+		}
+
+		if (ppa_package_type.length == 0){
+			log_error(_("Package type not specified"));
+			exit(1);
+		}
+
+		if (ppa_arch.length == 0){
+			ppa_arch = distro.package_arch;
+		}
+
+		if (ppa_arch.length == 0){
+			log_error(_("Package architecture not specified"));
+			exit(1);
+		}
+
+		string page_uri = "https://pkgs.org/download/%s".printf(ppa_package);
+
+		// fetch page -------------------------------------------------------------------------
+		
+		string page_path = get_temp_file_path(false);
+		
+		string cmd = "wget -O '%s' '%s'".printf(escape_single_quote(page_path), escape_single_quote(page_uri));
+
+		/*
+		 * the page on pkgs.org lists all files inside the icon theme package
+		 * this makes the page very large (> 5 MB). we will only fetch the first 100 KB.
+		* */
+		
+		log_msg("\nFetching: %s\n".printf(page_uri));
+		
+		//string std_out, std_err;
+		Posix.system(cmd);
+
+		if (file_exists(page_path)){
+			log_msg("\nSaved: %s\n".printf(page_path));
+		}
+		else{
+			log_error("Failed to download: %s".printf(page_path));
+			exit(1);
+		}
+
+		// parse page -------------------------------------------------------------------------
+		
+		string html = file_read(page_path);
+
+		//https://rosa.pkgs.org/2016.1/rosa-contrib-updates-i586/arrongin-rospo-1.0-2-rosa2016.1.noarch.rpm.html
+		string pattern = """href="(https*:\/\/(.*)%s(.*)%s""".printf(ppa_package, ppa_package_type.replace(".","""\."""));
+		
+		var match = regex_match(pattern + """\.html)"""", html);
+		 
+		if (match == null){
+			log_error("Could not determine page URI");
+			exit(1);
+		}
+
+		page_uri = match.fetch(1);
+
+		log_msg("\nMatched: " + page_uri);
+
+		// fetch page -------------------------------------------------------------------------
+
+		page_path = get_temp_file_path(false);
+
+		cmd = "wget -O '%s' '%s'".printf(escape_single_quote(page_path), escape_single_quote(page_uri));
+
+		log_msg("\nFetching: %s\n".printf(page_uri));
+		
+		Posix.system(cmd);
+
+		if (file_exists(page_path)){
+			log_msg("\nSaved: %s\n".printf(page_path));
+		}
+		else{
+			log_error("Failed to download: %s".printf(page_path));
+			exit(1);
+		}
+
+		// parse page -------------------------------------------------------------------------
+		
+		html = file_read(page_path);
+
+		string deb_uri = "";
+		
+		//https://rosa.pkgs.org/2016.1/rosa-contrib-updates-i586/arrongin-rospo-1.0-2-rosa2016.1.noarch.rpm.html
+		match = match = regex_match(pattern + """)"""", html);
+
+		if (match != null){
+
+			deb_uri = match.fetch(1);
+		}
+		
+		if (deb_uri.length == 0){
+			log_error("Could not determine package URI");
+			exit(1);
+		}
+
+		log_msg("Matched: " + deb_uri);
+
+		// fetch DEB -------------------------------------------------------------------
+		
+		string file_name = file_basename(deb_uri);
+		string deb_path = "/tmp/" + file_name;
+
+		cmd = "wget -O '%s' '%s'".printf(escape_single_quote(deb_path), escape_single_quote(deb_uri));
+
+		log_msg("Fetching: " + deb_path);
+		
+		Posix.system(cmd);
+
+		if (file_exists(deb_path)){
+			//log_debug("Found: " + deb_path);
+			log_msg("DEB_PATH:" + deb_path);
+			return deb_path;
+		}
+		else{
+			log_error("Failed to download: %s".printf(deb_path));
+			exit(1);
+		}
+
+		return "";
+	}
+
+	public bool unpack_theme_package(string pkg_file_path){
+
+		if ((pkg_file_path.length == 0) || !file_exists(pkg_file_path)){ return false; }
+
+		string tempdir = create_temp_subdir();
+		Environment.set_current_dir(tempdir);
+
+		log_debug("pwd: " + Environment.get_current_dir());
+
+		string cmd = "";
+		string extracted1 = path_combine(tempdir, "extracted1");
+		string extracted2 = path_combine(tempdir, "extracted2");
+		string theme_tempdir = "";
+		
+		if (pkg_file_path.has_suffix(".rpm") || pkg_file_path.has_suffix(".deb")){
+
+			cmd = "7z e '%s' -oextracted1".printf(escape_single_quote(pkg_file_path));
+			Posix.system(cmd);
+
+			var list = dir_list_names(extracted1, true);
+			
+			string data_file = "";
+
+			if (pkg_file_path.has_suffix(".rpm")){
+
+				foreach(string file_path in list){
+					if (file_basename(file_path).has_suffix("cpio")){
+						data_file = file_path;
+						log_msg("FOUND: %s".printf(data_file));
+						break;
+					}
+				}
+
+				if (data_file.length == 0){
+					log_error("FILE_NOT_FOUND: %s/*.cpio".printf(extracted1));
+					exit(1);
+				}
+
+				cmd = "7z x '%s' -oextracted2".printf(escape_single_quote(data_file));
+				Posix.system(cmd);
+
+				theme_tempdir = path_combine(tempdir, "extracted2");
+			}
+			else if (pkg_file_path.has_suffix(".deb")){
+
+				foreach(string file_path in list){
+					if (file_basename(file_path).has_prefix("data")){
+						data_file = file_path;
+						log_msg("FOUND: %s".printf(data_file));
+						break;
+					}
+				}
+
+				if (data_file.length == 0){
+					log_error("FILE_NOT_FOUND: %s/data.*".printf(extracted1));
+					exit(1);
+				}
+
+				cmd = "tar -xf '%s'".printf(escape_single_quote(data_file));
+				Posix.system(cmd);
+
+				theme_tempdir = tempdir;
+			}
+		}
+		else if (pkg_file_path.has_suffix(".tar.xz") || pkg_file_path.has_suffix(".tar.gz")){
+
+			cmd = "tar -xf '%s'".printf(escape_single_quote(pkg_file_path));
+			Posix.system(cmd);
+
+			theme_tempdir = tempdir;
+		}
+
+		if (theme_tempdir.length > 0){
+
+			string theme_dir = path_combine(theme_tempdir, "/usr/share/themes");
+
+			if (file_exists(theme_dir)){
+				cmd = "rsync -avh '%s/' ~/.themes/".printf(escape_single_quote(theme_dir));
+				Posix.system(cmd);
+				return true;
+			}
+
+			theme_dir = path_combine(theme_tempdir, "/usr/share/icons");
+
+			if (file_exists(theme_dir)){
+				cmd = "rsync -avh '%s/' ~/.icons/".printf(escape_single_quote(theme_dir));
+				Posix.system(cmd);
+				return true;
+			}
+		}
+		
+		return false;
+	}
+
 	// common ---------------
 	
 	public void copy_binary(){
@@ -2616,6 +3043,7 @@ public class AptikConsole : GLib.Object {
         //Unix.signal_add(Posix.Signal.INT,  () => { log_msg("Received interrupt signal"); exit(0); return false; });
         //Unix.signal_add(Posix.Signal.TERM, () => { log_msg("Received interrupt signal"); exit(0); return false; });
 	}
+
 }
 
 public class BackupConfig : GLib.Object{

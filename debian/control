@@ -10,7 +10,7 @@ Homepage: http://teejeetech.blogspot.in/
 
 Package: aptik
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, apt, aptitude, apt-transport-https, pv
+Depends: ${shlibs:Depends}, ${misc:Depends}, apt, aptitude, apt-transport-https, dconf-cli, pv, wget, p7zip, p7zip-full
 #Recommends:
 #Replaces: aptik
 Description: Aptik system migration utility

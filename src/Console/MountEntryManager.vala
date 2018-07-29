@@ -72,7 +72,7 @@ public class MountEntryManager : BackupManager {
 		string tab_file = "/etc/crypttab";
 
 		if (!file_exists(tab_file)){
-			log_error("%s: %s".printf(Messages.FILE_MISSING, tab_file));
+			log_msg("%s: %s".printf(Messages.FILE_MISSING, tab_file));
 			return false;
 		}
 		
@@ -244,7 +244,9 @@ public class MountEntryManager : BackupManager {
 	}
 
 	public static bool save_crypttab_file(Gee.ArrayList<CryptTabEntry> list){
-		
+
+		if (list.size == 0){ return true; }
+
 		string txt = "# <target name> <source device> <key file> <options>\n\n";
 
 		var tmplist = new Gee.ArrayList<Gee.ArrayList<string>>();
@@ -267,7 +269,7 @@ public class MountEntryManager : BackupManager {
 		var t = Time.local (time_t ());
 
 		string file_path = "/etc/crypttab";
-		
+
 		string cmd = "mv -vf %s %s.bkup.%s".printf(file_path, file_path, t.format("%Y-%d-%m_%H-%M-%S"));
 		Posix.system(cmd);
 		

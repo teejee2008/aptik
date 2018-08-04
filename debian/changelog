@@ -1,8 +1,8 @@
-aptik (18.7) bionic; urgency=medium
+aptik (18.8) bionic; urgency=medium
 
   * Added functions for Aptik Theme Manager
 
- -- Tony George <tony.george.kol@gmail.com>  Sun, 29 Jul 2018 10:00:00 +0530
+ -- Tony George <tony.george.kol@gmail.com>  Sat, 04 Aug 2018 10:00:00 +0530
 
 
 aptik (18.6) xenial; urgency=medium

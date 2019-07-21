@@ -1,3 +1,9 @@
+> ### The free version of Aptik is more than a year old and is no longer maintained. There may be issues when restoring to newer distributions.
+> 
+> ### A paid version is available with more features.
+> ### https://teejeetech.in/2019/07/14/aptik-v19-07/
+
+
 ## Aptik
 
 Aptik is a tool for **migrating settings and data** from one Linux installation to another. It can be used while re-installing the operating system, and when moving to next release of a Linux distribution.
@@ -37,20 +43,3 @@ PPA and DEB files are available for Ubuntu and Ubuntu-based distributions. Binar
 
 **[Installation](https://github.com/teejee2008/aptik/wiki/Installation)**
 
-## Donate
-
-*Aptik* is a non-commercial application. I work on it during my free time based on my requirements and interest. If you wish to support this project, you can make a donation for $10 or more via PayPal. Your contributions will help keep the project alive and support future development.
-
-**PayPal** ~ If you find this application useful and wish to say thanks, you can buy me a coffee by making a one-time donation with Paypal. 
-
-[![](https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg)](https://www.paypal.com/cgi-bin/webscr?business=teejeetech@gmail.com&cmd=_xclick&currency_code=USD&amount=10&item_name=Aptik%20Donation)  
-
-**Patreon** ~ You can also sign up as a sponsor on Patreon.com. As a patron you will get access to beta releases of new applications that I'm working on. You will also get news and updates about new features that are not published elsewhere.
-
-[![](https://2.bp.blogspot.com/-DNeWEUF2INM/WINUBAXAKUI/AAAAAAAAFmw/fTckfRrryy88pLyQGk5lJV0F0ESXeKrXwCLcB/s200/patreon.png)](https://www.patreon.com/bePatron?u=3059450)
-
-**Bitcoin** ~ You can send bitcoins at this address or by scanning the QR code below:
-
-```1Js5vfgmwKew4byF9unWacwAjBQVvZ3Fev```
-
-![](https://4.bp.blogspot.com/-9hMyCacf0nc/WQ1p3dcdtwI/AAAAAAAAGgA/WC-4gbGFl7skTjNRZbl99EBsXeYfZDqpgCLcB/s1600/polo.png)
